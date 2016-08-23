@@ -371,11 +371,6 @@ chroot "${ALTROOT}" portmaster  \
 # ANYTHING ELSE?
 ###################################################
 
-echo "root=pat@flanneryonline.com" >> "${ALTROOT}/usr/local/etc/ssmtp/ssmtp.conf"
-echo "mailhub=smtp.mail.wowway.com" >> "${ALTROOT}/usr/local/etc/ssmtp/ssmtp.conf"
-echo "AuthUser=pflannery" >> "${ALTROOT}/usr/local/etc/ssmtp/ssmtp.conf"
-echo "AuthPass=hR0X2145nV4" >> "${ALTROOT}/usr/local/etc/ssmtp/ssmtp.conf"
-chmod 640 "${ALTROOT}/usr/local/etc/ssmtp/ssmtp.conf"
 
 ###################################################
 # TODO
