@@ -12,7 +12,7 @@ fi
 DRIVE=$1
 
 # Check if arg is a drive
-if [[ ! -f /dev/${DRIVE} ]]
+if [[ ! -e /dev/${DRIVE} ]]
 then 
     exit 1
 fi
