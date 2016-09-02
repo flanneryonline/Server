@@ -11,7 +11,7 @@ efi=0
 
 apt-add-repository universe
 apt-get update
-apt-get install --yes debootstrap gdisk zfs-initramfs
+apt-get install --yes debootstrap gdisk zfsutils-linux
 
 sgdisk -og $DISK
 if [ $efi -eq 1 ]
@@ -91,13 +91,11 @@ mount --rbind /proc /mnt/proc
 mount --rbind /sys /mnt/sys
 
 cat << --EOF-CHROOT | sudo chroot /mnt
-echo 'LANG="en_US.UTF-8"' > /etc/default/locale
-dpkg-reconfigure tzdata
 ln -s /proc/self/mounts /etc/mtab
-apt-get update
-apt-get install --yes ubuntu-minimal
-apt-get install --yes --no-install-recommends linux-image-generic
-apt-get install --yes zfs-initramfs
+locale-gen en_US.UTF-8
+dpkg-reconfigure -f noninteractive tzdata
+apt update
+apt install --yes --no-install-recommends linux-image-4.7.2_amd64 ubuntu-minimal zfsutils-linux lxc zsh tmux
 
 if [[ $efi -eq 1 ]]
 then
