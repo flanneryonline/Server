@@ -93,17 +93,26 @@ mount --rbind /sys /mnt/sys
 cat << --EOF-CHROOT | sudo chroot /mnt
 ln -s /proc/self/mounts /etc/mtab
 locale-gen en_US.UTF-8
+echo "America/Chicago" > /etc/timezone
 dpkg-reconfigure -f noninteractive tzdata
+rm /etc/apt/sources.list
+echo "deb http://archive.ubuntu.com/ubuntu/ xenial main universe" >> /etc/apt/sources.list
+echo "deb http://security.ubuntu.com/ubuntu/ xenial-security main universe" >> /etc/apt/sources.list
+echo "deb http://archive.ubuntu.com/ubuntu/ xenial-updates main universe" >> /etc/apt/sources.list
 apt update
-apt install --yes --no-install-recommends linux-image-4.7.2_amd64 ubuntu-minimal zfsutils-linux lxc zsh tmux
+apt install --yes --no-install-recommends linux-image-generic ubuntu-minimal zfsutils-linux lxd
+--EOF-CHROOT
 
-if [[ $efi -eq 1 ]]
+if [[ $efi -ne 1 ]]
 then
+cat << --EOF-CHROOT | sudo chroot /mnt
     apt-get install --yes grub-pc
     update-initramfs -c -k all
     update-grub
     grub-install $DISK
+--EOF-CHROOT
 else
+cat << --EOF-CHROOT | sudo chroot /mnt
     apt-get install dosfstools
     mkdosfs -F 32 -n EFI $EFI_DISK
     mkdir /boot/efi
@@ -113,9 +122,9 @@ else
     update-initramfs -c -k all
     update-grub
     grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ubuntu --recheck --no-floppy
-fi
 --EOF-CHROOT
+fi
 
 mount | grep -v zfs | tac | awk '/\/mnt/ {print $3}' | xargs -i{} umount -lf {}
 zpool export zroot
-
+zpool export zfast
