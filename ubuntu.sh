@@ -89,39 +89,33 @@ mount --rbind /dev /mnt/dev
 mount --rbind /proc /mnt/proc
 mount --rbind /sys /mnt/sys
 
-cat << --EOF-CHROOT | sudo chroot /mnt
-ln -s /proc/self/mounts /etc/mtab
-locale-gen en_US.UTF-8
-echo "America/Chicago" > /etc/timezone
-dpkg-reconfigure -f noninteractive tzdata
-rm /etc/apt/sources.list
-echo "deb http://archive.ubuntu.com/ubuntu/ xenial main universe" >> /etc/apt/sources.list
-echo "deb http://security.ubuntu.com/ubuntu/ xenial-security main universe" >> /etc/apt/sources.list
-echo "deb http://archive.ubuntu.com/ubuntu/ xenial-updates main universe" >> /etc/apt/sources.list
-apt update
-apt install --yes --no-install-recommends linux-image-generic ubuntu-minimal zfsutils-linux lxd
---EOF-CHROOT
+chroot /mnt ln -s /proc/self/mounts /etc/mtab
+chroot /mnt locale-gen en_US.UTF-8
+chroot /mnt echo "America/Chicago" > /etc/timezone
+chroot /mnt dpkg-reconfigure -f noninteractive tzdata
+chroot /mnt rm /etc/apt/sources.list
+chroot /mnt echo "deb http://archive.ubuntu.com/ubuntu/ xenial main universe" >> /etc/apt/sources.list
+chroot /mnt echo "deb http://security.ubuntu.com/ubuntu/ xenial-security main universe" >> /etc/apt/sources.list
+chroot /mnt echo "deb http://archive.ubuntu.com/ubuntu/ xenial-updates main universe" >> /etc/apt/sources.list
+chroot /mnt apt update
+chroot /mnt apt install --yes --no-install-recommends linux-image-generic ubuntu-minimal zfsutils-linux lxd
 
 if [[ $efi -ne 1 ]]
 then
-cat << --EOF-CHROOT | sudo chroot /mnt
-    apt-get install --yes grub-pc
-    update-initramfs -c -k all
-    update-grub
-    grub-install $DISK
---EOF-CHROOT
+    chroot /mnt apt-get install --yes grub-pc
+    chroot /mnt update-initramfs -c -k all
+    chroot /mnt update-grub
+    chroot /mnt grub-install $DISK
 else
-cat << --EOF-CHROOT | sudo chroot /mnt
-    apt-get install dosfstools
-    mkdosfs -F 32 -n EFI ${DISK}-part3
-    mkdir /boot/efi
-    echo "PARTUUID=$(blkid -s PARTUUID -o value ${EFI_DISK}-part3) /boot/efi vfat defaults 0 1" >> /etc/fstab
-    mount /boot/efi
-    apt-get install --yes grub-efi-amd64
-    update-initramfs -c -k all
-    update-grub
-    grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ubuntu --recheck --no-floppy
---EOF-CHROOT
+    chroot /mnt apt-get install dosfstools
+    chroot /mnt mkdosfs -F 32 -n EFI "${DISK}-part3"
+    chroot /mnt mkdir /boot/efi
+    chroot /mnt echo "PARTUUID=$(blkid -s PARTUUID -o value "${EFI_DISK}-part3") /boot/efi vfat defaults 0 1" >> /etc/fstab
+    chroot /mnt mount /boot/efi
+    chroot /mnt apt-get install --yes grub-efi-amd64
+    chroot /mnt update-initramfs -c -k all
+    chroot /mnt update-grub
+    chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=ubuntu --recheck --no-floppy
 fi
 
 mount | grep -v zfs | tac | awk '/\/mnt/ {print $3}' | xargs -i{} umount -lf {}
