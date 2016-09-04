@@ -4,7 +4,6 @@ set -o errexit
 set -o nounset
 
 DISK=""
-EFI_DISK=""
 ssd=""
 HOSTNAME=""
 efi=0
@@ -38,7 +37,7 @@ zpool create -o ashift=12 \
          -o feature@enabled_txg=enabled \
          -o feature@embedded_data=enabled \
          -o feature@large_blocks=enabled \
-      zroot $DISK 
+      zroot ${DISK}-part1 
 
 zpool create -o ashift=12 \
       -O atime=off -O canmount=off -O compression=lz4 -O normalization=formD \
@@ -53,7 +52,7 @@ zpool create -o ashift=12 \
          -o feature@enabled_txg=enabled \
          -o feature@embedded_data=enabled \
          -o feature@large_blocks=enabled \
-      zfast $ssd 
+      zfast ${ssd}-part1 
 
 zfs create -o canmount=off -o mountpoint=none zroot/root
 zfs create -o canmount=noauto -o mountpoint=/ zroot/root/ubuntu
@@ -114,9 +113,9 @@ cat << --EOF-CHROOT | sudo chroot /mnt
 else
 cat << --EOF-CHROOT | sudo chroot /mnt
     apt-get install dosfstools
-    mkdosfs -F 32 -n EFI $EFI_DISK
+    mkdosfs -F 32 -n EFI ${DISK}-part3
     mkdir /boot/efi
-    echo "PARTUUID=$(blkid -s PARTUUID -o value $EFI_DISK) /boot/efi vfat defaults 0 1" >> /etc/fstab
+    echo "PARTUUID=$(blkid -s PARTUUID -o value ${EFI_DISK}-part3) /boot/efi vfat defaults 0 1" >> /etc/fstab
     mount /boot/efi
     apt-get install --yes grub-efi-amd64
     update-initramfs -c -k all
