@@ -21,7 +21,11 @@ fi
 
 ROOT_DRIVE_LIST=$1
 
-# Should there be a check of the drives to make sure they are blank?
+# Should there be a check of the drives to make sure they exist and are blank?
+for CHECK_DRIVE in $ROOT_DRIVE_LIST
+do
+    #check drive here
+done
 
 echo "Creating zfs boot (512k) and a zfs root partitions on drive list: ${ROOT_DRIVE_LIST}"
 DRIVE_NUMBER=0

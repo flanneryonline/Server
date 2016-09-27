@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Arguments:
+#   $1 = jail name
+#   $2 = software to install (quoated list)
+#   $3 = rc.conf settings?
+
+set -o errexit
+set -o nounset
+
+# No args? More than 1 arg?
+if [[ $# -ne 1 ]]
+then
+    exit 1
+fi
+
+
