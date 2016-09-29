@@ -3,23 +3,41 @@
 set -o errexit
 set -o nounset
 
-source ~/server/scripts/setup_zfs_zroot_pool
-source ~/server/scripts/setup_zfs_zroot_datasets
-source ~/server/scripts/setup_zfs_zfast_pool
-source ~/server/scripts/setup_zfs_zfast_datasets
-source ~/server/scripts/setup_zfs_zstorage_pool
-source ~/server/scripts/setup_zfs_zstorage_datasets
-source ~/server/scripts/setup_zfs_extra_datasets
+source ~/server/scripts/setup/setup_clean_disk
+source ~/server/scripts/setup/setup_zfs_zroot_pool
+source ~/server/scripts/setup/setup_zfs_zroot_datasets
+source ~/server/scripts/setup/setup_zfs_zfast_pool
+source ~/server/scripts/setup/setup_zfs_zfast_datasets
+source ~/server/scripts/setup/setup_zfs_zstorage_pool
+source ~/server/scripts/setup/setup_zfs_zstorage_datasets
+source ~/server/scripts/setup/setup_zfs_extra_datasets
 
 function zfs_init {
 
-zfs_zroot_pool "drive list"
+echo "WARNING: The following disks will be DELETED!!!"
+for disk in "${root_disk_list} ${fast_disk_list}"
+do
+    echo $disk
+done
+
+root_disk_list=$1
+fast_disk_list=$2
+
+for disk in "${root_disk_list} ${fast_disk_list}"
+do
+    clean_disk $disk
+done
+
+zfs_zroot_pool "${zroot_disk_list}"
 zfs_zroot_datasets
-zfs_zfast_pool "drive"
+zfs_zfast_pool "${zfast_disk_list}"
 zfs_zfast_datasets
-zfs_zstorage_pool "old pool"
+zfs_zstorage_pool \
+    "zfs"       #old pool name
 zfs_zstorage_datasets
-zfs_extra_datasets "ports pool" "jail pool"
+zfs_extra_datasets \
+    "zfast" \   #ports pool
+    "zfast"     #jail pool
 
 return 0
 
