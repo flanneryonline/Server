@@ -3,4 +3,24 @@
 set -o errexit
 set -o nounset
 
+source ~/server/scripts/setup_zfs_zroot_pool
+source ~/server/scripts/setup_zfs_zroot_datasets
+source ~/server/scripts/setup_zfs_zfast_pool
+source ~/server/scripts/setup_zfs_zfast_datasets
+source ~/server/scripts/setup_zfs_zstorage_pool
+source ~/server/scripts/setup_zfs_zstorage_datasets
+source ~/server/scripts/setup_zfs_extra_datasets
 
+function zfs_init {
+
+zfs_zroot_pool "drive list"
+zfs_zroot_datasets
+zfs_zfast_pool "drive"
+zfs_zfast_datasets
+zfs_zstorage_pool "old pool"
+zfs_zstorage_datasets
+zfs_extra_datasets "ports pool" "jail pool"
+
+return 0
+
+}
