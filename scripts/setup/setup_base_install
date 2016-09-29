@@ -1,14 +1,20 @@
 #!/usr/bin/env bash
 # 
 # ARGS
-# $1 = ARCH
-# $2 = RELEASE
-# $3 = ROOT
-# $4 = KERNEL FLAG
+# $1 = arch
+# $2 = release
+# $3 = root
+# $4 = kernel FLAG
 #
 
 set -o errexit
 set -o nounset
+# ARGS
+# $1 = arch
+# $2 = release
+# $3 = root
+# $4 = kernel FLAG
+#
 
 function base_install {
 
@@ -18,75 +24,75 @@ then
     exit 1
 fi
 
-local ARCH=$1
-local RELEASE=$2
-local ROOT=$3
-local KERNEL=$4
+local arch=$1
+local release=$2
+local root=$3
+local kernel=$4
 
 # Check variables
 # This would changeover time based on what is supported
-local VALID_ARCH="amd64 arm i386 ia64 powerpc sparc64"
-local VALID_RELEASE_NUM="9.3 10.1 10.2 10.3 11.0"
-local ARCH_VALID=0
-local RELEASE_VALID=0
-for ARCH_CHECK in $VALID_ARCH
+local valid_arch="amd64 arm i386 ia64 powerpc sparc64"
+local valid_release_num="9.3 10.1 10.2 10.3 11.0"
+local arch_valid=0
+local release_valid=0
+for arch_check in $valid_arch
 do
-    if [[ ${ARCH} == ${ARCH_CHECK} ]]
+    if [[ ${arch} == ${arch_check} ]]
     then
-        local ARCH_VALID=1
+        local arch_valid=1
     fi
 done
-for RELEASE_CHECK_NUM in $VALID_RELEASE_NUM
+for release_check_num in $valid_release_num
 do
-    if [[ ${RELEASE} == ${RELEASE_CHECK_NUM}-RELEASE ]]
+    if [[ ${release} == ${release_check_num}-release ]]
     then
-        local RELEASE_VALID=1
+        local release_valid=1
     fi
 done
-if [[ $RELEASE_VALID -ne 1 ]] || [[ $ARCH_VALID -ne 1 ]] || [[ ! -d "${ROOT}" ]]
+if [[ $release_valid -ne 1 ]] || [[ $arch_valid -ne 1 ]] || [[ ! -d "${root}" ]]
 then
     echo "Invalid variable supplied."
     exit 1
 fi
-if [[ ${KERNEL} -ne 1 ]]
-    local KERNEL=0
+if [[ ${kernel} -ne 1 ]]
+    local kernel=0
 fi
 
 if [[ -d /tmp ]]
 then
-    local TMP_FILES="/tmp"
+    local tmp_files="/tmp"
 elif [[ -d /var/tmp ]]
-    local TMP_FILES="/var/tmp"
+    local tmp_files="/var/tmp"
 else 
-    local TMP_FILES="${ROOT}"
+    local tmp_files="${root}"
 fi
 
-curl -fLo "${TMP_FILES}/base.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${ARCH}/${RELEASE}/base.txz"
-if [[ ${KERNEL} -eq 1 ]]
+curl -fLo "${tmp_files}/base.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/base.txz"
+if [[ ${kernel} -eq 1 ]]
 then
-    curl -fLo "${TMP_FILES}/kernel.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${ARCH}/${RELEASE}/kernel.txz"
+    curl -fLo "${tmp_files}/kernel.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/kernel.txz"
 fi
 if command -v pv >/dev/null 2>&1
 then
-    pv "${TMP_FILES}/base.txz" | tar -xf - -C "${ROOT}"
-    if [[ ${KERNEL} -eq 1 ]]
+    pv "${tmp_files}/base.txz" | tar -xf - -C "${root}"
+    if [[ ${kernel} -eq 1 ]]
     then
-        pv "${TMP_FILES}/kernel.txz" | tar -xf - -C "${ROOT}"
+        pv "${tmp_files}/kernel.txz" | tar -xf - -C "${root}"
     fi
 else
     echo "Installing base. Please wait..."
-    tar -xf "${TMP_FILES}/base.txz" -C "${ROOT}" >/dev/null 2>&1
-    if [[ ${KERNEL} -eq 1 ]]
+    tar -xf "${tmp_files}/base.txz" -C "${root}" >/dev/null 2>&1
+    if [[ ${kernel} -eq 1 ]]
     then
         echo "Installing kernel. Please wait..."
-        tar -xf "${TMP_FILES}/kernel.txz" -C "${ROOT}" >/dev/null 2>&1
+        tar -xf "${tmp_files}/kernel.txz" -C "${root}" >/dev/null 2>&1
     fi
 fi
 
-rm "${TMP_FILES}/base.txz"
-if [[ ${KERNEL} -eq 1 ]]
+rm "${tmp_files}/base.txz"
+if [[ ${kernel} -eq 1 ]]
 then
-    rm "${TMP_FILES}/kernel.txz"
+    rm "${tmp_files}/kernel.txz"
 fi
 
 echo "Install successful."

@@ -1,15 +1,14 @@
 #!/usr/bin/env bash
+#
+# This script assumes it was cloned from git repo to ~
+#
 
 set -o errexit
 set -o nounset
 
-RUN="$(pwd)/setup/"
+source ~/server/scripts/setup/setup_base_install
 
-#make sure scripts are executable
-chmod -R +x ${RUN}*
-
-${RUN}setup_clean_disk 
-${RUN}setup_base_install $(uname -a) "10.3-RELEASE" "${ALTROOT}" 
+base_install $(uname -a) "10.3-RELEASE" "${ALTROOT}" 
 
 exit 0
 
