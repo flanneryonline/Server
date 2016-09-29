@@ -7,10 +7,14 @@
 set -o errexit
 set -o nounset
 
+function create_jail {
+
 # No args? More than 1 arg?
 if [[ $# -ne 1 ]]
 then
-    exit 1
+    return 1
 fi
 
+return 0
 
+}
