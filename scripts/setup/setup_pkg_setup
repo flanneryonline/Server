@@ -1,4 +1,9 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function pkg_setup {
 
 #copied from man page
 if \
@@ -22,3 +27,4 @@ fi
 
 return 0
 
+}
