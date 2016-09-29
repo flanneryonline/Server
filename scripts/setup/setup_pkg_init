@@ -3,7 +3,7 @@
 set -o errexit
 set -o nounset
 
-function pkg_setup {
+function pkg_init {
 
 #copied from man page
 if \
