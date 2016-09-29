@@ -3,31 +3,35 @@
 set -o errexit
 set -o nounset
 
+function clean_disk {
+
 # No args? More than 1 arg?
 if [[ $# -ne 1 ]]
 then
     exit 1
 fi
 
-DRIVE=$1
+drive=$1
 
 # Check if arg is a drive
-if [[ ! -e /dev/${DRIVE} ]]
+if [[ ! -e /dev/${drive} ]]
 then 
     exit 1
 fi
 
-# MAX is the number of partitions that need to be removed before we can destroy the disk
-MAX=$(gpart show ${DRIVE} | awk '{if ($3>0 && $3<128){max=$3}} END{print max}')
-if [[ "${MAX}" =~ "[^0-9]+" ]]
+# max is the number of partitions that need to be removed before we can destroy the disk
+max=$(gpart show ${drive} | awk '{if ($3>0 && $3<128){max=$3}} END{print max}')
+if [[ "${max}" =~ "[^0-9]+" ]]
 then
-    MAX=0
+    max=0
 fi
-while [[ ${MAX} > 0 ]]
+while [[ ${max} > 0 ]]
 do
-    gpart delete -i ${MAX} "${DRIVE}"
-    ((MAX--))
+    gpart delete -i ${max} "${drive}"
+    ((max--))
 done
-gpart destroy "${DRIVE}"
+gpart destroy "${drive}"
 
-exit 0
+return 0
+
+}
