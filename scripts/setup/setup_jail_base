@@ -3,10 +3,8 @@
 set -o errexit
 set -o nounset
 
-function zfs_storage_pool {
-
+function jail_base {
 
 return 0
 
 }
-

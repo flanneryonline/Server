@@ -15,29 +15,26 @@ source ~/server/scripts/setup/setup_zfs_extra_datasets
 function zfs_init {
 
 echo "WARNING: The following disks will be DELETED!!!"
-for disk in "${root_disk_list} ${fast_disk_list}"
+for disk in "${root_drive_list} ${fast_drive_list}"
 do
-    echo $disk
+    echo "${disk}"
 done
 
-root_disk_list=$1
-fast_disk_list=$2
+echo "Press any key to continue. (Ctrl-C to exit)"
+read -n 1 -s
 
-for disk in "${root_disk_list} ${fast_disk_list}"
+for disk in "${root_drive_list} ${fast_drive_list}"
 do
     clean_disk $disk
 done
 
-zfs_zroot_pool "${zroot_disk_list}"
+zfs_zroot_pool 
 zfs_zroot_datasets
-zfs_zfast_pool "${zfast_disk_list}"
+zfs_zfast_pool
 zfs_zfast_datasets
-zfs_zstorage_pool \
-    "zfs"       #old pool name
+zfs_zstorage_pool
 zfs_zstorage_datasets
-zfs_extra_datasets \
-    "zfast" \   #ports pool
-    "zfast"     #jail pool
+zfs_extra_datasets
 
 return 0
 

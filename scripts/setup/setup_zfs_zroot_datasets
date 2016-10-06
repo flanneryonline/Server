@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function zfs_zroot_datasets {
+
+zfs create -o mountpoint=none zroot/root
+zfs create -o mountpoint=/ zroot/root/current
+
+return 0
+
+}

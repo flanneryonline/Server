@@ -6,45 +6,44 @@
 set -o errexit
 set -o nounset
 
+function zfs_zroot_pool {
+
 if [[ $# -eq 0 ]]
 then
     echo "No drive list provided. Nothing changed."
-    exit 1
+    return 1
 fi
 
-# More than 1 arg?
-if [[ $# -ne 1 ]]
-then
-    echo "Must provide drive list in a single argument. Did you forget to quote the list?"
-    exit 1
-fi
+local altroot=$1
+local root_drive_list=$2
 
-ROOT_DRIVE_LIST=$1
-
-# Should there be a check of the drives to make sure they exist and are blank?
-for CHECK_DRIVE in $ROOT_DRIVE_LIST
+for check_drive in $root_drive_list
 do
-    #check drive here
+    if [[ ! ls "/dev/${check_drive}" ]]
+    then
+        return 1
+    fi
 done
 
-echo "Creating zfs boot (512k) and a zfs root partitions on drive list: ${ROOT_DRIVE_LIST}"
-DRIVE_NUMBER=0
-for ROOT_DRIVE in $ROOT_DRIVE_LIST
+echo "Creating zfs boot (512k) and a zfs root partitions on drive list: ${root_drive_list}"
+local drive_number=0
+for root_drive in $root_drive_list
 do
-    gpart create -s gpt "${ROOT_DRIVE}"
-    gpart add -a 4k -s 512k -t freebsd-boot "${ROOT_DRIVE}"
-    gpart add -a 4k -t freebsd-zfs -l "boot${DRIVE_NUMBER}" "${ROOT_DRIVE}"
-    gpart bootcode -b /boot/pmbr -p /boot/gptzfsboot -i 1 "${ROOT_DRIVE}"
-    gnop create -S 4096 "/dev/gpt/boot${DRIVE_NUMBER}"
-    ZPOOL_LIST="${ZPOOL_LIST:-}${SPACE:-}/dev/gpt/boot${DRIVE_NUMBER}.nop"
-    SPACE=" "
-    ((DRIVE_NUMBER++))
+    gpart create -s gpt "${root_drive}"
+    gpart add -a 4k -s 512k -t freebsd-boot "${root_drive}"
+    gpart add -a 4k -t freebsd-zfs -l "boot${drive_number}" "${root_drive}"
+    gpart bootcode -b /boot/pmbr -p /boot/gptzfsboot -i 1 "${root_drive}"
+    gnop create -S 4096 "/dev/gpt/boot${drive_number}"
+    local zpool_list="${zpool_list:-}${space:-}/dev/gpt/boot${drive_number}.nop"
+    local space=" "
+    ((drive_number++))
 done
 
-zpool create -f -m none -o altroot="${ALTROOT}" -o cachefile="${ZCACHE}" zroot mirror "${ZPOOL_LIST}"
-zfs create -o mountpoint=none zroot/root
-zfs create -o mountpoint=/ zroot/root/current
+zpool create -f -m none -o altroot="${altroot}" -o cachefile="${ZCACHE}" zroot mirror "${zpool_list}"
 zfs set compression=lz4 zroot
 zfs set atime=off zroot
 
-exit 0
+return 0
+
+}
+

@@ -2,7 +2,6 @@
 # Arguments:
 #   $1 = jail name
 #   $2 = software to install (quoated list)
-#   $3 = rc.conf settings?
 
 set -o errexit
 set -o nounset

@@ -5,8 +5,11 @@ set -o nounset
 
 function pkg_init {
 
+local altoort=$1
+
 #copied from man page
 if \
+    chroot "${alroot}" \
     TMPDIR=/dev/null \
     ASSUME_ALWAYS_YES=yes \
     PACKAGESITE=file:///nonexistent \
@@ -17,11 +20,13 @@ fi
 
 #make sure bootstrap worked
 if \
+    chroot "${alroot}" \
     TMPDIR=/dev/null \
     ASSUME_ALWAYS_YES=yes \
     PACKAGESITE=file:///nonexistent \
     pkg info -x 'pkg(-devel)?$' >/dev/null 2>&1
 then
+    echo "pkg init failed."
     return 1
 fi
 

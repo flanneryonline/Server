@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function zfs_ports_datasets {
+
+return 0
+
+}
+

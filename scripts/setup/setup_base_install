@@ -1,58 +1,37 @@
 #!/usr/bin/env bash
-# 
-# ARGS
-# $1 = arch
-# $2 = release
-# $3 = root
-# $4 = kernel FLAG
-#
 
 set -o errexit
 set -o nounset
-# ARGS
-# $1 = arch
-# $2 = release
-# $3 = root
-# $4 = kernel FLAG
-#
 
 function base_install {
 
-# make sure args are passed
-if [[ $# -eq 0 ]]
-then
-    exit 1
-fi
-
-local arch=$1
-local release=$2
-local root=$3
-local kernel=$4
+local root=$1
+local kernel=$2
 
 # Check variables
-# This would changeover time based on what is supported
+# This will change over time based on what is supported
 local valid_arch="amd64 arm i386 ia64 powerpc sparc64"
 local valid_release_num="9.3 10.1 10.2 10.3 11.0"
 local arch_valid=0
 local release_valid=0
-for arch_check in $valid_arch
+for arch_check in "${valid_arch}"
 do
     if [[ ${arch} == ${arch_check} ]]
     then
         local arch_valid=1
     fi
 done
-for release_check_num in $valid_release_num
+for release_check_num in "${valid_release_num}"
 do
-    if [[ ${release} == ${release_check_num}-release ]]
+    if [[ ${release} == ${release_check_num}-RELEASE ]]
     then
         local release_valid=1
     fi
 done
 if [[ $release_valid -ne 1 ]] || [[ $arch_valid -ne 1 ]] || [[ ! -d "${root}" ]]
 then
-    echo "Invalid variable supplied."
-    exit 1
+    echo "Invalid variable set."
+    return 1
 fi
 if [[ ${kernel} -ne 1 ]]
     local kernel=0

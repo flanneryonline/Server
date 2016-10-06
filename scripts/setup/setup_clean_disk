@@ -8,22 +8,22 @@ function clean_disk {
 # No args? More than 1 arg?
 if [[ $# -ne 1 ]]
 then
-    exit 1
+    return 1
 fi
 
-drive=$1
+local drive=$1
 
 # Check if arg is a drive
 if [[ ! -e /dev/${drive} ]]
 then 
-    exit 1
+    return 1
 fi
 
 # max is the number of partitions that need to be removed before we can destroy the disk
-max=$(gpart show ${drive} | awk '{if ($3>0 && $3<128){max=$3}} END{print max}')
+local max=$(gpart show ${drive} | awk '{if ($3>0 && $3<128){max=$3}} END{print max}')
 if [[ "${max}" =~ "[^0-9]+" ]]
 then
-    max=0
+    local max=0
 fi
 while [[ ${max} > 0 ]]
 do

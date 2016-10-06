@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function zfs_jail_datasets {
+
+local pool=$1
+local dir=$2
+
+local dataset="${pool}/jails"
+
+zfs create -o mountpoint="${dir}" "${dataset}"
+zfs create "${dataset}/config"
+zfs create "${dataset}/releases"
+zfs create "${dataset}/skeleton"
+zfs create "${dataset}/thinjails"
+
+return 0
+
+}
+
