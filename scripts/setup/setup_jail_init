@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+#
+# This script assumes it was cloned from git repo to ~
+#
+
+set -o errexit
+set -o nounset
+
+#web proxy
+function jail_init_web {
+
+return 0
+
+}
+
+#torrent nzb sonarr etc
+function jail_init_download {
+
+return 0
+
+}
+
+#plex/emby etc
+function jail_init_media {
+
+return 0
+
+}
+
+#windows shares
+function jail_init_share {
+
+return 0
+
+}
+
+#tbd
+function jail_init_dashboard {
+
+return 0
+
+}
+

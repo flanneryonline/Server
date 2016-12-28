@@ -1,18 +1,42 @@
 #!/usr/bin/env bash
 # Arguments:
 #   $1 = jail name
-#   $2 = software to install (quoated list)
+#   $2 = release
 
 set -o errexit
 set -o nounset
 
 function create_jail {
 
-# No args? More than 1 arg?
-if [[ $# -ne 1 ]]
+local jail_release=$2
+local jail_name=$1
+
+#clone skeleton
+zfs clone "${jail_zfs}/skeleton/${jail_release}@skeleton" "${jail_zfs}/thinjails/${jail_name}"
+
+#mount point
+mkdir -p "${jail_dir}/mount/${jail_name}"
+
+#jail fstab setup
+echo "${jail_dir}/releases/${release}       ${jail_dir}/mount/${jail_name}                  nullfs ro 0 0" >> "${jail_dir}/config/${jail_name}.fstab"
+echo "${jail_dir}/thinjails/${jail_name}    ${jail_dir}/mount/${jail_name}/skeleton         nullfs rw 0 0" >> "${jail_dir}/config/${jail_name}.fstab"
+echo "${data_dir}                           ${jail_dir}/mount/${jail_name}/mnt/data         nullfs rw 0 0" >> "${jail_dir}/config/${jail_name}.fstab"
+if [[ "${jail_name}" == "media" ]] || [[ "${jail_name}" == "download" ]] || [[ "${jail_name}" == "share" ]]
 then
-    return 1
+    echo "${media_dir}                      ${jail_dir}/mount/${jail_name}/mnt/media        nullfs rw 0 0" >> "${jail_dir}/config/${jail_name}.fstab"
 fi
+if [[ "${jail_name}" == "download" ]] || [[ "${jail_name}" == "share" ]]
+then
+    echo "${download_dir}                   ${jail_dir}/mount/${jail_name}/mnt/downloads    nullfs rw 0 0" >> "${jail_dir}/config/${jail_name}.fstab"
+fi
+if [[ "${jail_name}" == "share" ]]
+    echo "${share_dir}                      ${jail_dir}/mount/${jail_name}/mnt/share        nullfs rw 0 0" >> "${jail_dir}/config/${jail_name}.fstab"
+fi
+echo "${config_dir}                         ${jail_dir}/mount/${jail_name}/mnt/config       nullfs rw 0 0" >> "${jail_dir}/config/${jail_name}.fstab"
+echo "/usr/ports                            ${jail_dir}/mount/${jail_name}/usr/ports        nullfs ro 0 0" >> "${jail_dir}/config/${jail_name}.fstab"
+
+#add jail to config
+echo "${jail_name} {\$ip4.addr=$(host ${jail_name}server${t:-}.${domain} | grep "has address" | awk '{ print $4 }');}" >> "${jail_dir}/config/jail.conf"
 
 return 0
 

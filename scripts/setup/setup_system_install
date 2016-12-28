@@ -3,13 +3,17 @@
 set -o errexit
 set -o nounset
 
-function base_install {
+function system_install {
 
-local root=$1
-local kernel=$2
+local root=${1:-}
+local kernel=${2:-0}
 
 # Check variables
 # This will change over time based on what is supported
+if [[ ${root} == "" ]]
+    echo "No value passed for install location."
+    return 1
+fi
 local valid_arch="amd64 arm i386 ia64 powerpc sparc64"
 local valid_release_num="9.3 10.1 10.2 10.3 11.0"
 local arch_valid=0
@@ -33,51 +37,41 @@ then
     echo "Invalid variable set."
     return 1
 fi
-if [[ ${kernel} -ne 1 ]]
-    local kernel=0
-fi
+temp_dir=${temp_dir:-"/var/tmp"}
 
-if [[ -d /tmp ]]
-then
-    local tmp_files="/tmp"
-elif [[ -d /var/tmp ]]
-    local tmp_files="/var/tmp"
-else 
-    local tmp_files="${root}"
+#making changes
+if [[ ${kernel} -eq 0 ]]
+    echo "Installing FreeBSD version ${release} for ${arch} to ${root} with no kernel."
+else
+    echo "Installing FreeBSD version ${release} for ${arch} to ${root} with kernel."
 fi
-
-curl -fLo "${tmp_files}/base.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/base.txz"
+curl -fLo "${temp_dir}/base.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/base.txz"
 if [[ ${kernel} -eq 1 ]]
 then
-    curl -fLo "${tmp_files}/kernel.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/kernel.txz"
+    curl -fLo "${temp_dir}/kernel.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/kernel.txz"
 fi
 if command -v pv >/dev/null 2>&1
 then
-    pv "${tmp_files}/base.txz" | tar -xf - -C "${root}"
+    pv "${temp_dir}/base.txz" | tar -xf - -C "${root}"
     if [[ ${kernel} -eq 1 ]]
     then
-        pv "${tmp_files}/kernel.txz" | tar -xf - -C "${root}"
+        pv "${temp_dir}/kernel.txz" | tar -xf - -C "${root}"
     fi
 else
     echo "Installing base. Please wait..."
-    tar -xf "${tmp_files}/base.txz" -C "${root}" >/dev/null 2>&1
+    tar -xf "${temp_dir}/base.txz" -C "${root}" >/dev/null 2>&1
     if [[ ${kernel} -eq 1 ]]
     then
         echo "Installing kernel. Please wait..."
-        tar -xf "${tmp_files}/kernel.txz" -C "${root}" >/dev/null 2>&1
+        tar -xf "${temp_dir}/kernel.txz" -C "${root}" >/dev/null 2>&1
     fi
 fi
-
-rm "${tmp_files}/base.txz"
+rm "${temp_dir}/base.txz"
 if [[ ${kernel} -eq 1 ]]
 then
-    rm "${tmp_files}/kernel.txz"
+    rm "${temp_dir}/kernel.txz"
 fi
 
 echo "Install successful."
-
 return 0
-
 }
-
-
