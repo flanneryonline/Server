@@ -3,10 +3,9 @@
 set -o errexit
 set -o nounset
 
-function user_init {
-
-
+function zstorage_datasets {
 
 return 0
 
 }
+#sysctl kern.geom.debugflags=16

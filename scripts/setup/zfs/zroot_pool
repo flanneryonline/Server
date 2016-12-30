@@ -6,21 +6,27 @@
 set -o errexit
 set -o nounset
 
-function zfs_zroot_pool {
+function zroot_pool {
 
-if [[ $# -eq 0 ]]
+root_drive_list=${root_drive_list:-""}
+altroot=${altroot:-""}
+
+if [[ "${root_drive_list}" == "" ]]
 then
-    echo "No drive list provided. Nothing changed."
+    echo "Failed to setup zroot pool. root_drive_list is not set."
     return 1
 fi
-
-local altroot=$1
-local root_drive_list=$2
+if [[ "${altroot}" == "" ]]
+then
+    echo "Failed to setup zroot pool. altroot is not set."
+    return 1
+fi
 
 for check_drive in $root_drive_list
 do
     if [[ ! ls "/dev/${check_drive}" ]]
     then
+        echo "Failed to setup zroot pool. $check_drive is not a valid drive."
         return 1
     fi
 done
@@ -39,10 +45,11 @@ do
     ((drive_number++))
 done
 
-zpool create -f -m none -o altroot="${altroot}" -o cachefile="${ZCACHE}" zroot mirror "${zpool_list}"
+zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" zroot mirror "${zpool_list}"
 zfs set compression=lz4 zroot
 zfs set atime=off zroot
 
+echo "Root drive ZFS setup complete."
 return 0
 
 }

@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+source ~/server/scripts/setup/system/install
+
+function jail_base {
+
+local altroot=${ALTROOT:-${altroot:-""}}
+local jail_zfs=${JAIL_ZFS:-${jail_zfs:-"zfast/jails"}}
+local jail_dir=${JAIL_DIR:-${jail_dir:-"${altroot}/usr/local/jails"}}
+
+local jail_release=${1:-""}
+if [[ "${jail_release}" == "" ]]
+    echo "failed to create jail base. Release not passed to jail_base."
+    return 1
+fi
+
+if \
+    zfs list -d 0 -H -t filesystem -o name \
+    "${jail_zfs}/base/${jail_release}" \
+    >/dev/null 2>&1 && \
+    zfs list -d 0 -H -t filesystem -o name \
+    "${jail_zfs}/staging/${jail_release}" \
+    >/dev/null 2>&1
+then  
+    echo "Jail base for release $jail_release exists. No update required."
+    return 0
+fi
+
+echo "Setting up base jail directory structure."
+zfs create "${jail_zfs}/base/${jail_release}"
+zfs create "${jail_zfs}/staging/${jail_release}"
+system_install "${jail_dir}/base/${jail_release}"
+
+mkdir -p "${jail_dir}/staging/${jail_release}/home"
+mkdir -p "${jail_dir}/staging/${jail_release}/portsbuild"
+mkdir -p "${jail_dir}/staging/${jail_release}/skeleton"
+
+mv "${jail_dir}/base/${jail_release}/etc" "${jail_dir}/staging/${jail_release}/etc"
+mv "${jail_dir}/base/${jail_release}/usr/local" "${jail_dir}/staging/${jail_release}/usr/local"
+mv "${jail_dir}/base/${jail_release}/tmp" "${jail_dir}/staging/${jail_release}/tmp"
+mv "${jail_dir}/base/${jail_release}/var" "${jail_dir}/staging/${jail_release}/var"
+mv "${jail_dir}/base/${jail_release}/root" "${jail_dir}/staging/${jail_release}/root"
+
+cp "${altroot}/usr/local/etc/portmaster.rc" "${jail_dir}/skeleton/${jail_release}/usr/local/etc/portmaster.rc"
+cp "${altroot}/etc/resolv.conf" "${jail_dir}/skeleton/${jail_release}/etc/resolv.conf"
+cp "${altroot}/etc/make.conf" "${jail_dir}/skeleton/${jail_release}/etc/make.conf"
+echo "WRKDIRPREFIX?=/skeleton/portbuild" >> "${jail_dir}/skeleton/${jail_release}/etc/make.conf"
+
+chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/etc" "etc"
+chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/home" "home"
+chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/root" "root"
+chroot "${jail_dir}/base/${jail_release}" ln -s "../skeleton/usr/local" "usr/local"
+chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/tmp" "tmp"
+chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/var" "var"
+chroot "${jail_dir}/base/${jail_release}" ln -s "../../skeleton/usr/ports/distfiles" "usr/ports/distfiles"
+
+sysrc -r "${jail_dir}/base/${jail_release}" sendmail_enable="NO"
+sysrc -r "${jail_dir}/base/${jail_release}" sendmail_submit_enable="NO"
+sysrc -r "${jail_dir}/base/${jail_release}" sendmail_outbound_enable="NO"
+sysrc -r "${jail_dir}/base/${jail_release}" sendmail_msp_queue_enable="NO"
+
+zfs snapshot "${jail_zfs}/staging/${jail_release}@skeleton"
+
+echo "FreeBSD version ${jail_release} base jail created at ${jail_dir}"
+echo "ZFS base snapshot stored at ${jail_zfs}/staging/${jail_release}@base_jail"
+
+return 0
+
+}

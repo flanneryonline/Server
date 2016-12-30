@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function make_conf_init {
+
+local altroot=${1:-${ALTROOT:-${altroot:-}}}
+
+#make.conf
+echo "OPTIONS_UNSET=CUPS NLS DOCS EXAMPLES X11" > "${altroot}/etc/make.conf"
+echo "OPTIONS_SET=OPTIMIZED_CFLAGS" >> "${altroot}/etc/make.conf"
+echo "DEFAULT_VERSIONS+=ssl=openssl" >> "${altroot}/etc/make.conf"
+
+return 0
+
+}

@@ -3,7 +3,7 @@
 set -o errexit
 set -o nounset
 
-function zfs_zfast_datasets {
+function zfast_datasets {
 
 zfs create -o mountpoint=/usr "zfast/usr"
 zfs create "zfast/usr/local"

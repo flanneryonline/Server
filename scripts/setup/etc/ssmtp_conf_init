@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function ssmtp_conf_init {
+
+local altroot=${1:-${ALTROOT:-${altroot:-}}}
+
+local password=""
+read -s -p "Enter ssmtp password: " password
+
+#resolv.conf
+echo "root=pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
+echo "mailhub=smtp.mail.wowway.com" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
+echo "AuthUser=pflannery" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
+echo "AuthPass=${password}" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
+
+return 0
+
+}

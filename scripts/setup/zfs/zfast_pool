@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function zfast_pool {
+
+fast_drive_list=${fast_drive_list:-""}
+altroot=${altroot:-""}
+
+if [[ "${fast_drive_list}" == "" ]]
+then
+    echo "Failed to setup zfast pool. fast_drive_list is not set."
+    return 1
+fi
+if [[ "${altroot}" == "" ]]
+then
+    echo "Failed to setup zfast pool. altroot is not set."
+    return 1
+fi
+
+for check_drive in $fast_drive_list
+do
+    if [[ ! ls "/dev/${check_drive}" ]]
+    then
+        echo "Failed to setup zfast pool. $check_drive is not a valid drive."
+        return 1
+    fi
+done
+
+echo "Creating ZFS partitions on drive list: ${fast_drive_list}"
+local drive_number=0
+for fast_drive in ${fast_drive_list}
+do
+    gpart create -s gpt "${fast_drive}"
+    gpart add -a 4k 0t freebsd-zfs -l "fast${drive_number}" "${fast_drive}"
+    gnop create -S 4096 "/dev/gpt/fast${drive_number}"
+    local zpool_list="${zpool_list:-}${space:-}/dev/gpt/fast${drive_number}.nop"
+    local space=" "
+    ((drive_number++))
+done
+
+zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" zfast "${zpool_list}"
+zfs set compression=lz4 zfast
+zfs set atime=off zfast
+
+echo "Fast drive ZFS setup complete."
+return 0
+
+}

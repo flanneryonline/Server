@@ -1,1 +1,0 @@
-server-nas.flanneryonline.com:/volume1/backup /mnt/backup nfs rw 0 0

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function loader_conf_init {
+
+local altroot=${1:-${ALTROOT:-${altroot:-}}}
+
+#loader.conf
+echo 'vfs.root.mountfrom="zfs:zroot/root/current"' >> "${altroot}/boot/loader.conf"
+echo 'kern.geom.label.disk_ident.enable="0"' >> "${altroot}/boot/loader.conf"
+echo 'kern.geom.label.gpt.enable="1"' >> "${altroot}/boot/loader.conf"
+echo 'kern.geom.label.gptid.enable="0"' >> "${altroot}/boot/loader.conf"
+echo 'zfs_load="YES"' >> "${altroot}/boot/loader.conf"
+
+return 0
+
+}

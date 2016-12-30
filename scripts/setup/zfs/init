@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+source ~/server/scripts/setup/system/clean_disk
+source ~/server/scripts/setup/zfs/zroot_pool
+source ~/server/scripts/setup/zfs/zroot_datasets
+source ~/server/scripts/setup/zfs/zfast_pool
+source ~/server/scripts/setup/zfs/zfast_datasets
+source ~/server/scripts/setup/zfs/zstorage_pool
+source ~/server/scripts/setup/zfs/zstorage_datasets
+source ~/server/scripts/setup/zfs/jail_datasets
+
+function init {
+
+echo "WARNING: The following disks will be DELETED!!!"
+for disk in "${root_drive_list} ${fast_drive_list}"
+do
+    echo "${disk}"
+done
+
+echo "Press any key to continue. (Ctrl-C to exit)"
+read -n 1 -s
+
+for disk in "${root_drive_list} ${fast_drive_list}"
+do
+    echo "    Cleaning ${disk}..."
+    clean_disk $disk
+done
+
+echo "Starting ZFS setup."
+
+zroot_pool
+zroot_datasets
+zfast_pool
+zfast_datasets
+zstorage_pool
+zstorage_datasets
+jail_datasets
+
+return 0
+
+}

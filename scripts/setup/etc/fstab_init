@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function fstab_init {
+
+local altroot=${1:-${ALTROOT:-${altroot:-}}}
+local backup_nfs=${BACKUP_NFS:-${backup_nfs:-""}}
+
+if [[ "${backup_nfs}" == "" ]]
+then
+    echo "Failed to create fstab. backup_nfs not set."
+    return 1
+fi
+
+#fstab
+echo "${backup_nfs} /mnt/backup nfs rw 0 0" > "${altroot}/etc/fstab"
+
+return 0
+
+}

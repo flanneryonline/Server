@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function jail_datasets {
+
+local jail_dir=${JAIL_DIR:-${jail_dir:-"/usr/local/jails"}}
+local jail_zfs=${JAIL_ZFS:-${jail_zfs:-"zfast/jails"}}
+
+zfs create -o mountpoint="${jail_dir}" "${jail_zfs}"
+zfs create "${jail_zfs}/base"
+zfs create "${jail_zfs}/staging"
+zfs create "${jail_zfs}/thinjails"
+
+return 0
+
+}
+

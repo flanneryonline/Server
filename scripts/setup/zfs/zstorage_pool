@@ -3,7 +3,7 @@
 set -o errexit
 set -o nounset
 
-function zfs_storage_pool {
+function zstorage_pool {
 
 
 return 0
