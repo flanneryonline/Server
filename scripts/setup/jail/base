@@ -4,6 +4,8 @@ set -o errexit
 set -o nounset
 
 source ~/server/scripts/setup/system/install
+source ~/server/scripts/setup/etc/pkg_init
+source ~/server/scripts/setup/etc/user_init
 
 function jail_base {
 
@@ -11,29 +13,42 @@ local altroot=${ALTROOT:-${altroot:-""}}
 local jail_zfs=${JAIL_ZFS:-${jail_zfs:-"zfast/jails"}}
 local jail_dir=${JAIL_DIR:-${jail_dir:-"${altroot}/usr/local/jails"}}
 
-local jail_release=${1:-""}
+local jail_release=${1:-"11.0-RELEASE"}
 if [[ "${jail_release}" == "" ]]
-    echo "failed to create jail base. Release not passed to jail_base."
+    echo "****failed to create jail base. Release blank****"
     return 1
 fi
+
+echo "creating jail base at ${jail_dir}"
+echo "  --jail zfs: ${jail_zfs}"
+echo "  --release: ${jail_release}"
 
 if \
     zfs list -d 0 -H -t filesystem -o name \
     "${jail_zfs}/base/${jail_release}" \
-    >/dev/null 2>&1 && \
+    >/dev/null 2>&1
+then  
+    echo "  **warning - jail base folder for release $jail_release seems to already exist - it will be removed"
+    zfs destroy -R -f "${jail_zfs}/base/${jail_release}"
+fi
+
+if \
     zfs list -d 0 -H -t filesystem -o name \
     "${jail_zfs}/staging/${jail_release}" \
     >/dev/null 2>&1
 then  
-    echo "Jail base for release $jail_release exists. No update required."
-    return 0
+    echo "  **warning - jail staging folder for release $jail_release seems to already exist - it will be removed"
+    zfs destroy -R -f "${jail_zfs}/staging/${jail_release}"
 fi
 
-echo "Setting up base jail directory structure."
+echo "    installing system for jail base"
 zfs create "${jail_zfs}/base/${jail_release}"
 zfs create "${jail_zfs}/staging/${jail_release}"
 system_install "${jail_dir}/base/${jail_release}"
+user_init "${jail_dir}/base/${jail_release}"
+pkg init "${jail_dir}/base/${jail_release}"
 
+echo "    setting up base jail directory structure"
 mkdir -p "${jail_dir}/staging/${jail_release}/home"
 mkdir -p "${jail_dir}/staging/${jail_release}/portsbuild"
 mkdir -p "${jail_dir}/staging/${jail_release}/skeleton"
@@ -44,10 +59,11 @@ mv "${jail_dir}/base/${jail_release}/tmp" "${jail_dir}/staging/${jail_release}/t
 mv "${jail_dir}/base/${jail_release}/var" "${jail_dir}/staging/${jail_release}/var"
 mv "${jail_dir}/base/${jail_release}/root" "${jail_dir}/staging/${jail_release}/root"
 
-cp "${altroot}/usr/local/etc/portmaster.rc" "${jail_dir}/skeleton/${jail_release}/usr/local/etc/portmaster.rc"
-cp "${altroot}/etc/resolv.conf" "${jail_dir}/skeleton/${jail_release}/etc/resolv.conf"
-cp "${altroot}/etc/make.conf" "${jail_dir}/skeleton/${jail_release}/etc/make.conf"
-echo "WRKDIRPREFIX?=/skeleton/portbuild" >> "${jail_dir}/skeleton/${jail_release}/etc/make.conf"
+cp "${altroot}/usr/local/etc/portmaster.rc" "${jail_dir}/staging/${jail_release}/usr/local/etc/portmaster.rc"
+cp "${altroot}/usr/local/etc/ssmtp/ssmtp.conf" "${jail_dir}/staging/${jail_release}/usr/local/etc/ssmtp/ssmtp.conf"
+cp "${altroot}/etc/resolv.conf" "${jail_dir}/staging/${jail_release}/etc/resolv.conf"
+cp "${altroot}/etc/make.conf" "${jail_dir}/staging/${jail_release}/etc/make.conf"
+echo "WRKDIRPREFIX?=/skeleton/portbuild" >> "${jail_dir}/staging/${jail_release}/etc/make.conf"
 
 chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/etc" "etc"
 chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/home" "home"
@@ -62,11 +78,10 @@ sysrc -r "${jail_dir}/base/${jail_release}" sendmail_submit_enable="NO"
 sysrc -r "${jail_dir}/base/${jail_release}" sendmail_outbound_enable="NO"
 sysrc -r "${jail_dir}/base/${jail_release}" sendmail_msp_queue_enable="NO"
 
-zfs snapshot "${jail_zfs}/staging/${jail_release}@skeleton"
+zfs snapshot "${jail_zfs}/staging/${jail_release}@base"
 
 echo "FreeBSD version ${jail_release} base jail created at ${jail_dir}"
-echo "ZFS base snapshot stored at ${jail_zfs}/staging/${jail_release}@base_jail"
+echo "  --ZFS base snapshot stored at ${jail_zfs}/staging/${jail_release}@base"
 
 return 0
-
 }

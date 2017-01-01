@@ -7,11 +7,13 @@ function make_conf_init {
 
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
+echo "starting make_conf_init at ${altroot}"
+
 #make.conf
 echo "OPTIONS_UNSET=CUPS NLS DOCS EXAMPLES X11" > "${altroot}/etc/make.conf"
 echo "OPTIONS_SET=OPTIMIZED_CFLAGS" >> "${altroot}/etc/make.conf"
 echo "DEFAULT_VERSIONS+=ssl=openssl" >> "${altroot}/etc/make.conf"
 
+echo "make_conf_init complete"
 return 0
-
 }

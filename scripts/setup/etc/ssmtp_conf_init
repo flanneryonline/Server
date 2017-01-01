@@ -7,15 +7,34 @@ function ssmtp_conf_init {
 
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
+echo "starting ssmtp_init at ${altroot}"
+
 local password=""
-read -s -p "Enter ssmtp password: " password
+while [[ "${password}" == "" ]]
+do
+    read -s -p "Enter ssmtp password: " password
+    if [[ "${password}" == "" ]] 
+    then 
+        echo "    must not be blank! try again..."
+    fi
+done
 
 #resolv.conf
 echo "root=pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "mailhub=smtp.mail.wowway.com" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
+echo "rewriteDomain=flanneryonline.com" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "AuthUser=pflannery" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "AuthPass=${password}" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 
-return 0
+echo "root:pat@flanneryonline.com" > "${altroot}/etc/ssmtp/revaliases"
+echo "homeadmin:pat@flanneryonline.com" > "${altroot}/etc/ssmtp/revaliases"
 
+echo "    running make replace for ssmtp"
+chroot "${altroot}" make \
+    -C /usr/ports/mail/ssmtp \
+    -DBATCH replace \
+    >/dev/null 2>&1
+
+echo "ssmtp_init complete"
+return 0
 }

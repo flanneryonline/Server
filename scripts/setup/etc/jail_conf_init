@@ -6,6 +6,9 @@ set -o nounset
 function jail_config_init {
 
 local altroot=${ALTROOT:-${altroot:-""}}
+
+echo "starting jail_conf_init at ${altroot}"
+
 local jail_dir=${JAIL_DIR:-${jail_dir:-"${altroot}/usr/local/jails"}}
 
 #create jail.conf (overwrite)
@@ -22,5 +25,6 @@ echo "path=\"${jail_dir}/mount/\${name}\";"                 >> "${altroot}/etc/j
 echo "mount.fstab=\"${jail_dir}/mount/\${name}.fstab\";"    >> "${altroot}/etc/jail.conf"
 echo "host.hostname=\"\${name}server${t:-}.${DOMAIN:-${domain:-"flanneryonline.com"}}\";" >> "${altroot}/etc/jail.conf"
 
+echo "jail_conf_init complete"
 return 0
 }

@@ -7,6 +7,8 @@ function pkg_init {
 
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
+echo "starting pkg_init at ${altroot}"
+
 #copied from man page
 if \
     chroot "${altroot}" \
@@ -26,26 +28,41 @@ if \
     PACKAGESITE=file:///nonexistent \
     pkg info -x 'pkg(-devel)?$' >/dev/null 2>&1
 then
-    echo "pkg init failed."
+    echo "****pkg init failed. bootstrap didn't work. Check pkg man pages for updates.****"
     return 1
 fi
 
+echo "    pkg update..."
 chroot "${altroot}" \
 TMPDIR=/dev/null \
 ASSUME_ALWAYS_YES=yes \
 pkg update >/dev/null 2>&1
 
+echo "    pkg upgrade..."
 chroot "${altroot}" \
 TMPDIR=/dev/null \
 ASSUME_ALWAYS_YES=yes \
 pkg upgrade >/dev/null 2>&1
 
-echo "Installing portmaster."
+echo "    installing portmaster."
 chroot "${altroot}" make \
     -C /usr/ports/ports-mgmt/portmaster \
     -DBATCH install clean \
     >/dev/null 2>&1
 
+echo "    installing default software."
+chroot "${altroot}" \
+    ASSUME_ALWAYS_YES=YES \
+    pkg install \
+        vim-lite \
+        git-lite \
+        sudo \
+        zsh \
+        tmux \
+        bash \
+    >/dev/null 2>&1
+
+echo "pkg_init complete."
 return 0
 
 }

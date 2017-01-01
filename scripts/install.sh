@@ -12,12 +12,6 @@ backup_nfs="server-nas.flanneryonline.com:/volume1/backup"
 jail_list="download media web share"
 delete_drive_list="${root_drive_list} ${ssd}"
 
-if [[ "${TESTING:-"YES"}" == "NO" ]]
-then
-    t=""
-else
-    t="test"
-fi
 release=${RELEASE:-"11.0-RELEASE"}
 altroot=${ALTROOT:-"/mnt"}
 jail_dir=${JAIL_DIR:-"${altroot}/usr/jails"}
@@ -29,7 +23,21 @@ zcache=${ZCACHE:-"${temp_dir}/zpool.cache"}
 temp_dir=${TEMP_DIR:-"/var/tmp/install"}
 fqdn="${hostname}.${domain}"
 arch=${ARCH:-$(uname -m)}
+root_pool=${ROOT_POOL:-"zroot"}
+fast_pool=${FAST_POOL:-"zfast"}
+storage_pool=${STORAGE_POOL:-"zstorage"}
+media_zfs=${MEDIA_ZFS:-"${storage_pool}/media"}
+download_zfs=${DOWNLOAD_ZFS:-"${storage_pool}/download"}
+config_zfs=${CONFIG_ZFS:-"${storage_pool}/config"}
+share_zfs=${SHARE_ZFS:-"${storage_pool}/share"}
 host_ip=$(host "${fqdn}" | grep "has address" | awk '{print $4}')
+
+if [[ "${TESTING:-"YES"}" == "NO" ]]
+then
+    t=""
+else
+    t="test"
+fi
 
 if [[ "${host_ip}" == "" ]]
 then
@@ -80,27 +88,6 @@ user_init
 jail_conf_init
 ssmtp_conf_init
 
-#host software install
-echo "initializing pkg for host."
-pkg_init ${altroot}
-
-echo "Updating ports. Please wait..."
-chroot "${altroot}" portsnap fetch update >/dev/null 2>&1
-
-#setup portmaster
-echo "Installing host software."
-#chroot "${altroot}" portmaster \
-chroot "${altroot}" \
-    ASSUME_ALWAYS_YES=YES \
-    pkg install \
-        vim-lite \
-        git-lite \
-        sudo \
-        zsh \
-        tmux \
-        bash \
-        ssmtp \
-    >/dev/null 2>&1
 echo "Configuring host software."
 #chroot "${altroot}" python3 -m ensurepip >/dev/null 2>&1
 #chroot "${altroot}" pip3 install jedi >/dev/null 2>&1
@@ -130,27 +117,27 @@ do
 done
 
 echo "Creating install snapshots and preping rolling snapshots"
-zfs snapshot -r zroot/@install
-zfs snapshot -r zroot/@today
-zfs snapshot -r zroot/@yesterday
-zfs snapshot -r zroot/@lastweek
-zfs snapshot -r zroot/@thisweek
-zfs snapshot -r zroot/@lastmonth
-zfs snapshot -r zroot/@thismonth
-zfs snapshot -r zfast/@install
-zfs snapshot -r zfast/@today
-zfs snapshot -r zfast/@yesterday
-zfs snapshot -r zfast/@lastweek
-zfs snapshot -r zfast/@thisweek
-zfs snapshot -r zfast/@lastmonth
-zfs snapshot -r zfast/@thismonth
-zfs snapshot -r zstorage/@install
-zfs snapshot -r zstorage/@today
-zfs snapshot -r zstorage/@yesterday
-zfs snapshot -r zstorage/@lastweek
-zfs snapshot -r zstorage/@thisweek
-zfs snapshot -r zstorage/@lastmonth
-zfs snapshot -r zstorage/@thismonth
+zfs snapshot -r ${root_pool}/@install
+zfs snapshot -r ${root_pool}/@today
+zfs snapshot -r ${root_pool}/@yesterday
+zfs snapshot -r ${root_pool}/@lastweek
+zfs snapshot -r ${root_pool}/@thisweek
+zfs snapshot -r ${root_pool}/@lastmonth
+zfs snapshot -r ${root_pool}/@thismonth
+zfs snapshot -r ${fast_pool}/@install
+zfs snapshot -r ${fast_pool}/@today
+zfs snapshot -r ${fast_pool}/@yesterday
+zfs snapshot -r ${fast_pool}/@lastweek
+zfs snapshot -r ${fast_pool}/@thisweek
+zfs snapshot -r ${fast_pool}/@lastmonth
+zfs snapshot -r ${fast_pool}/@thismonth
+zfs snapshot -r ${storage_pool}/@install
+zfs snapshot -r ${storage_pool}/@today
+zfs snapshot -r ${storage_pool}/@yesterday
+zfs snapshot -r ${storage_pool}/@lastweek
+zfs snapshot -r ${storage_pool}/@thisweek
+zfs snapshot -r ${storage_pool}/@lastmonth
+zfs snapshot -r ${storage_pool}/@thismonth
 
 echo "Almost done. Cleaning up..."
 zroot_reset
