@@ -24,7 +24,7 @@ fi
 
 for check_drive in $root_drive_list
 do
-    if [[ ! ls "/dev/${check_drive}" ]]
+    if ! ls "/dev/${check_drive}" >/dev/null 2>&1
     then
         echo "Failed to setup zroot pool. $check_drive is not a valid drive."
         return 1
@@ -35,17 +35,17 @@ echo "Creating zfs boot (512k) and a zfs root partitions on drive list: ${root_d
 local drive_number=0
 for root_drive in $root_drive_list
 do
-    gpart create -s gpt "${root_drive}"
-    gpart add -a 4k -s 512k -t freebsd-boot "${root_drive}"
-    gpart add -a 4k -t freebsd-zfs -l "boot${drive_number}" "${root_drive}"
-    gpart bootcode -b /boot/pmbr -p /boot/gptzfsboot -i 1 "${root_drive}"
-    gnop create -S 4096 "/dev/gpt/boot${drive_number}"
+    gpart create -s gpt "${root_drive}" >/dev/null 2>&1
+    gpart add -a 4k -s 512k -t freebsd-boot "${root_drive}" >/dev/null 2>&1
+    gpart add -a 4k -t freebsd-zfs -l "boot${drive_number}" "${root_drive}" >/dev/null 2>&1
+    gpart bootcode -b /boot/pmbr -p /boot/gptzfsboot -i 1 "${root_drive}" >/dev/null 2>&1
+    gnop create -S 4096 "/dev/gpt/boot${drive_number}" >/dev/null 2>&1
     local zpool_list="${zpool_list:-}${space:-}/dev/gpt/boot${drive_number}.nop"
     local space=" "
-    ((drive_number++))
+    ((drive_number = drive_number + 1))
 done
 
-zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" zroot mirror "${zpool_list}"
+zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" zroot mirror ${zpool_list} >/dev/null 2>&1
 zfs set compression=lz4 zroot
 zfs set atime=off zroot
 

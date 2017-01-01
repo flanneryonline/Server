@@ -19,6 +19,11 @@ then
     return 1
 fi
 
+if ! gpart show ${drive} >/dev/null 2>&1
+then
+    return 0
+fi
+
 # max is the number of partitions that need to be removed before we can destroy the disk
 local max=$(gpart show ${drive} | awk '{if ($3>0 && $3<128){max=$3}} END{print max}')
 if [[ "${max}" =~ "[^0-9]+" ]]
@@ -27,11 +32,10 @@ then
 fi
 while [[ ${max} > 0 ]]
 do
-    gpart delete -i ${max} "${drive}"
-    ((max--))
+    gpart delete -i ${max} "${drive}" >/dev/null 2>&1
+    ((max = max - 1))
 done
-gpart destroy "${drive}"
+gpart destroy "${drive}" >/dev/null 2>&1
 
 return 0
-
 }

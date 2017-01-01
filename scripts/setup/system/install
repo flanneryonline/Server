@@ -11,6 +11,7 @@ local ports=${3:-0}
 
 # Check variables
 if [[ ${root} == "" ]]
+then
     echo "No value passed for install location."
     return 1
 fi
@@ -19,14 +20,14 @@ local valid_arch="amd64 arm i386 ia64 powerpc sparc64"
 local valid_release_num="9.3 10.1 10.2 10.3 11.0"
 local arch_valid=0
 local release_valid=0
-for arch_check in "${valid_arch}"
+for arch_check in ${valid_arch}
 do
     if [[ ${arch} == ${arch_check} ]]
     then
         local arch_valid=1
     fi
 done
-for release_check_num in "${valid_release_num}"
+for release_check_num in ${valid_release_num}
 do
     if [[ ${release} == ${release_check_num}-RELEASE ]]
     then

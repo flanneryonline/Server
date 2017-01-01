@@ -21,7 +21,7 @@ fi
 
 for check_drive in $fast_drive_list
 do
-    if [[ ! ls "/dev/${check_drive}" ]]
+    if ! ls "/dev/${check_drive}" >/dev/null 2>&1
     then
         echo "Failed to setup zfast pool. $check_drive is not a valid drive."
         return 1
@@ -32,15 +32,15 @@ echo "Creating ZFS partitions on drive list: ${fast_drive_list}"
 local drive_number=0
 for fast_drive in ${fast_drive_list}
 do
-    gpart create -s gpt "${fast_drive}"
-    gpart add -a 4k 0t freebsd-zfs -l "fast${drive_number}" "${fast_drive}"
-    gnop create -S 4096 "/dev/gpt/fast${drive_number}"
+    gpart create -s gpt "${fast_drive}" >/dev/null 2>&1
+    gpart add -a 4k -t freebsd-zfs -l "fast${drive_number}" "${fast_drive}" >/dev/null 2>&1
+    gnop create -S 4096 "/dev/gpt/fast${drive_number}" >/dev/null 2>&1
     local zpool_list="${zpool_list:-}${space:-}/dev/gpt/fast${drive_number}.nop"
     local space=" "
-    ((drive_number++))
+    ((drive_number = drive_number + 1))
 done
 
-zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" zfast "${zpool_list}"
+zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" zfast ${zpool_list} >/dev/null 2>&1
 zfs set compression=lz4 zfast
 zfs set atime=off zfast
 

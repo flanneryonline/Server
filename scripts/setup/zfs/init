@@ -12,7 +12,7 @@ source ~/server/scripts/setup/zfs/zstorage_pool
 source ~/server/scripts/setup/zfs/zstorage_datasets
 source ~/server/scripts/setup/zfs/jail_datasets
 
-function init {
+function zfs_init {
 
 echo "WARNING: The following disks will be DELETED!!!"
 for disk in "${root_drive_list} ${fast_drive_list}"

@@ -15,6 +15,7 @@ local jail_dir=${JAIL_DIR:-${jail_dir:-"${altroot}/usr/local/jails"}}
 
 local jail_release=${1:-"11.0-RELEASE"}
 if [[ "${jail_release}" == "" ]]
+then
     echo "****failed to create jail base. Release blank****"
     return 1
 fi

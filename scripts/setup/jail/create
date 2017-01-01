@@ -50,6 +50,7 @@ then
     echo "${download_dir}                   ${jail_dir}/mount/${jail_name}/mnt/downloads    nullfs rw 0 0" >> "${jail_dir}/mount/${jail_name}.fstab"
 fi
 if [[ "${jail_name}" == "share" ]]
+then
     echo "${share_dir}                      ${jail_dir}/mount/${jail_name}/mnt/share        nullfs rw 0 0" >> "${jail_dir}/mount/${jail_name}.fstab"
 fi
 echo "${config_dir}                         ${jail_dir}/mount/${jail_name}/mnt/config       nullfs rw 0 0" >> "${jail_dir}/mount/${jail_name}.fstab"
