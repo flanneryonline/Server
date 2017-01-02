@@ -65,7 +65,7 @@ source ~/server/scripts/setup/jail/init
 
 #clears all disks, sets up partitions and zfs pools/datasets
 zfs_init
-chroot "${altroot}" ln -s /dev "${altroot}"
+ln -s /dev "${altroot}"
 system_install "${altroot}" 1 1
 
 #media_dir=$(zfs get all ${media_zfs} | grep mountpoint | awk '{print $3}')
