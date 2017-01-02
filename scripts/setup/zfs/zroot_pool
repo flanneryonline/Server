@@ -53,6 +53,7 @@ do
     gnop destroy "${gpt_nop}" >/dev/null 2>&1
 done
 
+zpool import -o altroot="${altroot}" -c "${zcache}" zroot
 zpool set bootfs=zroot zroot
 zpool set listsnapshots=on zroot
 zfs set compression=lz4 zroot
