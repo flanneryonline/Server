@@ -56,7 +56,6 @@ source ~/server/scripts/setup/etc/fstab_init
 source ~/server/scripts/setup/etc/jail_conf_init
 source ~/server/scripts/setup/etc/loader_conf_init
 source ~/server/scripts/setup/etc/make_conf_init
-source ~/server/scripts/setup/etc/pkg_init
 source ~/server/scripts/setup/etc/sysrc_init
 source ~/server/scripts/setup/etc/resolv_conf_init
 source ~/server/scripts/setup/etc/ssmtp_conf_init
@@ -79,7 +78,6 @@ make_conf_init
 resolv_conf_init
 jail_conf_init
 ssmtp_conf_init
-pkg_init
 user_init
 sysrc_init
 

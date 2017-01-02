@@ -7,8 +7,6 @@ function ssmtp_conf_init {
 
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-echo "starting ssmtp_init at ${altroot}"
-
 local password=""
 while [[ "${password}" == "" ]]
 do
@@ -30,6 +28,5 @@ echo "AuthPass=${password}" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "root:pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/revaliases"
 echo "homeadmin:pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/revaliases"
 
-echo "ssmtp_init complete"
 return 0
 }

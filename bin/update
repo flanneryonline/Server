@@ -43,12 +43,6 @@ pkg -r "${altroot}" install \
     bash \
     >/dev/null 2>&1
 
-echo "    running make replace for ssmtp"
-chroot "${altroot}" make \
-    -C /usr/ports/mail/ssmtp \
-    -DBATCH replace \
-    >/dev/null 2>&1
-
 echo "pkg_init complete."
 return 0
 
