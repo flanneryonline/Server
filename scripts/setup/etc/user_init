@@ -39,10 +39,6 @@ mkdir -p "${altroot}/usr/home/homeadmin"
 chroot "${altroot}" passwd "root"
 chroot "${altroot}" passwd "homeadmin"
 
-echo "    git clone dotfiles/server files"
-chroot -u homeadmin "${altroot}" sh -c "cd /usr/home/homeadmin && git clone https://github.com/flanneryonline/dotfiles.git"
-chroot -u homeadmin "${altroot}" sh -c "cd /usr/home/homeadmin && git clone https://github.com/flanneryonline/server.git"
-
 echo "user_init complete"
 return 0
 }
