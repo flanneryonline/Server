@@ -23,6 +23,17 @@ done
 echo "Press any key to continue. (Ctrl-C to exit)"
 read -n 1 -s
 
+if zpool list zfast >/dev/null 2>&1
+then
+    echo "zfast already exists - destroying!"
+    zpool destroy zfast >/dev/null 2>&1
+fi
+if zpool list zroot >/dev/null 2>&1
+then
+    echo "zroot already exists - destroying!"
+    zpool destroy zroot >/dev/null 2>&1
+fi
+
 for disk in ${root_drive_list} ${fast_drive_list}
 do
     echo "    Cleaning ${disk}..."

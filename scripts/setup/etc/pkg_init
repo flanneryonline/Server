@@ -43,12 +43,6 @@ pkg -r "${altroot}" install \
     bash \
     >/dev/null 2>&1
 
-echo "    installing portmaster."
-chroot "${altroot}" make \
-    -C /usr/ports/ports-mgmt/portmaster \
-    -DBATCH install clean \
-    >/dev/null 2>&1
-
 echo "    running make replace for ssmtp"
 chroot "${altroot}" make \
     -C /usr/ports/mail/ssmtp \

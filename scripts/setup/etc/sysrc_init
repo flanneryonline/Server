@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function sysrc_init {
+
+echo "Configuring host software."
+#chroot "${altroot}" python3 -m ensurepip >/dev/null 2>&1
+#chroot "${altroot}" pip3 install jedi >/dev/null 2>&1
+sysrc -R "${altroot}" zfs_enable="YES"
+sysrc -R "${altroot}" defaultrouter="${gateway}"
+sysrc -R "${altroot}" sendmail_enable="NO"
+sysrc -R "${altroot}" sendmail_submit_enable="NO"
+sysrc -R "${altroot}" sendmail_outbound_enable="NO"
+sysrc -R "${altroot}" sendmail_msp_queue_enable="NO"
+sysrc -R "${altroot}" hostname="${fqdn}"
+sysrc -R "${altroot}" cloned_interfaces="lagg0"
+for net in $(ifconfig | grep -v LOOPBACK | grep flags | cut -d: -f1)
+do
+    sysrc -R "${altroot}" "ifconfig_${net}=\"up\""
+    lag_string="${lag_string:-"laggproto lacp"} laggport ${net}"
+done
+sysrc -R "${altroot}" ifconfig_lagg0="inet ${host_ip} netmask ${subnet} ${lag_string}"
+
+return 0
+}

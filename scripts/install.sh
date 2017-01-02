@@ -43,14 +43,6 @@ then
     echo "Hostname ${fqdn} not found in DNS - setup DNS first."
     exit 1 
 fi
-if zpool list zfast >/dev/null 2>&1
-then
-    zpool destroy zfast >/dev/null 2>&1
-fi
-if zpool list zroot >/dev/null 2>&1
-then
-    zpool destroy zroot >/dev/null 2>&1
-fi
 if [[ -d "${temp_dir}" ]]
 then
     rm -R "${temp_dir}"
@@ -70,13 +62,16 @@ source ~/server/scripts/setup/etc/jail_conf_init
 source ~/server/scripts/setup/etc/loader_conf_init
 source ~/server/scripts/setup/etc/make_conf_init
 source ~/server/scripts/setup/etc/pkg_init
+source ~/server/scripts/setup/etc/sysrc_init
 source ~/server/scripts/setup/etc/resolv_conf_init
+source ~/server/scripts/setup/etc/ssmtp_conf_init
 source ~/server/scripts/setup/etc/user_init
 source ~/server/scripts/setup/jail/create
 source ~/server/scripts/setup/jail/init
 
 #clears all disks, sets up partitions and zfs pools/datasets
 zfs_init
+chroot "${altroot}" ln -s /dev "${altroot}"
 system_install "${altroot}" 1 1
 
 #media_dir=$(zfs get all ${media_zfs} | grep mountpoint | awk '{print $3}')
@@ -92,24 +87,7 @@ jail_conf_init
 ssmtp_conf_init
 user_init
 pkg_init
-
-echo "Configuring host software."
-#chroot "${altroot}" python3 -m ensurepip >/dev/null 2>&1
-#chroot "${altroot}" pip3 install jedi >/dev/null 2>&1
-sysrc -R "${altroot}" zfs_enable="YES"
-sysrc -R "${altroot}" defaultrouter="${gateway}"
-sysrc -R "${altroot}" sendmail_enable="NO"
-sysrc -R "${altroot}" sendmail_submit_enable="NO"
-sysrc -R "${altroot}" sendmail_outbound_enable="NO"
-sysrc -R "${altroot}" sendmail_msp_queue_enable="NO"
-sysrc -R "${altroot}" hostname="${fqdn}"
-sysrc -R "${altroot}" cloned_interfaces="lagg0"
-for net in $(ifconfig | grep -v LOOPBACK | grep flags | cut -d: -f1)
-do
-    sysrc -R "${altroot}" "ifconfig_${net}=\"up\""
-    lag_string="${lag_string:-"laggproto lacp"} laggport ${net}"
-done
-sysrc -R "${altroot}" ifconfig_lagg0="inet ${host_ip} netmask ${subnet} ${lag_string}"
+sysrc_init
 
 #Jail Setup
 echo "Creating jails."
@@ -120,6 +98,11 @@ do
     jail_init_${jail}
     echo "${jail} {\$ip4.addr=$(host ${jail}server${t:-}.${domain} | grep "has address" | awk '{ print $4 }');}" >> "${altroot}/etc/jail.conf"
 done
+
+echo "Almost done. Cleaning up..."
+cp "${zcache}" "${altroot}/boot/zfs/zpool.cache"
+rm -R "${temp_dir}"
+rm "${altroot}/dev"
 
 echo "Creating install snapshots and preping rolling snapshots"
 zfs snapshot -r ${root_pool}/@install
@@ -144,10 +127,9 @@ zfs snapshot -r ${fast_pool}/@thismonth
 #zfs snapshot -r ${storage_pool}/@lastmonth
 #zfs snapshot -r ${storage_pool}/@thismonth
 
-echo "Almost done. Cleaning up..."
-cp "${zcache}" "${altroot}/boot/zfs/zpool.cache"
-rm -R "${temp_dir}"
+echo "Syncing..."
 sync
 
+echo "Done!"
 exit 0
 
