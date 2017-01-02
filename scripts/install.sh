@@ -18,10 +18,8 @@ jail_dir=${JAIL_DIR:-"${altroot}/usr/jails"}
 gateway=${GATEWAY:-"10.0.0.1"}
 subnet=${SUBNET:-"255.0.0.0"}
 domain=${DOMAIN:-"flanneryonline.com"}
-hostname=${HOSTNAME:-"hostserver${t:-}"}
 temp_dir=${TEMP_DIR:-"/var/tmp/install"}
 zcache=${ZCACHE:-"${temp_dir}/zpool.cache"}
-fqdn="${hostname}.${domain}"
 arch=${ARCH:-$(uname -m)}
 root_pool=${ROOT_POOL:-"zroot"}
 fast_pool=${FAST_POOL:-"zfast"}
@@ -30,7 +28,6 @@ media_zfs=${MEDIA_ZFS:-"${storage_pool}/media"}
 download_zfs=${DOWNLOAD_ZFS:-"${storage_pool}/download"}
 config_zfs=${CONFIG_ZFS:-"${storage_pool}/config"}
 share_zfs=${SHARE_ZFS:-"${storage_pool}/share"}
-host_ip=$(host "${fqdn}" | grep "has address" | awk '{print $4}')
 
 if [[ "${TESTING:-"YES"}" == "NO" ]]
 then
@@ -38,7 +35,9 @@ then
 else
     t="test"
 fi
-
+hostname="hostserver${t:-}"
+fqdn="${hostname}.${domain}"
+host_ip=$(host "${fqdn}" | grep "has address" | awk '{print $4}')
 if [[ "${host_ip}" == "" ]]
 then
     echo "Hostname ${fqdn} not found in DNS - setup DNS first."
@@ -64,7 +63,6 @@ then
 fi
 mkdir -p "${altroot}"
 
-source ~/server/scripts/setup/zfs/zroot_reset
 source ~/server/scripts/setup/zfs/init
 source ~/server/scripts/setup/system/install
 source ~/server/scripts/setup/etc/fstab_init
@@ -89,11 +87,11 @@ system_install "${altroot}" 1 1
 fstab_init
 loader_conf_init
 make_conf_init
-pkg_init
 resolv_conf_init
-user_init
 jail_conf_init
 ssmtp_conf_init
+user_init
+pkg_init
 
 echo "Configuring host software."
 #chroot "${altroot}" python3 -m ensurepip >/dev/null 2>&1

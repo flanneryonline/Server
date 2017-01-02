@@ -9,40 +9,39 @@ local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
 echo "starting pkg_init at ${altroot}"
 
-#copied from man page
+export ASSUME_ALWAYS_YES=yes
+export PAGER=cat
+
 if \
-    chroot "${altroot}" \
-    TMPDIR=/dev/null \
-    ASSUME_ALWAYS_YES=yes \
-    PACKAGESITE=file:///nonexistent \
-    pkg info -x 'pkg(-devel)?$' >/dev/null 2>&1
+    pkg -r "${altroot}" info -x 'pkg(-devel)?$' >/dev/null 2>&1
 then
-    env ASSUME_ALWAYS_YES=YES pkg bootstrap
+    echo "    running pkg bootstrap at $altroot"
+    pkg -r "${altroot}" bootstrap >/dev/null 2>&1
 fi
 
 #make sure bootstrap worked
 if \
-    chroot "${altroot}" \
-    TMPDIR=/dev/null \
-    ASSUME_ALWAYS_YES=yes \
-    PACKAGESITE=file:///nonexistent \
-    pkg info -x 'pkg(-devel)?$' >/dev/null 2>&1
+    pkg -r "${altroot}" info -x 'pkg(-devel)?$' >/dev/null 2>&1
 then
     echo "****pkg init failed. bootstrap didn't work. Check pkg man pages for updates.****"
     return 1
 fi
 
 echo "    pkg update..."
-chroot "${altroot}" \
-TMPDIR=/dev/null \
-ASSUME_ALWAYS_YES=yes \
-pkg update >/dev/null 2>&1
+pkg -r "${altroot}" update >/dev/null 2>&1
 
 echo "    pkg upgrade..."
-chroot "${altroot}" \
-TMPDIR=/dev/null \
-ASSUME_ALWAYS_YES=yes \
-pkg upgrade >/dev/null 2>&1
+pkg -r "${altroot}" upgrade >/dev/null 2>&1
+
+echo "    installing default software."
+pkg -r "${altroot}" install \
+    vim-lite \
+    git-lite \
+    sudo \
+    zsh \
+    tmux \
+    bash \
+    >/dev/null 2>&1
 
 echo "    installing portmaster."
 chroot "${altroot}" make \
@@ -50,16 +49,10 @@ chroot "${altroot}" make \
     -DBATCH install clean \
     >/dev/null 2>&1
 
-echo "    installing default software."
-chroot "${altroot}" \
-    ASSUME_ALWAYS_YES=YES \
-    pkg install \
-        vim-lite \
-        git-lite \
-        sudo \
-        zsh \
-        tmux \
-        bash \
+echo "    running make replace for ssmtp"
+chroot "${altroot}" make \
+    -C /usr/ports/mail/ssmtp \
+    -DBATCH replace \
     >/dev/null 2>&1
 
 echo "pkg_init complete."

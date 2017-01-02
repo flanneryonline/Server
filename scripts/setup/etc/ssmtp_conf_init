@@ -30,12 +30,6 @@ echo "AuthPass=${password}" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "root:pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/revaliases"
 echo "homeadmin:pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/revaliases"
 
-echo "    running make replace for ssmtp"
-chroot "${altroot}" make \
-    -C /usr/ports/mail/ssmtp \
-    -DBATCH replace \
-    >/dev/null 2>&1
-
 echo "ssmtp_init complete"
 return 0
 }
