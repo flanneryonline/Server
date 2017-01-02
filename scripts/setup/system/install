@@ -43,11 +43,11 @@ temp_dir=${temp_dir:-"/var/tmp"}
 
 #making changes
 echo "Installing FreeBSD version ${release} for ${arch} to ${root}."
-if [[ ${kernel} -eq 0 ]]
+if [[ ${kernel} -eq 1 ]]
 then
     echo "       -with kernel"
 fi
-if [[ ${ports} -eq 0 ]]
+if [[ ${ports} -eq 1 ]]
 then
     echo "       -with ports"
 fi
