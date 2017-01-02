@@ -3,7 +3,7 @@
 set -o errexit
 set -o nounset
 
-function jail_config_init {
+function jail_conf_init {
 
 local altroot=${ALTROOT:-${altroot:-""}}
 
