@@ -81,10 +81,10 @@ source ~/server/scripts/setup/jail/init
 zfs_init
 system_install "${altroot}" 1 1
 
-media_dir=$(zfs get all ${media_zfs} | grep mountpoint | awk '{print $3}')
-download_dir=$(zfs get all ${download_zfs} | grep mountpoint | awk '{print $3}')
-config_dir=$(zfs get all ${config_zfs} | grep mountpoint | awk '{print $3}')
-share_dir=$(zfs get all ${share_zfs} | grep mountpoint | awk '{print $3}')
+#media_dir=$(zfs get all ${media_zfs} | grep mountpoint | awk '{print $3}')
+#download_dir=$(zfs get all ${download_zfs} | grep mountpoint | awk '{print $3}')
+#config_dir=$(zfs get all ${config_zfs} | grep mountpoint | awk '{print $3}')
+#share_dir=$(zfs get all ${share_zfs} | grep mountpoint | awk '{print $3}')
 
 fstab_init
 loader_conf_init
@@ -138,16 +138,15 @@ zfs snapshot -r ${fast_pool}/@lastweek
 zfs snapshot -r ${fast_pool}/@thisweek
 zfs snapshot -r ${fast_pool}/@lastmonth
 zfs snapshot -r ${fast_pool}/@thismonth
-zfs snapshot -r ${storage_pool}/@install
-zfs snapshot -r ${storage_pool}/@today
-zfs snapshot -r ${storage_pool}/@yesterday
-zfs snapshot -r ${storage_pool}/@lastweek
-zfs snapshot -r ${storage_pool}/@thisweek
-zfs snapshot -r ${storage_pool}/@lastmonth
-zfs snapshot -r ${storage_pool}/@thismonth
+#zfs snapshot -r ${storage_pool}/@install
+#zfs snapshot -r ${storage_pool}/@today
+#zfs snapshot -r ${storage_pool}/@yesterday
+#zfs snapshot -r ${storage_pool}/@lastweek
+#zfs snapshot -r ${storage_pool}/@thisweek
+#zfs snapshot -r ${storage_pool}/@lastmonth
+#zfs snapshot -r ${storage_pool}/@thismonth
 
 echo "Almost done. Cleaning up..."
-zroot_reset
 cp "${zcache}" "${altroot}/boot/zfs/zpool.cache"
 rm -R "${temp_dir}"
 sync

@@ -31,7 +31,7 @@ do
     fi
 done
 
-echo "Creating zfs boot (512k) and a zfs root partitions on drive list: ${root_drive_list}"
+echo "Creating boot and ZFS root partitions on drive list: ${root_drive_list}"
 local drive_number=0
 for root_drive in $root_drive_list
 do
@@ -46,6 +46,15 @@ do
 done
 
 zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" zroot mirror ${zpool_list} >/dev/null 2>&1
+zpool export zroot
+
+for gpt_nop in /dev/gpt/boot*.nop
+do
+    gnop destroy "${gpt_nop}" >/dev/null 2>&1
+done
+
+zpool set bootfs=zroot zroot
+zpool set listsnapshots=on zroot
 zfs set compression=lz4 zroot
 zfs set atime=off zroot
 

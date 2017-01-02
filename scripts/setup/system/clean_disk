@@ -16,11 +16,13 @@ local drive=$1
 # Check if arg is a drive
 if [[ ! -e /dev/${drive} ]]
 then 
+    echo "****Failed to delete $drive - not a drive****"
     return 1
 fi
 
 if ! gpart show ${drive} >/dev/null 2>&1
 then
+    echo "    $drive seems to already be clean."
     return 0
 fi
 
@@ -32,10 +34,18 @@ then
 fi
 while [[ ${max} > 0 ]]
 do
-    gpart delete -i ${max} "${drive}" >/dev/null 2>&1
-    ((max = max - 1))
+    echo "    Destroying partition $max on drive $drive"
+    if gpart delete -i ${max} ${drive} >/dev/null 2>&1
+    then
+        echo "    partition $max destroyed."
+    else
+        echo "    gpart exit code: $?"
+        echo "    possible issue with partition $max - moving on."
+    fi
+    ((max--))
 done
-gpart destroy "${drive}" >/dev/null 2>&1
+echo "    destroying drive $drive"
+gpart destroy ${drive} >/dev/null 2>&1
 
 return 0
 }

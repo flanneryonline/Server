@@ -20,14 +20,15 @@ do
 done
 
 #resolv.conf
+mkdir -p "${altroot}/usr/local/etc/ssmtp"
 echo "root=pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "mailhub=smtp.mail.wowway.com" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "rewriteDomain=flanneryonline.com" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "AuthUser=pflannery" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "AuthPass=${password}" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 
-echo "root:pat@flanneryonline.com" > "${altroot}/etc/ssmtp/revaliases"
-echo "homeadmin:pat@flanneryonline.com" > "${altroot}/etc/ssmtp/revaliases"
+echo "root:pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/revaliases"
+echo "homeadmin:pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/revaliases"
 
 echo "    running make replace for ssmtp"
 chroot "${altroot}" make \

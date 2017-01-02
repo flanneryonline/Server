@@ -15,7 +15,7 @@ source ~/server/scripts/setup/zfs/jail_datasets
 function zfs_init {
 
 echo "WARNING: The following disks will be DELETED!!!"
-for disk in "${root_drive_list} ${fast_drive_list}"
+for disk in ${root_drive_list} ${fast_drive_list}
 do
     echo "${disk}"
 done
@@ -23,7 +23,7 @@ done
 echo "Press any key to continue. (Ctrl-C to exit)"
 read -n 1 -s
 
-for disk in "${root_drive_list} ${fast_drive_list}"
+for disk in ${root_drive_list} ${fast_drive_list}
 do
     echo "    Cleaning ${disk}..."
     clean_disk $disk
@@ -35,8 +35,8 @@ zroot_pool
 zroot_datasets
 zfast_pool
 zfast_datasets
-zstorage_pool
-zstorage_datasets
+#zstorage_pool
+#zstorage_datasets
 jail_datasets
 
 return 0

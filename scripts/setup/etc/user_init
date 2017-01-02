@@ -9,6 +9,29 @@ local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
 echo "starting user_init at ${altroot}"
 
+echo "    pw.conf setup"
+echo "defaultpasswd=no" > "${altroot}/etc/pw.conf"
+echo "reuseuids=yes" >> "${altroot}/etc/pw.conf"
+echo "reusegids=yes" >> "${altroot}/etc/pw.conf"
+echo "nispasswd=" >> "${altroot}/etc/pw.conf"
+echo "skeleton=/usr/share/skel" >> "${altroot}/etc/pw.conf"
+echo "#newmail=" >> "${altroot}/etc/pw.conf"
+echo "logfile=no" >> "${altroot}/etc/pw.conf"
+echo "home=/usr/home" >> "${altroot}/etc/pw.conf"
+echo "#homemode=" >> "${altroot}/etc/pw.conf"
+echo "#shellpath=" >> "${altroot}/etc/pw.conf"
+echo "#shells=" >> "${altroot}/etc/pw.conf"
+echo "defaultshell=/usr/local/bin/zsh" >> "${altroot}/etc/pw.conf"
+echo "defaultgroup=no" >> "${altroot}/etc/pw.conf"
+echo "#extragroups=" >> "${altroot}/etc/pw.conf"
+echo "defaultclass=no" >> "${altroot}/etc/pw.conf"
+echo "#minuid=1000" >> "${altroot}/etc/pw.conf"
+echo "#maxuid=32000" >> "${altroot}/etc/pw.conf"
+echo "#mingid=1000" >> "${altroot}/etc/pw.conf"
+echo "#maxgid=32000" >> "${altroot}/etc/pw.conf"
+echo "expire_days=0" >> "${altroot}/etc/pw.conf"
+echo "password_days=0" >> "${altroot}/etc/pw.conf"
+
 echo "    host user/group setup"
 chroot "${altroot}" pw useradd -n "media" -u 1001 -s "/usr/sbin/nologin" -d "/nonexistent" -w no
 chroot "${altroot}" pw useradd -n "homeadmin" -u 5000 -s "/usr/local/bin/zsh" -G "wheel, media" -w no
@@ -16,8 +39,8 @@ chroot "${altroot}" passwd "root"
 chroot "${altroot}" passwd "homeadmin"
 
 echo "    git clone dotfiles/server files"
-chroot "${altroot}" cd /usr/home/homeadmin && git clone https://github.com/flanneryonline/dotfiles.git
-chroot "${altroot}" cd /usr/home/homeadmin && git clone https://github.com/flanneryonline/server.git
+chroot -u homeadmin "${altroot}" cd /usr/home/homeadmin && git clone https://github.com/flanneryonline/dotfiles.git
+chroot -u homeadmin "${altroot}" cd /usr/home/homeadmin && git clone https://github.com/flanneryonline/server.git
 
 echo "user_init complete"
 return 0
