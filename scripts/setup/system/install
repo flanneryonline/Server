@@ -73,8 +73,6 @@ then
     then
         echo "Installing ports. Please wait..."
         pv "${temp_dir}/ports.txz" | tar -xf - -C "${root}"
-        echo "updating ports..."
-        chroot "${altroot}" portsnap auto >/dev/null 2>&1
     fi
 else
     echo "Installing base. Please wait..."
@@ -88,8 +86,6 @@ else
     then
         echo "Installing ports. Please wait..."
         tar -xf "${temp_dir}/ports.txz" -C "${root}" >/dev/null 2>&1
-        echo "updating ports..."
-        chroot "${altroot}" portsnap auto >/dev/null 2>&1
     fi
 fi
 rm "${temp_dir}/base.txz"
