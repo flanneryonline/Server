@@ -16,6 +16,7 @@ sysrc -R "${altroot}" sendmail_outbound_enable="NO"
 sysrc -R "${altroot}" sendmail_msp_queue_enable="NO"
 sysrc -R "${altroot}" hostname="${fqdn}"
 sysrc -R "${altroot}" cloned_interfaces="lagg0"
+sysrc -R "${altroot}" jail_enable="YES"
 for net in $(ifconfig | grep -v LOOPBACK | grep flags | cut -d: -f1)
 do
     sysrc -R "${altroot}" "ifconfig_${net}=\"up\""

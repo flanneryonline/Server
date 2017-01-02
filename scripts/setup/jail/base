@@ -4,7 +4,6 @@ set -o errexit
 set -o nounset
 
 source ~/server/scripts/setup/system/install
-source ~/server/scripts/setup/etc/pkg_init
 source ~/server/scripts/setup/etc/user_init
 
 function jail_base {
@@ -47,7 +46,6 @@ zfs create "${jail_zfs}/base/${jail_release}"
 zfs create "${jail_zfs}/staging/${jail_release}"
 system_install "${jail_dir}/base/${jail_release}"
 user_init "${jail_dir}/base/${jail_release}"
-pkg_init "${jail_dir}/base/${jail_release}"
 
 echo "    setting up base jail directory structure"
 mkdir -p "${jail_dir}/staging/${jail_release}/home"

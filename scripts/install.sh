@@ -61,7 +61,6 @@ source ~/server/scripts/setup/etc/resolv_conf_init
 source ~/server/scripts/setup/etc/ssmtp_conf_init
 source ~/server/scripts/setup/etc/user_init
 source ~/server/scripts/setup/jail/create
-source ~/server/scripts/setup/jail/init
 
 #clears all disks, sets up partitions and zfs pools/datasets
 zfs_init
@@ -86,7 +85,6 @@ echo "Creating jails."
 for jail in "${jail_list}"
 do
     jail_create "${jail}" "${release}"
-    jail_init_${jail}
     echo "${jail} {\$ip4.addr=$(host ${jail}server${t:-}.${domain} | grep "has address" | awk '{ print $4 }');}" >> "${altroot}/etc/jail.conf"
 done
 
