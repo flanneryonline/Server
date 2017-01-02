@@ -52,13 +52,14 @@ mkdir -p "${jail_dir}/staging/${jail_release}/home"
 mkdir -p "${jail_dir}/staging/${jail_release}/portsbuild"
 mkdir -p "${jail_dir}/staging/${jail_release}/skeleton"
 
+chflags -R noschg "${jail_dir}/base/${jail_release}/var/empty"
+
 mv "${jail_dir}/base/${jail_release}/etc" "${jail_dir}/staging/${jail_release}"
 mv "${jail_dir}/base/${jail_release}/usr/local" "${jail_dir}/staging/${jail_release}/usr-local"
 mv "${jail_dir}/base/${jail_release}/tmp" "${jail_dir}/staging/${jail_release}"
 mv "${jail_dir}/base/${jail_release}/var" "${jail_dir}/staging/${jail_release}"
 mv "${jail_dir}/base/${jail_release}/root" "${jail_dir}/staging/${jail_release}"
 
-cp "${altroot}/usr/local/etc/portmaster.rc" "${jail_dir}/staging/${jail_release}/usr/local/etc/portmaster.rc"
 cp "${altroot}/usr/local/etc/ssmtp/ssmtp.conf" "${jail_dir}/staging/${jail_release}/usr/local/etc/ssmtp/ssmtp.conf"
 cp "${altroot}/etc/resolv.conf" "${jail_dir}/staging/${jail_release}/etc/resolv.conf"
 cp "${altroot}/etc/make.conf" "${jail_dir}/staging/${jail_release}/etc/make.conf"
