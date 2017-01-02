@@ -14,7 +14,8 @@ delete_drive_list="${root_drive_list} ${fast_drive_list}"
 
 release=${RELEASE:-"11.0-RELEASE"}
 altroot=${ALTROOT:-"/mnt"}
-jail_dir=${JAIL_DIR:-"${altroot}/usr/jails"}
+base_jail_dir=${BASE_JAIL_DIR:-"/usr/jails"}
+jail_dir=${JAIL_DIR:-"${altroot}${base_jail_dir}"}
 gateway=${GATEWAY:-"10.0.0.1"}
 subnet=${SUBNET:-"255.0.0.0"}
 domain=${DOMAIN:-"flanneryonline.com"}
