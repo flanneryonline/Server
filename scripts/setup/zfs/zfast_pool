@@ -5,8 +5,8 @@ set -o nounset
 
 function zfast_pool {
 
-fast_drive_list=${fast_drive_list:-""}
-altroot=${altroot:-""}
+local fast_drive_list=${fast_drive_list:-""}
+local altroot=${altroot:-""}
 
 if [[ "${fast_drive_list}" == "" ]]
 then
