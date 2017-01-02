@@ -66,8 +66,8 @@ source ~/server/scripts/setup/jail/init
 
 #clears all disks, sets up partitions and zfs pools/datasets
 zfs_init
-rm -R "${altroot}/dev"
-ln -s /dev "${altroot}"
+mkdir -p "${altroot}/dev"
+mount_nullfs -o ro /dev "${altroot}/dev"
 system_install "${altroot}" 1 1
 
 #media_dir=$(zfs get all ${media_zfs} | grep mountpoint | awk '{print $3}')
@@ -98,7 +98,7 @@ done
 echo "Almost done. Cleaning up..."
 cp "${zcache}" "${altroot}/boot/zfs/zpool.cache"
 rm -R "${temp_dir}"
-rm "${altroot}/dev"
+umount "${altroot}/dev"
 
 echo "Creating install snapshots and preping rolling snapshots"
 zfs snapshot -r ${root_pool}/@install
