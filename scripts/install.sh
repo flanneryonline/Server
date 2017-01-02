@@ -79,8 +79,8 @@ make_conf_init
 resolv_conf_init
 jail_conf_init
 ssmtp_conf_init
-user_init
 pkg_init
+user_init
 sysrc_init
 
 #Jail Setup
