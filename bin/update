@@ -1,49 +1,48 @@
 #!/usr/bin/env bash
 
 set -o errexit
-set -o nounset
-
-function pkg_init {
-
-local altroot=${1:-${ALTROOT:-${altroot:-}}}
-
-echo "starting pkg_init at ${altroot}"
 
 export ASSUME_ALWAYS_YES=yes
 export PAGER=cat
 
+echo "Attempting to update FreeBSD."
 if \
-    pkg -r "${altroot}" info -x 'pkg(-devel)?$' >/dev/null 2>&1
+    pkg info -x 'pkg(-devel)?$' >/dev/null 2>&1
 then
-    echo "    running pkg bootstrap at $altroot"
-    pkg -r "${altroot}" bootstrap >/dev/null 2>&1
+    echo "    running pkg bootstrap"
+    pkg bootstrap
 fi
 
 #make sure bootstrap worked
 if \
-    pkg -r "${altroot}" info -x 'pkg(-devel)?$' >/dev/null 2>&1
+    pkg info -x 'pkg(-devel)?$' >/dev/null 2>&1
 then
     echo "****pkg init failed. bootstrap didn't work. Check pkg man pages for updates.****"
-    return 1
+    exit 1
 fi
 
 echo "    pkg update..."
-pkg -r "${altroot}" update >/dev/null 2>&1
+pkg update
 
 echo "    pkg upgrade..."
-pkg -r "${altroot}" upgrade >/dev/null 2>&1
+pkg upgrade
 
-echo "    installing default software."
-pkg -r "${altroot}" install \
-    vim-lite \
-    git-lite \
-    sudo \
-    zsh \
-    tmux \
-    bash \
-    >/dev/null 2>&1
+echo "    pkg autoremove..."
+pkg autoremove
 
-echo "pkg_init complete."
-return 0
+echo "   Running audit..."
+pkg audit -F
 
-}
+echo "    freebsd-update..."
+freebsd-update fetch
+freebsd-update install
+
+echo "    cleaning up..."
+pkg clean -ay
+for i in /var/db/freebsd-update/files/*
+do 
+    rm "$i"
+done
+
+echo "Update complete."
+exit 0
