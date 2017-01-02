@@ -65,6 +65,7 @@ source ~/server/scripts/setup/jail/init
 
 #clears all disks, sets up partitions and zfs pools/datasets
 zfs_init
+rm -R "${altroot}/dev"
 ln -s /dev "${altroot}"
 system_install "${altroot}" 1 1
 
