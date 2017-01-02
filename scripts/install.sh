@@ -49,12 +49,6 @@ then
 fi
 mkdir -p "${temp_dir}"
 
-if [[ -d "${altroot}" ]]
-then
-    rm -R "${altroot}"
-fi
-mkdir -p "${altroot}"
-
 source ~/server/scripts/setup/zfs/init
 source ~/server/scripts/setup/system/install
 source ~/server/scripts/setup/etc/fstab_init
