@@ -45,6 +45,7 @@ do
     ((drive_number = drive_number + 1))
 done
 
+echo "Creating zroot pool at $altroot using cache at $zcache"
 zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" zroot mirror ${zpool_list} >/dev/null 2>&1
 zpool export zroot
 
