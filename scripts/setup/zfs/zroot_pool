@@ -47,14 +47,16 @@ done
 
 echo "Creating zroot pool at $altroot using cache at $zcache"
 zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" zroot mirror ${zpool_list} >/dev/null 2>&1
-zpool export zroot
 
+echo "ZFS re-import to set ashift=12 using gnop trick"
+zpool export zroot
 for gpt_nop in /dev/gpt/boot*.nop
 do
     gnop destroy "${gpt_nop}" >/dev/null 2>&1
 done
+zpool import -o altroot="${altroot}" -o cachefile="${zcache}" zroot
 
-zpool import -o altroot="${altroot}" -c "${zcache}" zroot
+echo "setting ZFS flags"
 zpool set bootfs=zroot zroot
 zpool set listsnapshots=on zroot
 zfs set compression=lz4 zroot
