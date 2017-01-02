@@ -60,6 +60,7 @@ mv "${jail_dir}/base/${jail_release}/tmp" "${jail_dir}/staging/${jail_release}"
 mv "${jail_dir}/base/${jail_release}/var" "${jail_dir}/staging/${jail_release}"
 mv "${jail_dir}/base/${jail_release}/root" "${jail_dir}/staging/${jail_release}"
 
+mkdir -p "${jail_dir}/staging/${jail_release}/usr/local/etc/ssmtp"
 cp "${altroot}/usr/local/etc/ssmtp/ssmtp.conf" "${jail_dir}/staging/${jail_release}/usr/local/etc/ssmtp/ssmtp.conf"
 cp "${altroot}/etc/resolv.conf" "${jail_dir}/staging/${jail_release}/etc/resolv.conf"
 cp "${altroot}/etc/make.conf" "${jail_dir}/staging/${jail_release}/etc/make.conf"
