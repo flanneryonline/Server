@@ -35,6 +35,7 @@ echo "password_days=0" >> "${altroot}/etc/pw.conf"
 echo "    host user/group setup"
 chroot "${altroot}" pw useradd -n "media" -u 1001 -s "/usr/sbin/nologin" -d "/nonexistent" -w no
 chroot "${altroot}" pw useradd -n "homeadmin" -u 5000 -s "/usr/local/bin/zsh" -G "wheel, media" -w no
+mkdir -p "${altroot}/usr/home/homeadmin"
 chroot "${altroot}" passwd "root"
 chroot "${altroot}" passwd "homeadmin"
 
