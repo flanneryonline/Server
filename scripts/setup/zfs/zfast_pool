@@ -28,7 +28,7 @@ do
     fi
 done
 
-echo "Creating ZFS partitions on drive list: ${fast_drive_list}"
+echo "    Creating ZFS partitions on drive list: ${fast_drive_list}"
 local drive_number=0
 for fast_drive in ${fast_drive_list}
 do
@@ -40,7 +40,19 @@ do
     ((drive_number = drive_number + 1))
 done
 
+echo "    Creating zfast pool at $altroot using cache at $zcache"
 zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" zfast ${zpool_list} >/dev/null 2>&1
+
+echo "    ZFS re-import to set ashift=12 using gnop trick"
+zpool export zfast
+for gpt_nop in /dev/gpt/fast*.nop
+do
+    gnop destroy "${gpt_nop}" >/dev/null 2>&1
+done
+zpool import -o altroot="${altroot}" -o cachefile="${zcache}" zfast
+
+echo "    setting ZFS flags"
+zpool set listsnapshots=on zfast
 zfs set compression=lz4 zfast
 zfs set atime=off zfast
 
