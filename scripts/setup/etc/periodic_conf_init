@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function periodic_conf_init {
+
+local altroot=${1:-${ALTROOT:-${altroot:-}}}
+
+echo "    periodic.conf created"
+return 0
+}

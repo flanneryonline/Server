@@ -8,6 +8,6 @@ function zroot_datasets {
 zfs create -o mountpoint=none zroot/root
 zfs create -o mountpoint=/ zroot/root/current
 
+echo "    zroot datasets created"
 return 0
-
 }

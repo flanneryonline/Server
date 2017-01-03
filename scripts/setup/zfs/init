@@ -14,23 +14,14 @@ source ~/server/scripts/setup/zfs/jail_datasets
 
 function zfs_init {
 
-echo "WARNING: The following disks will be DELETED!!!"
-for disk in ${root_drive_list} ${fast_drive_list}
-do
-    echo "${disk}"
-done
-
-echo "Press any key to continue. (Ctrl-C to exit)"
-read -n 1 -s
-
 if zpool list zfast >/dev/null 2>&1
 then
-    echo "zfast already exists - destroying!"
+    echo "    zfast already exists - destroying!"
     zpool destroy -f zfast >/dev/null 2>&1
 fi
 if zpool list zroot >/dev/null 2>&1
 then
-    echo "zroot already exists - destroying!"
+    echo "    zroot already exists - destroying!"
     zpool destroy -f zroot >/dev/null 2>&1
 fi
 
@@ -40,7 +31,7 @@ do
     clean_disk $disk
 done
 
-echo "Starting ZFS setup."
+echo "  --Starting ZFS setup."
 
 zroot_pool
 zroot_datasets
@@ -49,6 +40,8 @@ zfast_datasets
 #zstorage_pool
 #zstorage_datasets
 jail_datasets
+
+echo "  --ZFS setup complete."
 
 return 0
 

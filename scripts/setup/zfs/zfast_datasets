@@ -13,6 +13,6 @@ zfs create -o mountpoint=/tmp "zfast/tmp"
 zfs create -o mountpoint=/usr/home "zfast/home"
 zfs create -o mountpoint=/usr/ports "zfast/ports"
 
+echo "    zfast datasets created"
 return 0
-
 }

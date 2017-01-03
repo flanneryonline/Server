@@ -7,13 +7,10 @@ function resolv_conf_init {
 
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-echo "starting resolv_conf_init at ${altroot}"
-
-#resolv.conf
 echo "search ${DOMAIN:-${domain:-"flanneryonline.com"}}" > "${altroot}/etc/resolv.conf"
 echo "nameserver ${GATEWAY:-${gateway:-"10.0.0.1"}}" >> "${altroot}/etc/resolv.conf"
 echo "nameserver 8.8.8.8" >> "${altroot}/etc/resolv.conf"
 
-echo "resolv_conf_init complete"
+echo "    resolv.conf created"
 return 0
 }

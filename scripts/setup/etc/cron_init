@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function cron_init {
+
+local altroot=${1:-${ALTROOT:-${altroot:-}}}
+
+
+echo "    crontab created"
+return 0
+}

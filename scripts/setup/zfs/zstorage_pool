@@ -5,8 +5,7 @@ set -o nounset
 
 function zstorage_pool {
 
-
+echo "    Storage ZFS setup complete."
 return 0
-
 }
 

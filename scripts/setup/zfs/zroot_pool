@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# 
-# This script assumes the list of drives provided have been wiped already.
-#
 
 set -o errexit
 set -o nounset
@@ -13,20 +10,20 @@ altroot=${altroot:-""}
 
 if [[ "${root_drive_list}" == "" ]]
 then
-    echo "Failed to setup zroot pool. root_drive_list is not set."
+    echo "****Failed to setup zroot pool. root_drive_list is not set.****"
     return 1
 fi
 if [[ "${altroot}" == "" ]]
 then
-    echo "Failed to setup zroot pool. altroot is not set."
+    echo "****Failed to setup zroot pool. altroot is not set.****"
     return 1
 fi
 
 for check_drive in $root_drive_list
 do
-    if ! ls "/dev/${check_drive}" >/dev/null 2>&1
+    if [[ ! -e /dev/${check_drive} ]]
     then
-        echo "Failed to setup zroot pool. $check_drive is not a valid drive."
+        echo "****Failed to setup zroot pool. $check_drive is not a valid drive.****"
         return 1
     fi
 done
@@ -62,8 +59,7 @@ zpool set listsnapshots=on zroot
 zfs set compression=lz4 zroot
 zfs set atime=off zroot
 
-echo "Root drive ZFS setup complete."
+echo "    Root drive ZFS setup complete."
 return 0
-
 }
 

@@ -7,15 +7,12 @@ function loader_conf_init {
 
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-echo "starting loader_conf_init at ${altroot}"
-
-#loader.conf
 echo 'vfs.root.mountfrom="zfs:zroot/root/current"' >> "${altroot}/boot/loader.conf"
 echo 'kern.geom.label.disk_ident.enable="0"' >> "${altroot}/boot/loader.conf"
 echo 'kern.geom.label.gpt.enable="1"' >> "${altroot}/boot/loader.conf"
 echo 'kern.geom.label.gptid.enable="0"' >> "${altroot}/boot/loader.conf"
 echo 'zfs_load="YES"' >> "${altroot}/boot/loader.conf"
 
-echo "loader_conf_init complete"
+echo "    loader.conf created"
 return 0
 }

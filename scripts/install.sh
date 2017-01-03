@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-#
-# This script assumes it was cloned from git repo to ~
-#
 
 set -o errexit
 set -o nounset
@@ -26,96 +23,70 @@ root_pool=${ROOT_POOL:-"zroot"}
 fast_pool=${FAST_POOL:-"zfast"}
 storage_pool=${STORAGE_POOL:-"zstorage"}
 media_zfs=${MEDIA_ZFS:-"${storage_pool}/media"}
+media_dir=${MEDIA_DIR:-"/mnt/media"}
 download_zfs=${DOWNLOAD_ZFS:-"${storage_pool}/download"}
+download_dir=${DOWNLOAD_DIR:-"/mnt/download"}
 config_zfs=${CONFIG_ZFS:-"${storage_pool}/config"}
+config_dir=${CONFIG_DIR:-"/mnt/config"}
 share_zfs=${SHARE_ZFS:-"${storage_pool}/share"}
-
-if [[ "${TESTING:-"YES"}" == "NO" ]]
-then
-    t=""
-else
-    t="test"
-fi
-hostname="hostserver${t:-}"
+share_dir=${SHARE_DIR:-"/mnt/share"}
+hostname=${SERVER_HOSTNAME:-"hostserver${t:-}"}
 fqdn="${hostname}.${domain}"
 host_ip=$(host "${fqdn}" | grep "has address" | awk '{print $4}')
-if [[ "${host_ip}" == "" ]]
+
+if [[ "${TESTING:-"YES"}" = "NO" ]] ; then t=""; else t="test"; fi
+
+if [[ -z ${host_ip// } ]]
 then
     echo "Hostname ${fqdn} not found in DNS - setup DNS first."
     exit 1 
 fi
-if [[ -d "${temp_dir}" ]]
-then
-    rm -R "${temp_dir}"
-fi
+
+#dialog box here?
+
+if [[ -d "${temp_dir}" ]] ; then rm -R "${temp_dir}"; fi
 mkdir -p "${temp_dir}"
 
 source ~/server/scripts/setup/zfs/init
+
 source ~/server/scripts/setup/system/install
+
+source ~/server/scripts/setup/etc/cron_init
 source ~/server/scripts/setup/etc/fstab_init
 source ~/server/scripts/setup/etc/jail_conf_init
 source ~/server/scripts/setup/etc/loader_conf_init
 source ~/server/scripts/setup/etc/make_conf_init
-source ~/server/scripts/setup/etc/sysrc_init
+source ~/server/scripts/setup/etc/periodic_conf_init
+source ~/server/scripts/setup/etc/rc_conf_init
 source ~/server/scripts/setup/etc/resolv_conf_init
+source ~/server/scripts/setup/etc/sshd_config_init
 source ~/server/scripts/setup/etc/ssmtp_conf_init
 source ~/server/scripts/setup/etc/user_init
-source ~/server/scripts/setup/jail/create
 
-#clears all disks, sets up partitions and zfs pools/datasets
+echo "Setting up ZFS."
 zfs_init
+
+echo "Installing system."
 system_install "${altroot}" 1 1
 
-#media_dir=$(zfs get all ${media_zfs} | grep mountpoint | awk '{print $3}')
-#download_dir=$(zfs get all ${download_zfs} | grep mountpoint | awk '{print $3}')
-#config_dir=$(zfs get all ${config_zfs} | grep mountpoint | awk '{print $3}')
-#share_dir=$(zfs get all ${share_zfs} | grep mountpoint | awk '{print $3}')
-
+echo "Configuring system."
+cron_init
 fstab_init
 loader_conf_init
 make_conf_init
+periodic_conf_init
 resolv_conf_init
-jail_conf_init
+sshd_config_init
 ssmtp_conf_init
+jail_conf_init
 user_init
 sysrc_init
 
-#Jail Setup
-echo "Creating jails."
-for jail in "${jail_list}"
-do
-    jail_create "${jail}" "${release}"
-    echo "${jail} {\$ip4.addr=$(host ${jail}server${t:-}.${domain} | grep "has address" | awk '{ print $4 }');}" >> "${altroot}/etc/jail.conf"
-done
-
-echo "Almost done. Cleaning up..."
+echo "Cleaning up..."
 cp "${zcache}" "${altroot}/boot/zfs/zpool.cache"
 rm -R "${temp_dir}"
 
-echo "Creating install snapshots and preping rolling snapshots"
-zfs snapshot -r ${root_pool}/@install
-zfs snapshot -r ${root_pool}/@today
-zfs snapshot -r ${root_pool}/@yesterday
-zfs snapshot -r ${root_pool}/@lastweek
-zfs snapshot -r ${root_pool}/@thisweek
-zfs snapshot -r ${root_pool}/@lastmonth
-zfs snapshot -r ${root_pool}/@thismonth
-zfs snapshot -r ${fast_pool}/@install
-zfs snapshot -r ${fast_pool}/@today
-zfs snapshot -r ${fast_pool}/@yesterday
-zfs snapshot -r ${fast_pool}/@lastweek
-zfs snapshot -r ${fast_pool}/@thisweek
-zfs snapshot -r ${fast_pool}/@lastmonth
-zfs snapshot -r ${fast_pool}/@thismonth
-#zfs snapshot -r ${storage_pool}/@install
-#zfs snapshot -r ${storage_pool}/@today
-#zfs snapshot -r ${storage_pool}/@yesterday
-#zfs snapshot -r ${storage_pool}/@lastweek
-#zfs snapshot -r ${storage_pool}/@thisweek
-#zfs snapshot -r ${storage_pool}/@lastmonth
-#zfs snapshot -r ${storage_pool}/@thismonth
-
-echo "Syncing..."
+echo "Syncing."
 sync
 
 echo "Done!"

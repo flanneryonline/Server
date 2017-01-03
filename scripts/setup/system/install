@@ -8,18 +8,18 @@ function system_install {
 local root=${1:-}
 local kernel=${2:-0}
 local ports=${3:-0}
-
-# Check variables
-if [[ ${root} == "" ]]
-then
-    echo "No value passed for install location."
-    return 1
-fi
-# This will change over time based on what is supported
-local valid_arch="amd64 arm i386 ia64 powerpc sparc64"
-local valid_release_num="9.3 10.1 10.2 10.3 11.0"
+local temp_dir=${temp_dir:-"/var/tmp"}
+local valid_arch="amd64 arm i386"
+local valid_release_num="10.3 11.0"
 local arch_valid=0
 local release_valid=0
+
+if [[ -z "${root// }" ]]
+then
+    echo "****Failed to install system. No value passed for install location.****"
+    return 1
+fi
+
 for arch_check in ${valid_arch}
 do
     if [[ ${arch} == ${arch_check} ]]
@@ -36,71 +36,68 @@ do
 done
 if [[ $release_valid -ne 1 ]] || [[ $arch_valid -ne 1 ]] || [[ ! -d "${root}" ]]
 then
-    echo "Invalid variable set."
+    echo "****Failed to install system. Release, architecture, or root location invalid.****"
     return 1
 fi
-temp_dir=${temp_dir:-"/var/tmp"}
 
-#making changes
-echo "Installing FreeBSD version ${release} for ${arch} to ${root}."
+echo "  --Installing FreeBSD version ${release} for ${arch} to ${root}."
+if [[ ${kernel} -eq 1 ]] ; then echo "     -with kernel"; fi
+if [[ ${ports} -eq 1 ]] ; then echo "     -with ports"; fi
+
+if [[ ! -f "${temp_dir}/base-${release}.txz" ]]
+then
+    curl -fLo "${temp_dir}/base-${release}.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/base.txz"
+fi
+
 if [[ ${kernel} -eq 1 ]]
 then
-    echo "       -with kernel"
+    if [[ ! -f "${temp_dir}/kernel-${release}.txz" ]]
+    then
+        curl -fLo "${temp_dir}/kernel-${release}.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/kernel.txz"
+    fi
 fi
 if [[ ${ports} -eq 1 ]]
 then
-    echo "       -with ports"
+    if [[ ! -f "${temp_dir}/ports-${release}.txz" ]]
+    then
+        curl -fLo "${temp_dir}/ports-${release}.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/ports.txz"
+    fi
 fi
-curl -fLo "${temp_dir}/base.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/base.txz"
+
+echo "    Installing base. Please wait..."
+pv "${temp_dir}/base-${release}.txz" | tar -xf - -C "${root}"
 if [[ ${kernel} -eq 1 ]]
 then
-    curl -fLo "${temp_dir}/kernel.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/kernel.txz"
+    echo "    Installing kernel. Please wait..."
+    pv "${temp_dir}/kernel-${release}.txz" | tar -xf - -C "${root}"
 fi
 if [[ ${ports} -eq 1 ]]
 then
-    curl -fLo "${temp_dir}/ports.txz" "ftp://ftp.freebsd.org/pub/FreeBSD/releases/${arch}/${release}/ports.txz"
+    echo "    Installing ports. Please wait..."
+    pv "${temp_dir}/ports-${release}.txz" | tar -xf - -C "${root}"
 fi
-if command -v pv >/dev/null 2>&1
+
+if [[ ${REMOVE_INSTALL_FILES} -eq 1 ]]
 then
-    echo "Installing base. Please wait..."
-    pv "${temp_dir}/base.txz" | tar -xf - -C "${root}"
+    echo "    Removing temp files."
+    rm "${temp_dir}/base-${release}.txz"
     if [[ ${kernel} -eq 1 ]]
     then
-        echo "Installing kernel. Please wait..."
-        pv "${temp_dir}/kernel.txz" | tar -xf - -C "${root}"
+        rm "${temp_dir}/kernel-${release}.txz"
     fi
     if [[ ${ports} -eq 1 ]]
     then
-        echo "Installing ports. Please wait..."
-        pv "${temp_dir}/ports.txz" | tar -xf - -C "${root}"
+        rm "${temp_dir}/ports-${release}.txz"
     fi
-else
-    echo "Installing base. Please wait..."
-    tar -xf "${temp_dir}/base.txz" -C "${root}" >/dev/null 2>&1
-    if [[ ${kernel} -eq 1 ]]
-    then
-        echo "Installing kernel. Please wait..."
-        tar -xf "${temp_dir}/kernel.txz" -C "${root}" >/dev/null 2>&1
-    fi
-    if [[ ${ports} -eq 1 ]]
-    then
-        echo "Installing ports. Please wait..."
-        tar -xf "${temp_dir}/ports.txz" -C "${root}" >/dev/null 2>&1
-    fi
-fi
-rm "${temp_dir}/base.txz"
-if [[ ${kernel} -eq 1 ]]
-then
-    rm "${temp_dir}/kernel.txz"
-fi
-if [[ ${ports} -eq 1 ]]
-then
-    rm "${temp_dir}/ports.txz"
 fi
 
-#create home sym link
 chroot ${root} ln -s usr/home home
 
-echo "Install successful."
+echo "    upgrading system to latest"
+export ASSUME_ALWAYS_YES=YES
+export PAGER=cat
+freebsd-update -b $root fetch install >/dev/null 2>&1
+
+echo "    Install successful."
 return 0
 }

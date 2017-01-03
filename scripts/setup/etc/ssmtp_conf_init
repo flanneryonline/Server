@@ -8,16 +8,15 @@ function ssmtp_conf_init {
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
 local password=""
-while [[ "${password}" == "" ]]
+while [[ -z "${password// }" ]]
 do
     read -s -p "Enter ssmtp password: " password
-    if [[ "${password}" == "" ]] 
+    if [[ -z "${password// }" ]] 
     then 
         echo "    must not be blank! try again..."
     fi
 done
 
-#resolv.conf
 mkdir -p "${altroot}/usr/local/etc/ssmtp"
 echo "root=pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "mailhub=smtp.mail.wowway.com" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
@@ -28,5 +27,6 @@ echo "AuthPass=${password}" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "root:pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/revaliases"
 echo "homeadmin:pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/revaliases"
 
+echo "    ssmtp.conf created"
 return 0
 }

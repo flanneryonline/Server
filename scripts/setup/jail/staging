@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+source ~/server/scripts/setup/system/install
+source ~/server/scripts/setup/etc/user_init
+
+function jail_staging {
+
+if \
+    zfs list -d 0 -H -t snapshot -o name \
+    "${jail_zfs}/staging/${jail_release}@base" \
+    >/dev/null 2>&1
+then
+    echo "    Staging jail for $jail_release already exists. Moving on."
+    return 0
+fi
+
+if \
+    zfs list -d 0 -H -t filesystem -o name \
+    "${jail_zfs}/staging/${jail_release}" \
+    >/dev/null 2>&1
+then  
+    echo "  **warning - jail staging for release $jail_release seems to already exist but does not have a proper snapshot - it will be removed!"
+    zfs destroy -R -f "${jail_zfs}/staging/${jail_release}"
+fi
+
+zfs create "${jail_zfs}/staging/${jail_release}"
+
+cp "${altroot}/usr/local/etc/ssmtp/ssmtp.conf" "${jail_dir}/staging/${jail_release}/usr/local/etc/ssmtp/ssmtp.conf"
+cp "${altroot}/etc/resolv.conf" "${jail_dir}/staging/${jail_release}/etc/resolv.conf"
+cp "${altroot}/etc/make.conf" "${jail_dir}/basstaginge/${jail_release}/etc/make.conf"
+echo "WRKDIRPREFIX?=/skeleton/portbuild" >> "${jail_dir}/staging/${jail_release}/etc/make.conf"
+
+mkdir -p "${jail_dir}/staging/${jail_release}/home"
+mkdir -p "${jail_dir}/staging/${jail_release}/portsbuild"
+mkdir -p "${jail_dir}/staging/${jail_release}/skeleton"
+
+cp "${jail_dir}/base/${jail_release}/etc" "${jail_dir}/staging/${jail_release}"
+cp "${jail_dir}/base/${jail_release}/usr/local" "${jail_dir}/staging/${jail_release}/usr/local"
+cp "${jail_dir}/base/${jail_release}/tmp" "${jail_dir}/staging/${jail_release}"
+cp "${jail_dir}/base/${jail_release}/var" "${jail_dir}/staging/${jail_release}"
+cp "${jail_dir}/base/${jail_release}/root" "${jail_dir}/staging/${jail_release}"
+
+zfs snapshot "${jail_zfs}/staging/${jail_release}@base"
+
+echo "    Jail base staged."
+return 0
+}

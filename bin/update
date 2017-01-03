@@ -1,48 +1,39 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 
 export ASSUME_ALWAYS_YES=yes
+export HANDLE_RC_SCRIPTS=yes
 export PAGER=cat
 
-echo "Attempting to update FreeBSD."
-if \
-    pkg info -x 'pkg(-devel)?$' >/dev/null 2>&1
+if ! pkg info -x 'pkg(-devel)?$'
 then
-    echo "    running pkg bootstrap"
     pkg bootstrap
 fi
 
-#make sure bootstrap worked
-if \
-    pkg info -x 'pkg(-devel)?$' >/dev/null 2>&1
+if ! pkg info -x 'pkg(-devel)?$'
 then
     echo "****pkg init failed. bootstrap didn't work. Check pkg man pages for updates.****"
     exit 1
 fi
 
-echo "    pkg update..."
 pkg update
-
-echo "    pkg upgrade..."
 pkg upgrade
-
-echo "    pkg autoremove..."
 pkg autoremove
-
-echo "   Running audit..."
-pkg audit -F
-
-echo "    freebsd-update..."
-freebsd-update fetch
-freebsd-update install
-
-echo "    cleaning up..."
+pkg audit -Fr
 pkg clean -ay
-for i in /var/db/freebsd-update/files/*
-do 
-    rm "$i"
-done
 
-echo "Update complete."
+if [ `sysctl -n security.jail.jailed` -eq 0 ]
+then
+    freebsd-update fetch
+    freebsd-update install
+
+    for i in /var/db/freebsd-update/files/*
+    do 
+        rm "$i"
+    done
+
+    portsnap auto
+fi
+
 exit 0

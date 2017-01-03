@@ -13,7 +13,7 @@ zfs create "${jail_zfs}/base"
 zfs create "${jail_zfs}/staging"
 zfs create "${jail_zfs}/thinjails"
 
+echo "    jail datasets created"
 return 0
-
 }
 

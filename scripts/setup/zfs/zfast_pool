@@ -10,12 +10,12 @@ local altroot=${altroot:-""}
 
 if [[ "${fast_drive_list}" == "" ]]
 then
-    echo "Failed to setup zfast pool. fast_drive_list is not set."
+    echo "****Failed to setup zfast pool. fast_drive_list is not set.****"
     return 1
 fi
 if [[ "${altroot}" == "" ]]
 then
-    echo "Failed to setup zfast pool. altroot is not set."
+    echo "****Failed to setup zfast pool. altroot is not set.****"
     return 1
 fi
 
@@ -23,7 +23,7 @@ for check_drive in $fast_drive_list
 do
     if ! ls "/dev/${check_drive}" >/dev/null 2>&1
     then
-        echo "Failed to setup zfast pool. $check_drive is not a valid drive."
+        echo "****Failed to setup zfast pool. $check_drive is not a valid drive.****"
         return 1
     fi
 done
@@ -56,7 +56,6 @@ zpool set listsnapshots=on zfast
 zfs set compression=lz4 zfast
 zfs set atime=off zfast
 
-echo "Fast drive ZFS setup complete."
+echo "    Fast drive ZFS setup complete."
 return 0
-
 }

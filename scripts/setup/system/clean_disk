@@ -8,6 +8,7 @@ function clean_disk {
 # No args? More than 1 arg?
 if [[ $# -ne 1 ]]
 then
+    echo "****Failed to clean disk. invalid number of arquments.****"
     return 1
 fi
 
@@ -26,24 +27,6 @@ then
     return 0
 fi
 
-# max is the number of partitions that need to be removed before we can destroy the disk
-#local max=$(gpart show ${drive} | awk '{if ($3>0 && $3<128){max=$3}} END{print max}')
-#if [[ "${max}" =~ "[^0-9]+" ]]
-#then
-#    local max=0
-#fi
-#while [[ ${max} > 0 ]]
-#do
-#    echo "    Destroying partition $max on drive $drive"
-#    if gpart delete -i ${max} ${drive} >/dev/null 2>&1
-#    then
-#        echo "    partition $max destroyed."
-#    else
-#        echo "    gpart exit code: $?"
-#        echo "    possible issue with partition $max - moving on."
-#    fi
-#    ((max--))
-#done
 echo "    destroying drive $drive"
 gpart destroy -F ${drive} >/dev/null 2>&1
 

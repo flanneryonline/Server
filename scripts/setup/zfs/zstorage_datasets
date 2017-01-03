@@ -5,7 +5,7 @@ set -o nounset
 
 function zstorage_datasets {
 
+echo "    zstorage datasets created"
 return 0
-
 }
 #sysctl kern.geom.debugflags=16
