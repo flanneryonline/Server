@@ -8,6 +8,7 @@ function system_install {
 local root=${1:-}
 local kernel=${2:-0}
 local ports=${3:-0}
+local ports_dir=${PORTS_DIR:-${ports_dir:-"/usr/ports"}}
 local temp_dir=${temp_dir:-"/var/tmp"}
 local valid_arch="amd64 arm i386"
 local valid_release_num="10.3 11.0"
@@ -91,13 +92,17 @@ then
     fi
 fi
 
-chroot ${root} ln -s usr/home home
+echo "    Updating system to latest."
+freebsd-update -b "${root}" fetch install >/dev/null
+portsnap -d "${port_dir}" auto >/dev/null
 
-echo "    upgrading system to latest"
-export ASSUME_ALWAYS_YES=YES
-export PAGER=cat
-freebsd-update -b $root fetch install >/dev/null 2>&1
+echo "    Installing base software."
+pkg update >/dev/null
+pkg -r "${root}" install ctags cscope curl expat libnghttp2 ca_root_nss pcre git-lite zsh >/dev/null
+make -C "${port_dir}/ports-mgmt/portmaster" -DBATCH install PREFIX="${root}" clean >/dev/null
+make -C "${port_dir}/editors/vim" -DBATCH install PREFIX="${root}" clean >/dev/null
+make -C "${port_dir}/mail/ssmtp" -DBATCH install PREFIX="${root}" replace clean >/dev/null
 
-echo "    Install successful."
+echo "    Install successful!"
 return 0
 }

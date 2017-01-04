@@ -3,6 +3,9 @@
 set -o errexit
 set -o nounset
 
+export ASSUME_ALWAYS_YES=YES
+export PAGER=cat
+
 fast_drive_list="ada0"
 root_drive_list="da0 da1"
 backup_nfs="server-nas.flanneryonline.com:/volume1/backup"
@@ -10,26 +13,37 @@ jail_list="download media web share"
 delete_drive_list="${root_drive_list} ${fast_drive_list}"
 
 release=${RELEASE:-"11.0-RELEASE"}
+arch=${ARCH:-$(uname -m)}
+
 altroot=${ALTROOT:-"/mnt"}
-base_jail_dir=${BASE_JAIL_DIR:-"/usr/jails"}
-jail_dir=${JAIL_DIR:-"${altroot}${base_jail_dir}"}
-gateway=${GATEWAY:-"10.0.0.1"}
-subnet=${SUBNET:-"255.0.0.0"}
-domain=${DOMAIN:-"flanneryonline.com"}
 temp_dir=${TEMP_DIR:-"/var/tmp/install"}
 zcache=${ZCACHE:-"${temp_dir}/zpool.cache"}
-arch=${ARCH:-$(uname -m)}
+
+base_jail_dir=${BASE_JAIL_DIR:-"/usr/jails"}
+jail_dir=${JAIL_DIR:-"${altroot}${base_jail_dir}"}
+base_port_dir=${BASE_PORT_DIR:-"/usr/ports"}
+port_dir=${PORT_DIR:-"${altroot}${base_port_dir}"}
+
 root_pool=${ROOT_POOL:-"zroot"}
 fast_pool=${FAST_POOL:-"zfast"}
 storage_pool=${STORAGE_POOL:-"zstorage"}
+
 media_zfs=${MEDIA_ZFS:-"${storage_pool}/media"}
 media_dir=${MEDIA_DIR:-"/mnt/media"}
 download_zfs=${DOWNLOAD_ZFS:-"${storage_pool}/download"}
 download_dir=${DOWNLOAD_DIR:-"/mnt/download"}
+
 config_zfs=${CONFIG_ZFS:-"${storage_pool}/config"}
 config_dir=${CONFIG_DIR:-"/mnt/config"}
 share_zfs=${SHARE_ZFS:-"${storage_pool}/share"}
 share_dir=${SHARE_DIR:-"/mnt/share"}
+
+port_zfs=${PORT_ZFS:-"${fast_pool}/ports"}
+jail_zfs=${JAIL_ZFS:-"${fast_pool}/jails"}
+
+gateway=${GATEWAY:-"10.0.0.1"}
+subnet=${SUBNET:-"255.0.0.0"}
+domain=${DOMAIN:-"flanneryonline.com"}
 hostname=${SERVER_HOSTNAME:-"hostserver${t:-}"}
 fqdn="${hostname}.${domain}"
 host_ip=$(host "${fqdn}" | grep "has address" | awk '{print $4}')

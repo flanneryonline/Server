@@ -7,9 +7,11 @@ function make_conf_init {
 
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-echo "OPTIONS_UNSET=CUPS NLS DOCS EXAMPLES X11" > "${altroot}/etc/make.conf"
+echo "OPTIONS_UNSET_FORCE=CUPS NLS DOCS EXAMPLES X11" > "${altroot}/etc/make.conf"
 echo "OPTIONS_SET=OPTIMIZED_CFLAGS" >> "${altroot}/etc/make.conf"
 echo "DEFAULT_VERSIONS+=ssl=openssl" >> "${altroot}/etc/make.conf"
+echo "editors_vim_SET_FORCE=CONSOLE PYTHON" >> "${altroot}/etc/make.conf"
+echo "editors_vim_UNSET_FORCE=DEFAULT_VIMRC LUA PERL RUBY TCL ATHENA GNOME GTK2 GTK3 MOTIF" >> "${altroot}/etc/make.conf" 
 
 echo "    make.conf created"
 return 0
