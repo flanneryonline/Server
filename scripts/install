@@ -9,7 +9,7 @@ export PAGER=cat
 fast_drive_list="ada0"
 root_drive_list="da0 da1"
 backup_nfs="server-nas.flanneryonline.com:/volume1/backup"
-jail_list="download media web share"
+software_list="ctags cscope curl expat libnghttp2 ca_root_nss pcre git-lite zsh zfsnap2"
 delete_drive_list="${root_drive_list} ${fast_drive_list}"
 
 release=${RELEASE:-"11.0-RELEASE"}
