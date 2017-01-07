@@ -61,9 +61,9 @@ fi
 if [[ -d "${temp_dir}" ]] ; then rm -R "${temp_dir}"; fi
 mkdir -p "${temp_dir}"
 
-source ~/server/scripts/setup/zfs/init
+source ~/server/scripts/zfs/init
 
-source ~/server/scripts/setup/system/install
+source ~/server/scripts/system/install
 
 source ~/server/scripts/etc/cron_init
 source ~/server/scripts/etc/fstab_init
