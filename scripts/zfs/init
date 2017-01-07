@@ -3,14 +3,14 @@
 set -o errexit
 set -o nounset
 
-source ~/server/scripts/setup/system/clean_disk
-source ~/server/scripts/setup/zfs/zroot_pool
-source ~/server/scripts/setup/zfs/zroot_datasets
-source ~/server/scripts/setup/zfs/zfast_pool
-source ~/server/scripts/setup/zfs/zfast_datasets
-source ~/server/scripts/setup/zfs/zstorage_pool
-source ~/server/scripts/setup/zfs/zstorage_datasets
-source ~/server/scripts/setup/zfs/extra_datasets
+source ~/server/scripts/system/clean_disk
+source ~/server/scripts/zfs/zroot_pool
+source ~/server/scripts/zfs/zroot_datasets
+source ~/server/scripts/zfs/zfast_pool
+source ~/server/scripts/zfs/zfast_datasets
+source ~/server/scripts/zfs/zstorage_pool
+source ~/server/scripts/zfs/zstorage_datasets
+source ~/server/scripts/zfs/extra_datasets
 
 function zfs_init {
 
