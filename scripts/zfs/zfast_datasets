@@ -5,7 +5,6 @@ set -o nounset
 
 function zfast_datasets {
 
-zfs create -o mountpoint=/usr "zfast/usr"
 zfs create -o mountpoint=/var "zfast/var"
 zfs create -o setuid=off "zfast/var/tmp"
 zfs create -o mountpoint=/tmp "zfast/tmp"

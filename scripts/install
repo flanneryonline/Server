@@ -76,6 +76,7 @@ source ~/server/scripts/etc/resolv_conf_init
 source ~/server/scripts/etc/sshd_config_init
 source ~/server/scripts/etc/ssmtp_conf_init
 source ~/server/scripts/etc/user_init
+source ~/server/scripts/etc/rc_conf_init
 
 echo "Setting up ZFS."
 zfs_init
@@ -95,6 +96,11 @@ ssmtp_conf_init
 jail_conf_init
 user_init
 sysrc_init
+rc_conf_init
+
+echo ""
+zfs snapshot -r zroot@install
+zfs snapshot -r zfast@install
 
 echo "Cleaning up..."
 cp "${zcache}" "${altroot}/boot/zfs/zpool.cache"
