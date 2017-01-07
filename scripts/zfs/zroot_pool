@@ -54,7 +54,6 @@ done
 zpool import -o altroot="${altroot}" -o cachefile="${zcache}" zroot
 
 echo "    setting ZFS flags"
-zpool set bootfs=zroot/root/current zroot
 zpool set listsnapshots=on zroot
 zfs set compression=lz4 zroot
 zfs set atime=off zroot
