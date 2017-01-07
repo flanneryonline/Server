@@ -65,17 +65,17 @@ source ~/server/scripts/setup/zfs/init
 
 source ~/server/scripts/setup/system/install
 
-source ~/server/scripts/setup/etc/cron_init
-source ~/server/scripts/setup/etc/fstab_init
-source ~/server/scripts/setup/etc/jail_conf_init
-source ~/server/scripts/setup/etc/loader_conf_init
-source ~/server/scripts/setup/etc/make_conf_init
-source ~/server/scripts/setup/etc/periodic_conf_init
-source ~/server/scripts/setup/etc/rc_conf_init
-source ~/server/scripts/setup/etc/resolv_conf_init
-source ~/server/scripts/setup/etc/sshd_config_init
-source ~/server/scripts/setup/etc/ssmtp_conf_init
-source ~/server/scripts/setup/etc/user_init
+source ~/server/scripts/etc/cron_init
+source ~/server/scripts/etc/fstab_init
+source ~/server/scripts/etc/jail_conf_init
+source ~/server/scripts/etc/loader_conf_init
+source ~/server/scripts/etc/make_conf_init
+source ~/server/scripts/etc/periodic_conf_init
+source ~/server/scripts/etc/rc_conf_init
+source ~/server/scripts/etc/resolv_conf_init
+source ~/server/scripts/etc/sshd_config_init
+source ~/server/scripts/etc/ssmtp_conf_init
+source ~/server/scripts/etc/user_init
 
 echo "Setting up ZFS."
 zfs_init
