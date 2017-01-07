@@ -78,7 +78,7 @@ then
     pv "${temp_dir}/ports-${release}.txz" | tar -xf - -C "${root}"
 fi
 
-if [[ ${REMOVE_INSTALL_FILES} -eq 1 ]]
+if [[ ${REMOVE_INSTALL_FILES:-1} -eq 1 ]]
 then
     echo "    Removing temp files."
     rm "${temp_dir}/base-${release}.txz"
