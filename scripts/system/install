@@ -96,16 +96,6 @@ echo "    Updating system to latest."
 freebsd-update -b "${root}" fetch install >/dev/null
 portsnap -d "${port_dir}" auto >/dev/null
 
-echo "    Installing base software."
-pkg update >/dev/null
-if [[ ! -z ${software_list:-} ]]
-then
-    pkg -r "${root}" install ${software_list} >/dev/null
-fi
-make -C "${port_dir}/ports-mgmt/portmaster" -DBATCH install PREFIX="${root}" clean >/dev/null
-make -C "${port_dir}/editors/vim" -DBATCH install PREFIX="${root}" clean >/dev/null
-make -C "${port_dir}/mail/ssmtp" -DBATCH install PREFIX="${root}" replace clean >/dev/null
-
 echo "    Install successful!"
 return 0
 }
