@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function create_pool {
+
+local pool=${1:-}
+local ztype=${2:-}
+local drive_list=${3:-}
+local boot=${4:-0}
+local altroot=${altroot:-}
+
+if [[ -z "${drive_list// }" ]]
+then
+    echo "****Failed to setup pool. drive_list is not set.****"
+    return 1
+fi
+
+if [[ -z "${altroot// }" ]]
+then
+    echo "****Failed to setup pool. altroot is not set.****"
+    return 1
+fi
+
+for check_drive in $drive_list
+do
+    if [[ ! -e /dev/${check_drive} ]]
+    then
+        echo "****Failed to setup pool. $check_drive is not a valid drive.****"
+        return 1
+    fi
+done
+
+for check_type in "mirror raidz raidz1 raidz2 raidz3"
+do
+    if [[ $ztype = $check_type ]]
+    then
+        local type_checks_out=1
+    fi
+done
+if [[ -z "$ztype" ]]
+then
+    local type_checks_out=1
+fi
+if [[ ${type_checks_out:-} -ne 1 ]]
+then
+    echo "****Failed to setup pool. $ztype is not a valid zfs pool type.****"
+    return 1
+fi
+
+echo "    Creating partitions on drive list: ${drive_list}"
+local drive_number=0
+for drive in $drive_list
+do
+    gpart create -s gpt "${drive}" >/dev/null
+    if [[ ${boot} -eq 1 ]]
+    then
+        gpart add -a 4k -s 512k -t freebsd-boot "${drive}" >/dev/null
+        gpart bootcode -b /boot/pmbr -p /boot/gptzfsboot -i 1 "${drive}" >/dev/null
+    fi
+    gpart add -a 4k -t freebsd-zfs -l "${pool}${drive_number}" "${drive}" >/dev/null
+    gnop create -S 4096 "/dev/gpt/${pool}${drive_number}" >/dev/null
+    local zpool_list="${zpool_list:-}${space:-}/dev/gpt/${pool}${drive_number}.nop"
+    local space=" "
+    ((drive_number = drive_number + 1))
+done
+
+if [[ $drive_number -eq 1 ]]
+then
+    ztype=""
+fi
+
+echo "    Creating pool $pool at $altroot using cache at $zcache"
+zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" ${pool} $ztype ${zpool_list} >/dev/null 2>&1
+
+echo "    Finishing ZFS setup"
+zpool export ${pool}
+for gpt_nop in "/dev/gpt/${pool}*.nop"
+do
+    gnop destroy $gpt_nop >/dev/null 2>&1
+done
+zpool import -o altroot="${altroot}" -o cachefile="${zcache}" ${pool}
+
+echo "    Setting ZFS flags"
+zpool set listsnapshots=on ${pool}
+zfs set compression=lz4 ${pool}
+zfs set atime=off ${pool}
+
+echo "    Pool created."
+return 0
+}
+

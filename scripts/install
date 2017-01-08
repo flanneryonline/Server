@@ -95,7 +95,6 @@ sshd_config_init
 ssmtp_conf_init
 jail_conf_init
 user_init
-sysrc_init
 rc_conf_init
 
 echo ""

@@ -5,10 +5,11 @@ set -o nounset
 
 function zroot_datasets {
 
-zfs create -o mountpoint=none zroot/root
-zfs create -o mountpoint=/ zroot/root/current
-mkdir -p "${altroot}/usr"
-zpool set bootfs=zroot/root/current zroot
+local root_pool=${ROOT_POOL:-${root_pool:-"zroot"}}
+
+zfs create -o mountpoint=none "${root_pool}/root"
+zfs create -o mountpoint=/ "${root_pool}/root/current"
+zpool set bootfs=${root_pool}/root/current ${root_pool}
 
 echo "    zroot datasets created"
 return 0
