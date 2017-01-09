@@ -7,8 +7,14 @@ function sshd_config_init {
 
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
+# File already exists in base system with all options commented out.
+# Just add chagnes to the bottom.
+echo "AllowUsers homeadmin" >> "${altroot}/etc/ssh/sshd_config"
+echo "AuthenticationMethods publickey" >> "${altroot}/etc/ssh/sshd_config"
 
+chroot "${altroot}" su homeadmin -c "[ ! -d /usr/home/homeadmin/.ssh ] && mkdir -p /usr/home/homeadmin/.ssh"
+[ -e /root/.ssh/authorized_keys ] && su homeadmin -c cp /root/.ssh/authorized_keys "${altroot}/usr/home/homeadmin/.ssh/authorised_keys"
 
-echo "    sshd_config created"
+echo "    sshd configured"
 return 0
 }

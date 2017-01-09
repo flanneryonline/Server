@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function software_init {
+
+local altroot=${1:-${ALTROOT:-${altroot:-}}}
+
+export ASSUME_ALWAYS_YES=yes
+export PAGER=cat
+
+echo "    Updating ports."
+chroot "${altroot}" /usr/sbin/portsnap auto >/dev/null
+
+echo "    Setting up pkg."
+chroot "${altroot}" /usr/sbin/pkg bootstrap -f >/dev/null
+chroot "${altroot}" /usr/sbin/pkg update >/dev/null
+
+echo "    Installing software."
+chroot "${altroot}" /usr/sbin/pkg install bash zsh git-lite ssmpt tmux python sudo >/dev/null
+chroot "${altroot}" /usr/bin/make -C "${base_port_dir:-"/usr/ports"}/editors/vim" -DBATCH install clean >/dev/null
+chroot "${altroot}" /usr/bin/make -C "${base_port_dir:-"/usr/ports"}/mail/ssmtp" replace
+
+echo "    Cleaning up pkg."
+chroot "${altroot}" /usr/sbin/pkg autoremove >/dev/null
+
+return 0
+}

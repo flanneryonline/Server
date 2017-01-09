@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+set -o errexit
+set -o nounset
+
+function sudo_init {
+
+local altroot=${1:-${ALTROOT:-${altroot:-}}}
+
+#make sure directory is there
+[ -d "${altroot}/usr/local/etc/sudoers.d" ] && mkdir -p "${altroot}/usr/local/etc/sudoers.d"
+
+#host alias
+echo "Host_Alias    HOST = hostserver.flanneryonline.com" >> "${altroot}/usr/local/etc/sudoers.d/10hosts"
+echo "Host_Alias    JAILS = *server.flanneryonline.com,!hostserver.flanneryonline.com" >> "${altroot}/usr/local/etc/sudoers.d/11jails"
+
+#user alias
+echo "User_Alias    ADMINS = homeadmin" >> "${altroot}/usr/local/etc/sudoers.d/20admins"
+echo "User_Alias    USERS = media" >> "${altroot}/usr/local/etc/sudoers.d/21users"
+
+#runas alias
+echo "Runas_Alias    ROOT = root" >> "${altroot}/usr/local/etc/sudoers.d/30runas"
+echo "Runas_Alias    OTHERS = media" >> "${altroot}/usr/local/etc/sudoers.d/30runas"
+
+#command alias
+echo "Cmnd_Alias    REBOOT = /bin/reboot" >> "${altroot}/usr/local/etc/sudoers.d/40commands"
+echo "Cmnd_Alias    JAIL = /usr/sbin/jls /usr/sbin/jexec" >> "${altroot}/usr/local/etc/sudoers.d/40commands"
+echo "Cmnd_Alias    ZFS = /sbin/zfs /sbin/zpool" >> "${altroot}/usr/local/etc/sudoers.d/40commands"
+echo "Cmnd_Alias    READONLY = /bin/ls /sbin/ping" >> "${altroot}/usr/local/etc/sudoers.d/40commands"
+
+# default configs
+echo "Defaults fqdn" >> "${altroot}/usr/local/etc/sudoers.d/50defaults"
+echo "Defaults log_host" >> "${altroot}/usr/local/etc/sudoers.d/50defaults"
+echo "Defaults log_year" >> "${altroot}/usr/local/etc/sudoers.d/50defaults"
+echo "Defaults mail_badpass" >> "${altroot}/usr/local/etc/sudoers.d/50defaults"
+echo "Defaults pwfeedback" >> "${altroot}/usr/local/etc/sudoers.d/50defaults"
+echo "Defaults !lecture" >> "${altroot}/usr/local/etc/sudoers.d/50defaults"
+
+#bring it all together
+echo "ADMINS HOST = (ROOT) NOPASSWD: ALL" >> "${altroot}/usr/local/etc/sudoers.d/99nopasswd"
+echo "ADMINS HOST = (OTHERS) NOPASSWD: ALL" >> "${altroot}/usr/local/etc/sudoers.d/99nopasswd"
+echo "ADMINS JAILS = (ROOT) NOPASSWD: ALL" >> "${altroot}/usr/local/etc/sudoers.d/99nopasswd"
+echo "ADMINS JAILS = (OTHERS) NOPASSWD: ALL" >> "${altroot}/usr/local/etc/sudoers.d/99nopasswd"
+
+echo "    sudo configured"
+return 0
+}
+

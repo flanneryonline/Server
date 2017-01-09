@@ -1,0 +1,8 @@
+#!/bin/sh
+
+for snap in `zfs list -H -t snapshot -r "$1" | grep "$2" | cut -f 1`
+do
+    zfs rollback -r -R -f $snap
+done
+
+exit 0

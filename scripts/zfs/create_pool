@@ -83,7 +83,6 @@ done
 zpool import -o altroot="${altroot}" -o cachefile="${zcache}" ${pool}
 
 echo "    Setting ZFS flags"
-zpool set listsnapshots=on ${pool}
 zfs set compression=lz4 ${pool}
 zfs set atime=off ${pool}
 
