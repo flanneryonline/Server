@@ -47,15 +47,16 @@ hostname=${SERVER_HOSTNAME:-"hostserver${t:-}"}
 fqdn="${hostname}.${domain}"
 host_ip=$(host "${fqdn}" | grep "has address" | awk '{print $4}')
 
-if [[ "${TESTING:-"YES"}" = "NO" ]] ; then t=""; else t="test"; fi
+t="test"
+if [ "${TESTING:-"YES"}" = "NO" ] ; then t=""; fi
 
-if [[ -z ${host_ip// } ]]
+if [ -z "${host_ip}" ]
 then
     echo "Hostname ${fqdn} not found in DNS - setup DNS first."
     exit 1 
 fi
 
-[ -d "${temp_dir}" ] && rm -R "${temp_dir}"
+if [ -d "${temp_dir}" ] ; then rm -R "${temp_dir}"; fi
 mkdir -p "${temp_dir}"
 
 source ~/server/scripts/zfs/init
@@ -83,6 +84,8 @@ zfs_init
 echo "Installing system."
 system_install "${altroot}" 1 1
 
+mount -t devfs devfs /mnt/dev
+
 echo "Configuring system."
 cron_init
 fstab_init
@@ -90,12 +93,12 @@ loader_conf_init
 make_conf_init
 periodic_conf_init
 resolv_conf_init
-sshd_config_init
 jail_conf_init
 ssmtp_conf_init
 sudo_init
 software_init   #requires make.conf and ssmtp
 user_init       #requires software
+sshd_config_init #requires user
 rc_conf_init
 
 echo "Creating install snapshots."
@@ -103,6 +106,7 @@ zfs snapshot -r zroot@install
 zfs snapshot -r zfast@install
 
 echo "Cleaning up..."
+umount /mnt/dev
 cp "${zcache}" "${altroot}/boot/zfs/zpool.cache"
 rm -R "${temp_dir}"
 

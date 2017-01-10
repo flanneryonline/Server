@@ -8,7 +8,7 @@ function sudo_init {
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
 #make sure directory is there
-[ -d "${altroot}/usr/local/etc/sudoers.d" ] && mkdir -p "${altroot}/usr/local/etc/sudoers.d"
+if [ ! -d "${altroot}/usr/local/etc/sudoers.d" ] ; then mkdir -p "${altroot}/usr/local/etc/sudoers.d"; fi
 
 #host alias
 echo "Host_Alias    HOST = hostserver.flanneryonline.com" >> "${altroot}/usr/local/etc/sudoers.d/10hosts"

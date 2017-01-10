@@ -16,7 +16,7 @@ fi
 
 echo "${backup_nfs} /mnt/backup nfs rw 0 0" > "${altroot}/etc/fstab"
 
-echo "    fstab created"
+echo "    fstab updated"
 
 return 0
 }

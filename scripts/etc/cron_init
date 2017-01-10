@@ -8,6 +8,6 @@ function cron_init {
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
 
-echo "    crontab created"
+echo "    crontab configured"
 return 0
 }
