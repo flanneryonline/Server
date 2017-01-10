@@ -32,7 +32,7 @@ do
     fi
 done
 
-for check_type in "mirror raidz raidz1 raidz2 raidz3"
+for check_type in mirror raidz raidz1 raidz2 raidz3
 do
     if [ "$ztype" == "$check_type" ]
     then
