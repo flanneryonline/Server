@@ -3,7 +3,7 @@
 set -o errexit
 set -o nounset
 
-function user_init {
+function pw_conf_init {
 
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
@@ -29,21 +29,5 @@ echo "#maxgid=32000" >> "${altroot}/etc/pw.conf"
 echo "expire_days=0" >> "${altroot}/etc/pw.conf"
 echo "password_days=0" >> "${altroot}/etc/pw.conf"
 
-echo "    pw.conf created"
-
-pw -R "${altroot}" useradd -n "media" -u 1001 -s "/usr/sbin/nologin" -d "/nonexistent" -w no
-pw -R "${altroot}" useradd -n "homeadmin" -u 5000 -s "/usr/local/bin/zsh" -G "wheel, media" -w no
-chroot "${altroot}" passwd "root"
-chroot "${altroot}" passwd "homeadmin"
-
-echo "    Copying configs from git."
-chroot "${altroot}" su homeadmin -c "[ ! -d /usr/home/homeadmin ] && mkdir -p /usr/home/homeadmin"
-chroot "${altroot}" su homeadmin -c "cd /usr/home/homeadmin && /usr/local/sbin/git clone https://github.com/flanneryonline/dotfiles >/dev/null"
-chroot "${altroot}" su homeadmin -c "cd /usr/home/homeadmin && /usr/local/sbin/git clone https://github.com/flanneryonline/server >/dev/null"
-chroot "${altroot}" su homeadmin -c "chmod +x /usr/home/homeadmin/dotfiles/dot.sh"
-chroot "${altroot}" su homeadmin -c "/usr/home/homeadmin/dotfiles/dot.sh >/dev/null"
-chroot "${altroot}" su homeadmin -c "vim +PlugInstall +qall >/dev/null 2>&1"
-
-echo "    users created"
 return 0
 }

@@ -3,12 +3,16 @@
 set -o errexit
 set -o nounset
 
-source ~/server/scripts/system/clean_disk
-source ~/server/scripts/zfs/create_pool
-source ~/server/scripts/zfs/zroot_datasets
-source ~/server/scripts/zfs/zfast_datasets
-source ~/server/scripts/zfs/zstorage_datasets
-source ~/server/scripts/zfs/extra_datasets
+source ~/server/include/zfs/clean_disk
+source ~/server/include/zfs/create_pool
+
+source ~/server/include/zfs/etc/loader_conf_init
+
+source ~/server/include/zfs/datasets/zroot
+source ~/server/include/zfs/datasets/zfast
+source ~/server/include/zfs/datasets/zstorage
+source ~/server/include/zfs/datasets/extra
+
 
 function zfs_init {
 
@@ -44,8 +48,10 @@ create_pool "$fast_pool" "" "${fast_drive_list}" 0
 
 zroot_datasets
 zfast_datasets
-#zstorage_datasets
+zstorage_datasets
 extra_datasets
+
+loader_conf_init
 
 echo "    ZFS setup complete."
 

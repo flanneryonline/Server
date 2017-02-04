@@ -93,8 +93,7 @@ then
 fi
 
 echo "    Updating system to latest."
-freebsd-update -b "${root}" fetch install >/dev/null
-portsnap -d "${port_dir}" auto >/dev/null
+freebsd-update -b "${root}" fetch install >/dev/null 2>&1
 
 echo "    Install successful!"
 return 0

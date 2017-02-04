@@ -1,0 +1,9 @@
+
+
+
+
+source ~/server/scripts/etc/jail_conf_init
+
+sysrc -R "${altroot}" jail_enable="YES" >/dev/null 2>&1
+
+jail_conf_init

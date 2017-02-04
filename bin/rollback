@@ -1,5 +1,25 @@
 #!/bin/sh
 
+for h in "-h" "--help" "help"
+do
+    if [ $1 = $h ] ; then help=1; fi
+done
+
+if [ $# -eq 0 ] ; then help=1; fi
+
+if [ ${help:-0} -eq 1 ]
+then
+    echo "Usage: rollback dataset snapshot"
+    echo "Rollsback dataset and all children of dataset to given snapshot"
+    exit 0
+fi
+
+if [ $# -ne 2 ]
+then
+    echo "Wong number of parameters!" 1>&2
+    return 1
+fi
+
 for snap in `zfs list -H -t snapshot -r "$1" | grep "$2" | cut -f 1`
 do
     zfs rollback -r -R -f $snap

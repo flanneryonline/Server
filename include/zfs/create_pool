@@ -74,7 +74,6 @@ fi
 echo "    Creating pool $pool at $altroot using cache at $zcache"
 zpool create -f -m none -o altroot="${altroot}" -o cachefile="${zcache}" ${pool} $ztype ${zpool_list} >/dev/null 2>&1
 
-echo "    Finishing ZFS setup"
 zpool export ${pool}
 for gpt_nop in "/dev/gpt/${pool}*.nop"
 do

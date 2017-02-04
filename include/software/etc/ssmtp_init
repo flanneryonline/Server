@@ -7,26 +7,14 @@ function ssmtp_conf_init {
 
 local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-local password=""
-while [[ -z "${password// }" ]]
-do
-    read -s -p "Enter ssmtp password: " password
-    if [[ -z "${password// }" ]] 
-    then 
-        echo "    must not be blank! try again..."
-    fi
-done
-
-mkdir -p "${altroot}/usr/local/etc/ssmtp"
+if [ ! -d "${altroot}/usr/local/etc/ssmtp" ] ; then mkdir -p "${altroot}/usr/local/etc/ssmtp"; fi
 echo "root=pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "mailhub=smtp.mail.wowway.com" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "rewriteDomain=flanneryonline.com" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "AuthUser=pflannery" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
-echo "AuthPass=${password}" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
-
 echo "root:pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/revaliases"
 echo "homeadmin:pat@flanneryonline.com" > "${altroot}/usr/local/etc/ssmtp/revaliases"
+chroot "${altroot}" /usr/bin/make -C "${base_port_dir:-"/usr/ports"}/mail/ssmtp" replace
 
-echo "    ssmtp.conf created"
 return 0
 }
