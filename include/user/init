@@ -9,24 +9,24 @@ source ~/server/include/user/etc/sudo_init
 
 function user_init {
 
-local altroot=${1:-${ALTROOT:-${altroot:-}}}
+    local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-pw_conf_init
-sshd_conf_init
-sudo_init
+    pw_conf_init
+    sshd_conf_init
+    sudo_init
 
-pw -R "${altroot}" useradd -n "media" -u 1001 -s "/usr/sbin/nologin" -d "/nonexistent" -w no
-pw -R "${altroot}" useradd -n "homeadmin" -u 5000 -s "/usr/local/bin/zsh" -G "wheel, media" -w no
+    pw -R "${altroot}" useradd -n "media" -u 1001 -s "/usr/sbin/nologin" -d "/nonexistent" -w no
+    pw -R "${altroot}" useradd -n "homeadmin" -u 5000 -s "/usr/local/bin/zsh" -G "wheel, media" -w no
 
-echo "    Copying configs from git."
-mkdir -p "${altroot}/usr/home/homeadmin"
-chroot "${altroot}" chown homeadmin:homeadmin /usr/home/homeadmin
-chroot "${altroot}" su homeadmin -c "cd /usr/home/homeadmin && /usr/local/bin/git clone https://github.com/flanneryonline/dotfiles >/dev/null"
-chroot "${altroot}" su homeadmin -c "cd /usr/home/homeadmin && /usr/local/bin/git clone https://github.com/flanneryonline/server >/dev/null"
-chroot "${altroot}" su homeadmin -c "chmod +x /usr/home/homeadmin/dotfiles/dot.sh"
-chroot "${altroot}" su homeadmin -c "/usr/home/homeadmin/dotfiles/dot.sh >/dev/null"
-chroot "${altroot}" su homeadmin -c "vim +PlugInstall +qall >/dev/null 2>&1"
+    echo "    Copying configs from git."
+    mkdir -p "${altroot}/usr/home/homeadmin"
+    chroot "${altroot}" chown homeadmin:homeadmin /usr/home/homeadmin
+    chroot "${altroot}" su homeadmin -c "cd /usr/home/homeadmin && /usr/local/bin/git clone https://github.com/flanneryonline/dotfiles >/dev/null"
+    chroot "${altroot}" su homeadmin -c "cd /usr/home/homeadmin && /usr/local/bin/git clone https://github.com/flanneryonline/server >/dev/null"
+    chroot "${altroot}" su homeadmin -c "chmod +x /usr/home/homeadmin/dotfiles/dot.sh"
+    chroot "${altroot}" su homeadmin -c "/usr/home/homeadmin/dotfiles/dot.sh >/dev/null"
+    chroot "${altroot}" su homeadmin -c "vim +PlugInstall +qall >/dev/null 2>&1"
 
-echo "    users created"
-return 0
+    echo "    users created"
+    return 0
 }

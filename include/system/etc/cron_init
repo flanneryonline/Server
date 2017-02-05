@@ -5,9 +5,8 @@ set -o nounset
 
 function cron_init {
 
-local altroot=${1:-${ALTROOT:-${altroot:-}}}
+    local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-
-echo "    crontab configured"
-return 0
+    echo "    crontab configured"
+    return 0
 }

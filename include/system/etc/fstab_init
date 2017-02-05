@@ -5,18 +5,18 @@ set -o nounset
 
 function fstab_init {
 
-local altroot=${1:-${ALTROOT:-${altroot:-}}}
-local backup_nfs=${BACKUP_NFS:-${backup_nfs:-}}
+    local altroot=${1:-${ALTROOT:-${altroot:-}}}
+    local backup_nfs=${BACKUP_NFS:-${backup_nfs:-}}
 
-if [[ -z "${backup_nfs// }" ]]
-then
-    echo "****failed to create fstab. backup_nfs not set****"
-    return 1
-fi
+    if [[ -z "${backup_nfs// }" ]]
+    then
+        echo "****failed to create fstab. backup_nfs not set****"
+        return 1
+    fi
 
-echo "${backup_nfs} /mnt/backup nfs rw 0 0" > "${altroot}/etc/fstab"
+    echo "${backup_nfs} /mnt/backup nfs rw 0 0" > "${altroot}/etc/fstab"
 
-echo "    fstab updated"
+    echo "    fstab updated"
 
-return 0
+    return 0
 }

@@ -5,8 +5,8 @@ set -o nounset
 
 function zstorage_datasets {
 
-echo "    zstorage datasets created"
+    echo "    zstorage datasets created"
 
 
-return 0
+    return 0
 }

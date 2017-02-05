@@ -5,29 +5,29 @@ set -o nounset
 
 function pw_conf_init {
 
-local altroot=${1:-${ALTROOT:-${altroot:-}}}
+    local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-echo "defaultpasswd=no" > "${altroot}/etc/pw.conf"
-echo "reuseuids=yes" >> "${altroot}/etc/pw.conf"
-echo "reusegids=yes" >> "${altroot}/etc/pw.conf"
-echo "nispasswd=" >> "${altroot}/etc/pw.conf"
-echo "skeleton=/usr/share/skel" >> "${altroot}/etc/pw.conf"
-echo "#newmail=" >> "${altroot}/etc/pw.conf"
-echo "logfile=no" >> "${altroot}/etc/pw.conf"
-echo "home=/usr/home" >> "${altroot}/etc/pw.conf"
-echo "#homemode=" >> "${altroot}/etc/pw.conf"
-echo "#shellpath=" >> "${altroot}/etc/pw.conf"
-echo "#shells=" >> "${altroot}/etc/pw.conf"
-echo "defaultshell=/bin/sh" >> "${altroot}/etc/pw.conf"
-echo "defaultgroup=no" >> "${altroot}/etc/pw.conf"
-echo "#extragroups=" >> "${altroot}/etc/pw.conf"
-echo "defaultclass=no" >> "${altroot}/etc/pw.conf"
-echo "#minuid=1000" >> "${altroot}/etc/pw.conf"
-echo "#maxuid=32000" >> "${altroot}/etc/pw.conf"
-echo "#mingid=1000" >> "${altroot}/etc/pw.conf"
-echo "#maxgid=32000" >> "${altroot}/etc/pw.conf"
-echo "expire_days=0" >> "${altroot}/etc/pw.conf"
-echo "password_days=0" >> "${altroot}/etc/pw.conf"
+    echo "defaultpasswd=no" > "${altroot}/etc/pw.conf"
+    echo "reuseuids=yes" >> "${altroot}/etc/pw.conf"
+    echo "reusegids=yes" >> "${altroot}/etc/pw.conf"
+    echo "nispasswd=" >> "${altroot}/etc/pw.conf"
+    echo "skeleton=/usr/share/skel" >> "${altroot}/etc/pw.conf"
+    echo "#newmail=" >> "${altroot}/etc/pw.conf"
+    echo "logfile=no" >> "${altroot}/etc/pw.conf"
+    echo "home=/usr/home" >> "${altroot}/etc/pw.conf"
+    echo "#homemode=" >> "${altroot}/etc/pw.conf"
+    echo "#shellpath=" >> "${altroot}/etc/pw.conf"
+    echo "#shells=" >> "${altroot}/etc/pw.conf"
+    echo "defaultshell=/bin/sh" >> "${altroot}/etc/pw.conf"
+    echo "defaultgroup=no" >> "${altroot}/etc/pw.conf"
+    echo "#extragroups=" >> "${altroot}/etc/pw.conf"
+    echo "defaultclass=no" >> "${altroot}/etc/pw.conf"
+    echo "#minuid=1000" >> "${altroot}/etc/pw.conf"
+    echo "#maxuid=32000" >> "${altroot}/etc/pw.conf"
+    echo "#mingid=1000" >> "${altroot}/etc/pw.conf"
+    echo "#maxgid=32000" >> "${altroot}/etc/pw.conf"
+    echo "expire_days=0" >> "${altroot}/etc/pw.conf"
+    echo "password_days=0" >> "${altroot}/etc/pw.conf"
 
-return 0
+    return 0
 }

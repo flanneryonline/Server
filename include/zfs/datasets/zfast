@@ -5,14 +5,14 @@ set -o nounset
 
 function zfast_datasets {
 
-local fast_pool=${FAST_POOL:-${fast_pool:-"zfast"}}
+    local fast_pool=${FAST_POOL:-${fast_pool:-"zfast"}}
 
-zfs create -o mountpoint=/var "${fast_pool}/var"
-zfs create -o setuid=off "${fast_pool}/var/tmp"
-zfs create -o mountpoint=/tmp "${fast_pool}/tmp"
-zfs create -o mountpoint=/usr/local "${fast_pool}/usr-local"
-zfs create -o mountpoint=/usr/home "${fast_pool}/home"
+    zfs create -o mountpoint=/var "${fast_pool}/var"
+    zfs create -o setuid=off "${fast_pool}/var/tmp"
+    zfs create -o mountpoint=/tmp "${fast_pool}/tmp"
+    zfs create -o mountpoint=/usr/local "${fast_pool}/usr-local"
+    zfs create -o mountpoint=/usr/home "${fast_pool}/home"
 
-echo "    zfast datasets created"
-return 0
+    echo "    zfast datasets created"
+    return 0
 }

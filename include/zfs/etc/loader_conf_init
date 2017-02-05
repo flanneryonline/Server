@@ -5,22 +5,18 @@ set -o nounset
 
 function loader_conf_init {
 
-local altroot=${1:-${ALTROOT:-${altroot:-}}}
+    local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-if [ ! -d "${altroot}/boot" ] ; then mkdir -p "${altroot}/boot"; fi
+    if [ ! -d "${altroot}/boot" ] ; then mkdir -p "${altroot}/boot"; fi
 
-echo "vfs.root.mountfrom=\"zfs:${root_pool:-"zroot"}/root/current\"" > "${altroot}/boot/loader.conf"
+    #echo "vfs.root.mountfrom=\"zfs:${root_pool:-"zroot"}/root/current\"" > "${altroot}/boot/loader.conf"
 
-echo 'kern.geom.label.disk_ident.enable="0"' >> "${altroot}/boot/loader.conf"
-echo 'kern.geom.label.gpt.enable="1"' >> "${altroot}/boot/loader.conf"
-echo 'kern.geom.label.gptid.enable="0"' >> "${altroot}/boot/loader.conf"
+    echo 'kern.geom.label.disk_ident.enable="0"' >> "${altroot}/boot/loader.conf"
+    echo 'kern.geom.label.gptid.enable="0"' >> "${altroot}/boot/loader.conf"
 
-echo 'zpool_cache_load="YES"' >> "${altroot}/boot/loader.conf"
-echo 'zpool_cache_type="/boot/zfs/zpool.cache"' >> "${altroot}/boot/loader.conf"
-echo 'zpool_cache_name="/boot/zfs/zpool.cache"' >> "${altroot}/boot/loader.conf"
+    echo 'zfs_load="YES"' >> "${altroot}/boot/loader.conf"
 
-echo 'zfs_load="YES"' >> "${altroot}/boot/loader.conf"
+    echo "    loader.conf created"
+    return 0
 
-echo "    loader.conf created"
-return 0
 }

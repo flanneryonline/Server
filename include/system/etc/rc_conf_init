@@ -5,14 +5,14 @@ set -o nounset
 
 function rc_conf_init {
 
-local altroot=${1:-${ALTROOT:-${altroot:-}}}
+    local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-sysrc -R "${altroot}" zfs_enable="YES" >/dev/null 2>&1
-sysrc -R "${altroot}" sendmail_enable="NO" >/dev/null 2>&1
-sysrc -R "${altroot}" sendmail_submit_enable="NO" >/dev/null 2>&1
-sysrc -R "${altroot}" sendmail_outbound_enable="NO" >/dev/null 2>&1
-sysrc -R "${altroot}" sendmail_msp_queue_enable="NO" >/dev/null 2>&1
+    sysrc -R "${altroot}" zfs_enable="YES" >/dev/null 2>&1
+    sysrc -R "${altroot}" sendmail_enable="NO" >/dev/null 2>&1
+    sysrc -R "${altroot}" sendmail_submit_enable="NO" >/dev/null 2>&1
+    sysrc -R "${altroot}" sendmail_outbound_enable="NO" >/dev/null 2>&1
+    sysrc -R "${altroot}" sendmail_msp_queue_enable="NO" >/dev/null 2>&1
 
-echo "    rc.conf created"
-return 0
+    echo "    rc.conf created"
+    return 0
 }

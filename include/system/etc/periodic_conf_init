@@ -5,13 +5,13 @@ set -o nounset
 
 function periodic_conf_init {
 
-local altroot=${1:-${ALTROOT:-${altroot:-}}}
+    local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-echo "local_periodic=/usr/home/homeadmin/server/periodic" > "${altroot}/etc/periodic.conf.local"
-echo "daily_output=/var/log/daily.log" >> "${altroot}/etc/periodic.conf.local"
-echo "weekly_output=/var/log/weekly.log" >> "${altroot}/etc/periodic.conf.local"
-echo "monthly_output=/var/log/monthly.log" >> "${altroot}/etc/periodic.conf.local"
+    echo "local_periodic=/usr/home/homeadmin/server/periodic" > "${altroot}/etc/periodic.conf.local"
+    echo "daily_output=/var/log/daily.log" >> "${altroot}/etc/periodic.conf.local"
+    echo "weekly_output=/var/log/weekly.log" >> "${altroot}/etc/periodic.conf.local"
+    echo "monthly_output=/var/log/monthly.log" >> "${altroot}/etc/periodic.conf.local"
 
-echo "    periodic.conf created"
-return 0
+    echo "    periodic.conf created"
+    return 0
 }

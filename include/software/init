@@ -8,21 +8,21 @@ source ~/server/include/software/etc/ssmtp_init
 
 function software_init {
 
-local altroot=${1:-${ALTROOT:-${altroot:-}}}
+    local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-export ASSUME_ALWAYS_YES=yes
-export PAGER=cat
+    export ASSUME_ALWAYS_YES=yes
+    export PAGER=cat
 
-make_conf_init
+    make_conf_init
 
-chroot "${altroot}" /usr/sbin/portsnap auto >/dev/null 2>&1
-chroot "${altroot}" /usr/sbin/pkg bootstrap -f >/dev/null
-chroot "${altroot}" /usr/sbin/pkg update >/dev/null
-chroot "${altroot}" /usr/sbin/pkg install bash git-lite ssmtp tmux python sudo >/dev/null
-chroot "${altroot}" /usr/bin/make -C "${base_port_dir:-"/usr/ports"}/editors/vim" -DBATCH install clean >/dev/null 2>&1
-chroot "${altroot}" /usr/sbin/pkg autoremove >/dev/null
+    chroot "${altroot}" /usr/sbin/portsnap auto >/dev/null 2>&1
+    chroot "${altroot}" /usr/sbin/pkg bootstrap -f >/dev/null
+    chroot "${altroot}" /usr/sbin/pkg update >/dev/null
+    chroot "${altroot}" /usr/sbin/pkg install bash git-lite ssmtp tmux python sudo >/dev/null
+    chroot "${altroot}" /usr/bin/make -C "${base_port_dir:-"/usr/ports"}/editors/vim" -DBATCH install clean >/dev/null 2>&1
+    chroot "${altroot}" /usr/sbin/pkg autoremove >/dev/null
 
-ssmtp_init
+    ssmtp_init
 
-return 0
+    return 0
 }

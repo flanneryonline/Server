@@ -8,58 +8,58 @@ source ~/server/scripts/setup/etc/user_init
 
 function jail_base {
 
-local altroot=${ALTROOT:-${altroot:-}}
-local jail_zfs=${JAIL_ZFS:-${jail_zfs:-"zfast/jails"}}
-local jail_dir=${JAIL_DIR:-${jail_dir:-"${altroot}/usr/jails"}}
+    local altroot=${ALTROOT:-${altroot:-}}
+    local jail_zfs=${JAIL_ZFS:-${jail_zfs:-"zfast/jails"}}
+    local jail_dir=${JAIL_DIR:-${jail_dir:-"${altroot}/usr/jails"}}
 
-local jail_release=${1:-${JAIL_RELEASE:-${jail_release:-}}}
+    local jail_release=${1:-${JAIL_RELEASE:-${jail_release:-}}}
 
-if [[ -z "${jail_release// }" ]]
-then
-    echo "****failed to create jail base. Release blank****"
-    return 1
-fi
+    if [[ -z "${jail_release// }" ]]
+    then
+        echo "****failed to create jail base. Release blank****"
+        return 1
+    fi
 
-echo "    Jail base ($jail_release) being created at $jail_dir on ZFS $jail_zfs"
+    echo "    Jail base ($jail_release) being created at $jail_dir on ZFS $jail_zfs"
 
-if \
-    zfs list -d 0 -H -t snapshot -o name \
-    "${jail_zfs}/base/${jail_release}@install" \
-    >/dev/null 2>&1
-then  
-    echo "    Base jail for $jail_release already exists. Moving on."
+    if \
+        zfs list -d 0 -H -t snapshot -o name \
+        "${jail_zfs}/base/${jail_release}@install" \
+        >/dev/null 2>&1
+    then  
+        echo "    Base jail for $jail_release already exists. Moving on."
+        return 0
+    fi
+
+    if \
+        zfs list -d 0 -H -t filesystem -o name \
+        "${jail_zfs}/base/${jail_release}" \
+        >/dev/null 2>&1
+    then  
+        echo "  **warning - jail base for release $jail_release seems to already exist but does not have a proper snapshot - it will be removed!"
+        zfs destroy -R -f "${jail_zfs}/staging/${jail_release}"
+    fi
+
+    echo "    installing system for jail base"
+    zfs create "${jail_zfs}/base/${jail_release}"
+    system_install "${jail_dir}/base/${jail_release}"
+    user_init "${jail_dir}/base/${jail_release}"
+
+    chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/etc" "etc"
+    chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/home" "home"
+    chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/root" "root"
+    chroot "${jail_dir}/base/${jail_release}" ln -s "../skeleton/usr/local" "usr/local"
+    chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/tmp" "tmp"
+    chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/var" "var"
+    chroot "${jail_dir}/base/${jail_release}" ln -s "../../skeleton/usr/ports/distfiles" "usr/ports/distfiles"
+
+    sysrc -r "${jail_dir}/base/${jail_release}" sendmail_enable="NO"
+    sysrc -r "${jail_dir}/base/${jail_release}" sendmail_submit_enable="NO"
+    sysrc -r "${jail_dir}/base/${jail_release}" sendmail_outbound_enable="NO"
+    sysrc -r "${jail_dir}/base/${jail_release}" sendmail_msp_queue_enable="NO"
+
+    zfs snapshot "${jail_zfs}/base/${jail_release}@install"
+
+    echo "    Base jail created."
     return 0
-fi
-
-if \
-    zfs list -d 0 -H -t filesystem -o name \
-    "${jail_zfs}/base/${jail_release}" \
-    >/dev/null 2>&1
-then  
-    echo "  **warning - jail base for release $jail_release seems to already exist but does not have a proper snapshot - it will be removed!"
-    zfs destroy -R -f "${jail_zfs}/staging/${jail_release}"
-fi
-
-echo "    installing system for jail base"
-zfs create "${jail_zfs}/base/${jail_release}"
-system_install "${jail_dir}/base/${jail_release}"
-user_init "${jail_dir}/base/${jail_release}"
-
-chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/etc" "etc"
-chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/home" "home"
-chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/root" "root"
-chroot "${jail_dir}/base/${jail_release}" ln -s "../skeleton/usr/local" "usr/local"
-chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/tmp" "tmp"
-chroot "${jail_dir}/base/${jail_release}" ln -s "skeleton/var" "var"
-chroot "${jail_dir}/base/${jail_release}" ln -s "../../skeleton/usr/ports/distfiles" "usr/ports/distfiles"
-
-sysrc -r "${jail_dir}/base/${jail_release}" sendmail_enable="NO"
-sysrc -r "${jail_dir}/base/${jail_release}" sendmail_submit_enable="NO"
-sysrc -r "${jail_dir}/base/${jail_release}" sendmail_outbound_enable="NO"
-sysrc -r "${jail_dir}/base/${jail_release}" sendmail_msp_queue_enable="NO"
-
-zfs snapshot "${jail_zfs}/base/${jail_release}@install"
-
-echo "    Base jail created."
-return 0
 }

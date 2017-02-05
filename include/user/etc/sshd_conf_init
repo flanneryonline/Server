@@ -5,22 +5,22 @@ set -o nounset
 
 function sshd_config_init {
 
-local altroot=${1:-${ALTROOT:-${altroot:-}}}
+    local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
-# File already exists in base system with all options commented out.
-# Just add chagnes to the bottom.
-echo "AllowUsers homeadmin" >> "${altroot}/etc/ssh/sshd_config"
-echo "AuthenticationMethods publickey" >> "${altroot}/etc/ssh/sshd_config"
+    # File already exists in base system with all options commented out.
+    # Just add chagnes to the bottom.
+    echo "AllowUsers homeadmin" >> "${altroot}/etc/ssh/sshd_config"
+    echo "AuthenticationMethods publickey" >> "${altroot}/etc/ssh/sshd_config"
 
-chroot "${altroot}" su homeadmin -c "if [ ! -d /usr/home/homeadmin/.ssh ] ; then mkdir -p /usr/home/homeadmin/.ssh; fi"
-if [ -e /root/.ssh/authorized_keys ]
-then 
-    cp /root/.ssh/authorized_keys "${altroot}/usr/home/homeadmin/.ssh/authorised_keys"
-    chroot "${altroot}" chown homeadmin:homeadmin /usr/home/homeadmin/.ssh/authorised_keys
-fi
+    chroot "${altroot}" su homeadmin -c "if [ ! -d /usr/home/homeadmin/.ssh ] ; then mkdir -p /usr/home/homeadmin/.ssh; fi"
+    if [ -e /root/.ssh/authorized_keys ]
+    then 
+        cp /root/.ssh/authorized_keys "${altroot}/usr/home/homeadmin/.ssh/authorised_keys"
+        chroot "${altroot}" chown homeadmin:homeadmin /usr/home/homeadmin/.ssh/authorised_keys
+    fi
 
-sysrc -R "${altroot}" sshd_enable="YES" >/dev/null 2>&1
+    sysrc -R "${altroot}" sshd_enable="YES" >/dev/null 2>&1
 
-echo "    sshd configured"
-return 0
+    echo "    sshd configured"
+    return 0
 }

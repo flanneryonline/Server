@@ -17,7 +17,7 @@ fi
 if [ $# -ne 2 ]
 then
     echo "Wong number of parameters!" 1>&2
-    return 1
+    exit 1
 fi
 
 for snap in `zfs list -H -t snapshot -r "$1" | grep "$2" | cut -f 1`

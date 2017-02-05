@@ -5,22 +5,22 @@ set -o nounset
 
 function jail_conf_init {
 
-local altroot=${ALTROOT:-${altroot:-}}
-local jail_dir=${JAIL_DIR:-${jail_dir:-"${altroot}/usr/jails"}}
+    local altroot=${ALTROOT:-${altroot:-}}
+    local jail_dir=${JAIL_DIR:-${jail_dir:-"${altroot}/usr/jails"}}
 
-echo "exec.start=\"/bin/sh /etc/rc\";"                       > "${altroot}/etc/jail.conf"
-echo "exec.stop=\"/bin/sh /etc/rc.shutdown\";"              >> "${altroot}/etc/jail.conf"
-echo "exec.clean;"                                          >> "${altroot}/etc/jail.conf"
-echo "children.max=0;"                                      >> "${altroot}/etc/jail.conf"
-echo "allow.set_hostname=0;"                                >> "${altroot}/etc/jail.conf"
-echo "mount.devfs;"                                         >> "${altroot}/etc/jail.conf"
-echo "allow.mount;"                                         >> "${altroot}/etc/jail.conf"
-echo "allow.raw_sockets;"                                   >> "${altroot}/etc/jail.conf"
-echo "interface=lagg0;"                                     >> "${altroot}/etc/jail.conf"
-echo "path=\"${jail_dir}/mount/\${name}\";"                 >> "${altroot}/etc/jail.conf"
-echo "mount.fstab=\"${jail_dir}/mount/\${name}.fstab\";"    >> "${altroot}/etc/jail.conf"
-echo "host.hostname=\"\${name}server${t:-}.${DOMAIN:-${domain:-"flanneryonline.com"}}\";" >> "${altroot}/etc/jail.conf"
+    echo "exec.start=\"/bin/sh /etc/rc\";"                       > "${altroot}/etc/jail.conf"
+    echo "exec.stop=\"/bin/sh /etc/rc.shutdown\";"              >> "${altroot}/etc/jail.conf"
+    echo "exec.clean;"                                          >> "${altroot}/etc/jail.conf"
+    echo "children.max=0;"                                      >> "${altroot}/etc/jail.conf"
+    echo "allow.set_hostname=0;"                                >> "${altroot}/etc/jail.conf"
+    echo "mount.devfs;"                                         >> "${altroot}/etc/jail.conf"
+    echo "allow.mount;"                                         >> "${altroot}/etc/jail.conf"
+    echo "allow.raw_sockets;"                                   >> "${altroot}/etc/jail.conf"
+    echo "interface=lagg0;"                                     >> "${altroot}/etc/jail.conf"
+    echo "path=\"${jail_dir}/mount/\${name}\";"                 >> "${altroot}/etc/jail.conf"
+    echo "mount.fstab=\"${jail_dir}/mount/\${name}.fstab\";"    >> "${altroot}/etc/jail.conf"
+    echo "host.hostname=\"\${name}server${t:-}.${DOMAIN:-${domain:-"flanneryonline.com"}}\";" >> "${altroot}/etc/jail.conf"
 
-echo "    jail.conf created"
-return 0
+    echo "    jail.conf created"
+    return 0
 }
