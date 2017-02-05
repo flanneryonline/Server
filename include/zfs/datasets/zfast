@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-function zfast_datasets {
+zfast_datasets () {
 
     local fast_pool=${FAST_POOL:-${fast_pool:-"zfast"}}
 

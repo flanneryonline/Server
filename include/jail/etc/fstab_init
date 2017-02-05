@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-function jail_fstab_init {
+jail_fstab_init () {
 
     local jail_name=${1:-${JAIL_NAME:-}}
     local jail_release=${2:-${JAIL_RELEASE:-}}
@@ -13,12 +13,12 @@ function jail_fstab_init {
     local config_dir=${MEDIA_DIR:-${media_dir:-"/mnt/config"}}
     local share_dir=${MEDIA_DIR:-${media_dir:-"/mnt/share"}}
 
-    if [[ -z "${jail_name// }" ]]
+    if [ -z ${jail_name} ]
     then
         echo "****Failed to create jail fstab. Jail name cannot be blank.****"
         return 1
     fi
-    if [[ -z "${jail_release// }" ]]
+    if [ -z "${jail_release}" ]
     then
         echo "****Failed to create jail fstab. Jail release cannot be blank.****"
         return 1
@@ -27,21 +27,20 @@ function jail_fstab_init {
     echo "${jail_dir}/base/${jail_release}      ${jail_dir}/mount/${jail_name}                  nullfs ro 0 0" >  "${jail_dir}/mount/${jail_name}.fstab"
     echo "${jail_dir}/thinjails/${jail_name}    ${jail_dir}/mount/${jail_name}/skeleton         nullfs rw 0 0" >> "${jail_dir}/mount/${jail_name}.fstab"
     echo "${data_dir}                           ${jail_dir}/mount/${jail_name}/mnt/data         nullfs rw 0 0" >> "${jail_dir}/mount/${jail_name}.fstab"
-    if [[ "${jail_name}" == "media" ]] || [[ "${jail_name}" == "download" ]] || [[ "${jail_name}" == "share" ]]
+    if [ "${jail_name}" = "media" -o "${jail_name}" = "download" -o "${jail_name}" = "share" ]
     then
         echo "${media_dir}                      ${jail_dir}/mount/${jail_name}/mnt/media        nullfs rw 0 0" >> "${jail_dir}/mount/${jail_name}.fstab"
     fi
-    if [[ "${jail_name}" == "download" ]] || [[ "${jail_name}" == "share" ]]
+    if [ "${jail_name}" = "download" -o "${jail_name}" = "share" ]
     then
         echo "${download_dir}                   ${jail_dir}/mount/${jail_name}/mnt/downloads    nullfs rw 0 0" >> "${jail_dir}/mount/${jail_name}.fstab"
     fi
-    if [[ "${jail_name}" == "share" ]]
+    if [ "${jail_name}" = "share" ]
     then
         echo "${share_dir}                      ${jail_dir}/mount/${jail_name}/mnt/share        nullfs rw 0 0" >> "${jail_dir}/mount/${jail_name}.fstab"
     fi
     echo "${config_dir}                         ${jail_dir}/mount/${jail_name}/mnt/config       nullfs rw 0 0" >> "${jail_dir}/mount/${jail_name}.fstab"
     echo "/usr/ports                            ${jail_dir}/mount/${jail_name}/usr/ports        nullfs ro 0 0" >> "${jail_dir}/mount/${jail_name}.fstab"
-
 
     return 0
 }

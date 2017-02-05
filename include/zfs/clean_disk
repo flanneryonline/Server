@@ -1,23 +1,21 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-function clean_disk {
+clean_disk () {
 
-    # No args? More than 1 arg?
-    if [[ $# -ne 1 ]]
+    if [ $# -ne 1 ]
     then
-        echo "****Failed to clean disk. invalid number of arquments.****"
+        echo >&2 "****Failed to clean disk. invalid number of arquments.****"
         return 1
     fi
 
     local drive=$1
 
-    # Check if arg is a drive
-    if [[ ! -e /dev/${drive} ]]
+    if [ ! -e /dev/${drive} ]
     then 
-        echo "****Failed to delete $drive - not a drive****"
+        echo >&2 "****Failed to delete $drive - not a drive****"
         return 1
     fi
 

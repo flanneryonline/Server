@@ -1,12 +1,12 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-source ~/server/scripts/setup/system/install
-source ~/server/scripts/setup/etc/user_init
+. ~/server/scripts/setup/system/install
+. ~/server/scripts/setup/etc/user_init
 
-function jail_staging {
+jail_staging () {
 
     if \
         zfs list -d 0 -H -t snapshot -o name \

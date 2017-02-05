@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-function jail_conf_init {
+jail_conf_init () {
 
     local altroot=${ALTROOT:-${altroot:-}}
     local jail_dir=${JAIL_DIR:-${jail_dir:-"${altroot}/usr/jails"}}

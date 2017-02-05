@@ -1,14 +1,14 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-source ~/server/include/system/etc/cron_init
-source ~/server/include/system/etc/fstab_init
-source ~/server/include/system/etc/periodic_conf_init
-source ~/server/include/system/etc/rc_conf_init
+. ~/server/include/system/etc/cron_init
+. ~/server/include/system/etc/fstab_init
+. ~/server/include/system/etc/periodic_conf_init
+. ~/server/include/system/etc/rc_conf_init
 
-function system_install {
+system_install () {
 
     cron_init
     fstab_init

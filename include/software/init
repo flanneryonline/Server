@@ -1,17 +1,14 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-source ~/server/include/software/etc/make_conf_init
-source ~/server/include/software/etc/ssmtp_init
+. ~/server/include/software/etc/make_conf_init
+. ~/server/include/software/etc/ssmtp_init
 
-function software_init {
+software_init () {
 
     local altroot=${1:-${ALTROOT:-${altroot:-}}}
-
-    export ASSUME_ALWAYS_YES=yes
-    export PAGER=cat
 
     make_conf_init
 

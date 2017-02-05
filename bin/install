@@ -1,10 +1,18 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
 export ASSUME_ALWAYS_YES=YES
 export PAGER=cat
+
+command -v zfs >/dev/null 2>&1 || { echo >&2 "zfs command is required but it's not installed.  Aborting."; exit 1; }
+command -v curl >/dev/null 2>&1 || { echo >&2 "curl command is required but it's not installed.  Aborting."; exit 1; }
+command -v sysrc >/dev/null 2>&1 || { echo >&2 "sysrc command is required but it's not installed.  Aborting."; exit 1; }
+command -v freebsd-update >/dev/null 2>&1 || { echo >&2 "freebsd-update command is required but it's not installed.  Aborting."; exit 1; }
+command -v zpool >/dev/null 2>&1 || { echo >&2 "zpool command is required but it's not installed.  Aborting."; exit 1; }
+command -v gpart >/dev/null 2>&1 || { echo >&2 "gpart command is required but it's not installed.  Aborting."; exit 1; }
+command -v gnop >/dev/null 2>&1 || { echo >&2 "gnop command is required but it's not installed.  Aborting."; exit 1; }
 
 fast_drive_list="ada0"
 root_drive_list="da0 da1"
@@ -48,31 +56,26 @@ fqdn="${hostname}.${domain}"
 host_ip=$(host "${fqdn}" | grep "has address" | awk '{print $4}')
 
 t="test"
-if [ "${TESTING:-"YES"}" = "NO" ] ; then t=""; fi
+if [ ${TESTING:-"YES"} = "NO" ] ; then t=""; fi
 
 if [ -z "${host_ip}" ]
 then
-    echo "Hostname ${fqdn} not found in DNS - setup DNS first."
-    exit 1 
+    echo >&2 "Hostname ${fqdn} not found in DNS - setup DNS first."
+    exit 1
 fi
 
 if [ -d "${temp_dir}" ] ; then rm -R "${temp_dir}"; fi
 mkdir -p "${temp_dir}"
 
 
-source ~/server/include/jail/init
-source ~/server/include/jail/create
-
-source ~/server/include/networking/init
-
-source ~/server/include/software/init
-
-source ~/server/include/system/init
-source ~/server/include/system/install
-
-source ~/server/include/user/init
-
-source ~/server/include/zfs/init
+. ~/server/include/jail/init
+. ~/server/include/jail/create
+. ~/server/include/networking/init
+. ~/server/include/software/init
+. ~/server/include/system/init
+. ~/server/include/system/install
+. ~/server/include/user/init
+. ~/server/include/zfs/init
 
 echo "Setting up ZFS."
 zfs_init
@@ -86,13 +89,9 @@ mount -t devfs devfs "${altroot}/dev"
 echo "Configuring system."
 
 system_init
-
 software_init
-
 user_init
-
 networking_init
-
 jail_init
 
 echo "Creating Jails."
@@ -100,15 +99,18 @@ echo "Creating Jails."
 echo "Set passwords."
 chroot "${altroot}" passwd "root"
 chroot "${altroot}" passwd "homeadmin"
-password=""
-while [ -z "${password// }" ]
+
+while [ -z ${password:-} ]
 do
     read -s -p "Enter ssmtp password: " password
-    if [ -z "${password// }" ] 
+    if [ -z ${password} ] 
     then 
-        echo "\nMust not be blank! try again..."
+        echo ""
+        echo "Must not be blank! try again..."
     fi
 done
+
+mkdir -p "${altroot}/usr/local/etc/ssmtp"
 echo "AuthPass=${password}" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 
 echo "Creating install snapshots."

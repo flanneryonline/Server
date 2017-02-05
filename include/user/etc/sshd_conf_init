@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-function sshd_config_init {
+sshd_config_init () {
 
     local altroot=${1:-${ALTROOT:-${altroot:-}}}
 

@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-function rc_conf_init {
+rc_conf_init () {
 
     local altroot=${1:-${ALTROOT:-${altroot:-}}}
 

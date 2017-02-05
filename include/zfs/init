@@ -1,20 +1,18 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-source ~/server/include/zfs/clean_disk
-source ~/server/include/zfs/create_pool
-
-source ~/server/include/zfs/etc/loader_conf_init
-
-source ~/server/include/zfs/datasets/zroot
-source ~/server/include/zfs/datasets/zfast
-source ~/server/include/zfs/datasets/zstorage
-source ~/server/include/zfs/datasets/extra
+. ~/server/include/zfs/clean_disk
+. ~/server/include/zfs/create_pool
+. ~/server/include/zfs/etc/loader_conf_init
+. ~/server/include/zfs/datasets/zroot
+. ~/server/include/zfs/datasets/zfast
+. ~/server/include/zfs/datasets/zstorage
+. ~/server/include/zfs/datasets/extra
 
 
-function zfs_init {
+zfs_init () {
 
     local root_drive_list=${ROOT_DRIVE_LIST:-${root_drive_list}}
     local fast_drive_list=${FAST_DRIVE_LIST:-${fast_drive_list}}

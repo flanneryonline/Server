@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-function extra_datasets {
+extra_datasets () {
 
     local base_jail_dir=${BASE_JAIL_DIR:-${base_jail_dir:-"/usr/jails"}}
     local jail_zfs=${JAIL_ZFS:-${jail_zfs:-"zfast/jails"}}

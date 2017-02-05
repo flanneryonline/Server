@@ -1,12 +1,12 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-source ~/server/scripts/setup/system/install
-source ~/server/scripts/setup/etc/user_init
+. ~/server/scripts/setup/system/install
+. ~/server/scripts/setup/etc/user_init
 
-function jail_base {
+jail_base () {
 
     local altroot=${ALTROOT:-${altroot:-}}
     local jail_zfs=${JAIL_ZFS:-${jail_zfs:-"zfast/jails"}}
@@ -14,7 +14,7 @@ function jail_base {
 
     local jail_release=${1:-${JAIL_RELEASE:-${jail_release:-}}}
 
-    if [[ -z "${jail_release// }" ]]
+    if [ -z "${jail_release}" ]
     then
         echo "****failed to create jail base. Release blank****"
         return 1

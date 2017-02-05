@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-function zstorage_datasets {
+zstorage_datasets () {
 
     echo "    zstorage datasets created"
 

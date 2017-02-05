@@ -1,13 +1,13 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-source ~/server/include/user/etc/pw_conf_init
-source ~/server/include/user/etc/sshd_conf_init
-source ~/server/include/user/etc/sudo_init
+. ~/server/include/user/etc/pw_conf_init
+. ~/server/include/user/etc/sshd_conf_init
+. ~/server/include/user/etc/sudo_init
 
-function user_init {
+user_init () {
 
     local altroot=${1:-${ALTROOT:-${altroot:-}}}
 

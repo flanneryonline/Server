@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-function periodic_conf_init {
+periodic_conf_init () {
 
     local altroot=${1:-${ALTROOT:-${altroot:-}}}
 

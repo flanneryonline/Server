@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-function zroot_datasets {
+zroot_datasets () {
 
     local root_pool=${ROOT_POOL:-${root_pool:-"zroot"}}
 

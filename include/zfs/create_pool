@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/sh
 
 set -o errexit
 set -o nounset
 
-function create_pool {
+create_pool () {
 
     local pool=${1:-}
     local ztype=${2:-}
@@ -13,13 +13,13 @@ function create_pool {
 
     if [ -z "$drive_list" ]
     then
-        echo "****Failed to setup pool. drive_list is not set.****"
+        echo >&2 "****Failed to setup pool. drive_list is not set.****"
         return 1
     fi
 
     if [ -z "$altroot" ]
     then
-        echo "****Failed to setup pool. altroot is not set.****"
+        echo >&2 "****Failed to setup pool. altroot is not set.****"
         return 1
     fi
 
@@ -27,7 +27,7 @@ function create_pool {
     do
         if [ ! -e /dev/${check_drive} ]
         then
-            echo "****Failed to setup pool. $check_drive is not a valid drive.****"
+            echo >&2 "****Failed to setup pool. $check_drive is not a valid drive.****"
             return 1
         fi
     done
@@ -45,7 +45,7 @@ function create_pool {
     fi
     if [ ${type_checks_out:-0} -ne 1 ]
     then
-        echo "****Failed to setup pool. $ztype is not a valid zfs pool type.****"
+        echo >&2 "****Failed to setup pool. $ztype is not a valid zfs pool type.****"
         return 1
     fi
 
