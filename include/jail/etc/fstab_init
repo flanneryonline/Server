@@ -15,12 +15,12 @@ jail_fstab_init () {
 
     if [ -z ${jail_name} ]
     then
-        echo "****Failed to create jail fstab. Jail name cannot be blank.****"
+        echo >&2 "****Failed to create jail fstab. Jail name cannot be blank.****"
         return 1
     fi
     if [ -z "${jail_release}" ]
     then
-        echo "****Failed to create jail fstab. Jail release cannot be blank.****"
+        echo >&2 "****Failed to create jail fstab. Jail release cannot be blank.****"
         return 1
     fi
 

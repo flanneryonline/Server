@@ -69,7 +69,6 @@ mkdir -p "${temp_dir}"
 
 
 . ~/server/include/jail/init
-. ~/server/include/jail/create
 . ~/server/include/networking/init
 . ~/server/include/software/init
 . ~/server/include/system/init
@@ -94,8 +93,6 @@ user_init
 networking_init
 jail_init
 
-echo "Creating Jails."
-
 echo "Set passwords."
 chroot "${altroot}" passwd "root"
 chroot "${altroot}" passwd "homeadmin"
@@ -116,6 +113,7 @@ echo "AuthPass=${password}" >> "${altroot}/usr/local/etc/ssmtp/ssmtp.conf"
 echo "Creating install snapshots."
 zfs snapshot -r zroot@install
 zfs snapshot -r zfast@install
+zfs snapshot -r zstorage@install
 
 echo "Cleaning up..."
 umount "${altroot}/dev"

@@ -3,8 +3,9 @@
 set -o errexit
 set -o nounset
 
-. ~/server/scripts/setup/system/install
-. ~/server/scripts/setup/etc/user_init
+. ~/server/include/jail/staging
+. ~/server/include/system/install
+. ~/server/include/user/init
 
 jail_base () {
 
@@ -59,6 +60,8 @@ jail_base () {
     sysrc -r "${jail_dir}/base/${jail_release}" sendmail_msp_queue_enable="NO"
 
     zfs snapshot "${jail_zfs}/base/${jail_release}@install"
+
+    jail_staging
 
     echo "    Base jail created."
     return 0

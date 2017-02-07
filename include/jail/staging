@@ -3,10 +3,9 @@
 set -o errexit
 set -o nounset
 
-. ~/server/scripts/setup/system/install
-. ~/server/scripts/setup/etc/user_init
-
 jail_staging () {
+
+    local jail_release=${1:-${JAIL_RELEASE:-${jail_release:-}}}
 
     if \
         zfs list -d 0 -H -t snapshot -o name \

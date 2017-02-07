@@ -3,9 +3,9 @@
 set -o errexit
 set -o nounset
 
-. ~/server/scripts/setup/jail/base
-. ~/server/scripts/setup/jail/staging
-. ~/server/scripts/setup/jail/fstab_init
+. ~/server/jail/base
+. ~/server/jail/staging
+. ~/server/jail/etc/fstab_init
 
 jail_create () {
 
