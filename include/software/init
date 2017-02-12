@@ -5,6 +5,7 @@ set -o nounset
 
 . ~/server/include/software/etc/make_conf_init
 . ~/server/include/software/etc/ssmtp_init
+. ~/server/include/software/setup
 
 software_init () {
 
@@ -20,6 +21,8 @@ software_init () {
     chroot "${altroot}" /usr/sbin/pkg autoremove >/dev/null
 
     ssmtp_init
+
+    software_setup
 
     return 0
 }

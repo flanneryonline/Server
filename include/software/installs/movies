@@ -1,0 +1,13 @@
+#!/bin/sh
+
+set -o errexit
+set -o nounset
+
+movies_install () {
+
+    local altroot=${1:-${ALTROOT:-${altroot:-}}}
+
+    
+
+    return 0
+}

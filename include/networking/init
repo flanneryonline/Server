@@ -3,14 +3,22 @@
 set -o errexit
 set -o nounset
 
-source ~/server/include/networking/etc/resolv_conf_init
+. ~/server/include/networking/etc/resolv_conf_init
+. ~/server/include/networking/lagg
 
 function networking_init {
+
+    local altroot=${1:-${ALTROOT:-${altroot:-}}}
 
     resolv_conf_init
 
     sysrc -R "${altroot}" defaultrouter="${gateway}" >/dev/null 2>&1
     sysrc -R "${altroot}" hostname="${fqdn}" >/dev/null 2>&1
+
+    if [ $lag ]
+    then
+        lagg_init
+    fi
 
     return 0
 }
