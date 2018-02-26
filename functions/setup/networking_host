@@ -1,0 +1,62 @@
+#!/bin/bash
+
+#disabled legacy networking services and enabled systemd-networkd
+#also makes sure network devices are re-probed so proper names are given
+#required:
+#   helper functions:
+#       server_howmany
+initialize_networking() {
+    service network-manager stop
+    service networking stop
+    rm /etc/resolv.conf
+    ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
+
+    #force udev to re-load nets
+    nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
+    for net in $nets; do
+        driver=$(basename $(readlink /sys/class/net/$net/device/driver/module))
+        modprobe -r $driver
+        modprobe $driver
+    done
+    udevadm trigger --attr-match=subsystem=net
+    systemctl restart systemd-udevd
+    systemctl enable systemd-resolved
+    systemctl enable systemd-networkd
+    systemctl start systemd-resolved
+    systemctl start systemd-networkd
+
+    #names might have changed so get list of nets again
+    nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
+    if [ $(howmany $nets) -eq 1 ]; then
+        echo "[Match]" > "/usr/lib/systemd/network/$nets.network"
+        echo "Name=$nets" >> "/usr/lib/systemd/network/$nets.network"
+        echo "[Network]" >> "/usr/lib/systemd/network/$nets.network"
+        echo "DHCP=yes" >> "/usr/lib/systemd/network/$nets.network"
+    fi
+    if [ $(howmany $nets) -gt 1 ]; then
+        for net in $nets; do
+            echo "[Match]" > "/usr/lib/systemd/network/$net.network"
+            echo "Name=$net" >> "/usr/lib/systemd/network/$net.network"
+            echo "[Network]" >> "/usr/lib/systemd/network/$net.network"
+            echo "Bond=lacp0" >> "/usr/lib/systemd/network/$net.network"
+        done
+
+        echo "[Match]" > "/usr/lib/systemd/network/lacp0.network"
+        echo "Name=lacp0" >> "/usr/lib/systemd/network/lacp0.network"
+        echo "[Network]" >> "/usr/lib/systemd/network/lacp0.network"
+        echo "DHCP=yes" >> "/usr/lib/systemd/network/lacp0.network"
+        echo "BindCarrier=$(ls /sys/class/net | grep -v lo)" >> "/usr/lib/systemd/network/lacp0.network"
+
+        echo "[NetDev]" > "/usr/lib/systemd/network/lacp0.netdev"
+        echo "Name=lacp0" >> "/usr/lib/systemd/network/lacp0.netdev"
+        echo "Kind=bond" >> "/usr/lib/systemd/network/lacp0.netdev"
+        echo "[Bond]" >> "/usr/lib/systemd/network/lacp0.netdev"
+        echo "Mode=802.3ad" >> "/usr/lib/systemd/network/lacp0.netdev"
+        echo "LACPTransmitRate=fast" >> "/usr/lib/systemd/network/lacp0.netdev"
+        echo "MIIMonitorSec=1s" >> "/usr/lib/systemd/network/lacp0.netdev"
+        echo "UpDelaySec=2s" >> "/usr/lib/systemd/network/lacp0.netdev"
+        echo "DownDelaySec=8s" >> "/usr/lib/systemd/network/lacp0.netdev"
+    fi
+
+    systemctl restart systemd-networkd
+}

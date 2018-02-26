@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#filters quotes out of whatever is passed in
+#useful for whiptail values with quotes in them
+filter_quotes() {
+echo "$1" | sed 's/"//g'
+}

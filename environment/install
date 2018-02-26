@@ -1,0 +1,15 @@
+#!/bin/bash
+
+dist="debian"
+release="stretch"
+root="/mnt/install"
+dist_url="http://deb.debian.org/debian"
+sec_url="http://security.debian.org/"
+components="main,contrib"
+comp_spaces=$(echo $components | sed 's/,/ /g')
+packages="lsb-release,linux-base,linux-headers-amd64,linux-image-amd64,"
+packages="${packages}software-properties-common,systemd,apt-listchanges,"
+packages="${packages}locales,ssh,dosfstools,man-db,unattended-upgrades,"
+packages="${packages}ca-certificates,apt-transport-https,"
+packages="${packages}vim,curl,gnupg2,bash-completion,systemd-container"
+chroot_eval="systemd-nspawn -a -D "$root" /usr/bin/env PATH=/usr/sbin:/usr/bin/:/bin:/sbin DEBIAN_FRONTEND=noninteractive"

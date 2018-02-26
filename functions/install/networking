@@ -1,0 +1,40 @@
+#!/bin/bash
+
+initialize_networking() {
+    [ -f "$root/etc/resolv.conf" ] && rm "$root/etc/resolv.conf"
+    eval "$chroot_eval ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf"
+    eval "$chroot_eval systemctl enable systemd-networkd.service"
+    eval "$chroot_eval systemctl enable systemd-resolved.service"
+
+    nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
+    if [ $(howmany $nets) -eq 1 ]; then
+        echo "[Match]" > "$root/usr/lib/systemd/network/$nets.network"
+        echo "Name=$nets" >> "$root/usr/lib/systemd/network/$nets.network"
+        echo "[Network]" >> "$root/usr/lib/systemd/network/$nets.network"
+        echo "DHCP=yes" >> "$root/usr/lib/systemd/network/$nets.network"
+    fi
+    if [ $(howmany $nets) -gt 1 ]; then
+        for net in $nets; do
+            echo "[Match]" > "$root/usr/lib/systemd/network/$net.network"
+            echo "Name=$net" >> "$root/usr/lib/systemd/network/$net.network"
+            echo "[Network]" >> "$root/usr/lib/systemd/network/$net.network"
+            echo "Bond=lacp0" >> "$root/usr/lib/systemd/network/$net.network"
+        done
+
+        echo "[Match]" > "$root/usr/lib/systemd/network/lacp0.network"
+        echo "Name=lacp0" >> "$root/usr/lib/systemd/network/lacp0.network"
+        echo "[Network]" >> "$root/usr/lib/systemd/network/lacp0.network"
+        echo "DHCP=yes" >> "$root/usr/lib/systemd/network/lacp0.network"
+        echo "BindCarrier=$(echo $nets)" >> "$root/usr/lib/systemd/network/lacp0.network"
+
+        echo "[NetDev]" > "$root/usr/lib/systemd/network/lacp0.netdev"
+        echo "Name=lacp0" >> "$root/usr/lib/systemd/network/lacp0.netdev"
+        echo "Kind=bond" >> "$root/usr/lib/systemd/network/lacp0.netdev"
+        echo "[Bond]" >> "$root/usr/lib/systemd/network/lacp0.netdev"
+        echo "Mode=802.3ad" >> "$root/usr/lib/systemd/network/lacp0.netdev"
+        echo "LACPTransmitRate=fast" >> "$root/usr/lib/systemd/network/lacp0.netdev"
+        echo "MIIMonitorSec=1s" >> "$root/usr/lib/systemd/network/lacp0.netdev"
+        echo "UpDelaySec=2s" >> "$root/usr/lib/systemd/network/lacp0.netdev"
+        echo "DownDelaySec=8s" >> "$root/usr/lib/systemd/network/lacp0.netdev"
+    fi
+}

@@ -1,0 +1,25 @@
+#!/bin/bash
+
+initialize_apt() {
+    echo "setting up system package management"
+    rm "$root/etc/apt/sources.list"
+    touch "$root/etc/apt/sources.list"
+
+    echo "deb [arch=amd64] $sec_url $release/updates $comp_spaces" \
+        >>  "$root/etc/apt/sources.list.d/$dist.$release-updates.list"
+    echo "deb [arch=amd64] $dist_url $release-updates $comp_spaces" \
+        >>  "$root/etc/apt/sources.list.d/$dist.$release-updates.list"
+
+    echo "deb [arch=amd64] $dist_url $release-backports $comp_spaces" \
+        >>  "$root/etc/apt/sources.list.d/$dist.$release-backports.list"
+
+    echo "deb [arch=amd64] $dist_url $release $comp_spaces" \
+        >>  "$root/etc/apt/sources.list.d/$dist.$release.list"
+
+    echo "updating packages"
+    eval "$chroot_eval apt-get update -qq"
+    echo "upgrading packages"
+    eval "$chroot_eval apt-get upgrade -qq"
+    eval "$chroot_eval apt-get install -qq zfs-initramfs zfs-dkms"
+    echo "package setup complete"
+}

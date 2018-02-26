@@ -1,0 +1,20 @@
+#!/bin/bash
+
+. "${SERVER_INSTALL:-~/server}/environment/install"
+. "${SERVER_INSTALL:-~/server}/environment/host"
+
+. "${SERVER_INSTALL:-~/server}/functions/howmany"
+. "${SERVER_INSTALL:-~/server}/functions/debootstrap_install"
+
+for file in $(ls "${SERVER_INSTALL:-~/server}/functions/disk"); do
+    . "${SERVER_INSTALL:-~/server}/functions/disk/$file"
+done
+for file in $(ls "${SERVER_INSTALL:-~/server}/functions/install"); do
+    . "${SERVER_INSTALL:-~/server}/functions/disk/$file"
+done
+for file in $(ls "${SERVER_INSTALL:-~/server}/functions/setup"); do
+    . "${SERVER_INSTALL:-~/server}/functions/disk/$file"
+done
+for file in $(ls "${SERVER_INSTALL:-~/server}/functions/zfs"); do
+    . "${SERVER_INSTALL:-~/server}/functions/disk/$file"
+done

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+. "${INSTALL_ENVIRONMENT:-${SERVER_INSTALL:-~/server}/environment/host}"
+
+export PUID=$docker_user_id
+export PGID=$docker_group_id
+export DOCKER_CONFIGS="$storage_dir/configs"
+export DOCKER_MEDIA="$storage_dir/media"
+export DOCKER_DOWNLOADS="$storage_dir/downloads"
+export SERVER_TIMEZONE=$timezone
+export SERVER_DOMAIN=$server_domain
+export ADMIN_EMAIL=$admin_email
+export EMAIL_SERVER=$email_server
+export EMAIL_USER=$email_user
+export EMAIL_PASSWORD=$email_password

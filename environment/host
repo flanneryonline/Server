@@ -1,0 +1,19 @@
+#!/bin/bash
+
+root_pool="zroot"
+storage_pool="zstorage"
+docker_pool="zdocker"
+storage_dir="/storage"
+admin_username="pat"
+admin_user_id=1000
+admin_group_id=1000
+docker_user_id=1001
+docker_group_id=1001
+timezone="America\Chicago"
+hostname="hostserver"
+server_domain="flanneryonline.com"
+server_fqdm="$hostname.$server_domain"
+admin_email="$admin_username@$server_domain"
+email_server="smtp.mail.wowway.com"
+email_user="pflannery"
+email_password="update me"

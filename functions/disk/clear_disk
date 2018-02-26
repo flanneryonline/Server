@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#removes all mounts/swaps/zpools from disk. anything that would prevent repartitioning.
+#
+#variables
+#   1=dev disk ex: "/dev/sda"
+clear_disk() {
+    local disk=$1
+    for swap in $(cat /proc/swaps | awk -v d=$disk '$1 ~ d {print $1}'); do swapoff $swap; done
+    for mountpoint in $(mount | awk -v d=$disk '$1 ~ d {print $1}' | sort | uniq); do umount -lAR $mountpoint; done
+    for pool in $(zpool list -H | awk '{print $1}'); do
+        [ -n "$(zpool status -P $pool | grep $(get_disk_link $disk))" ] && zpool destroy $pool
+    done
+    for pool in $(zpool list -H | awk '{print $1}'); do
+        [ -n "$(zpool status -P $pool | grep $disk)" ] && zpool destroy $pool;
+    done
+    which mdadm >/dev/null && mdadm --zero-superblock --force $disk
+    sgdisk --zap $disk >/dev/null
+}

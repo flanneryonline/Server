@@ -1,0 +1,10 @@
+#!/bin/bash
+
+initialize_users() {
+    groupadd -R "$root" -g $admin_group_id $admin_username
+    groupadd -R "$root" -g $docker_group_id docker_group
+    useradd -R "$root" -m -u $admin_user_id -g $admin_username \
+        -G plugdev,sudo,docker_group -s /bin/bash $admin_username
+    useradd -R "$root" -r -u $docker_user_id -g docker_group -s /sbin/nologin docker_user
+    echo "$admin_username:$admin_password" | chpasswd -R "$root"
+}

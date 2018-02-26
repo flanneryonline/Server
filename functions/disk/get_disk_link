@@ -1,0 +1,14 @@
+#!/bin/bash
+
+#gets a single /dev/disk/by-
+#link based on the dev provided
+#
+#parameters:
+#   1 - base dev ex: "/dev/sda"
+#   2 - (optional) link type ex: "uuid"
+#       this is anything under /dev/disk/by-
+#       that would show up under DEVLINKS in udevadm
+get_disk_link() {
+filter="by-"${2:-"id"}
+udevadm info -q all $1 | grep DEVLINKS | sed 's/ /\n/g' | grep /dev/ | sed 's/DEVLINKS=//' | grep $filter | sort | head -n1
+}

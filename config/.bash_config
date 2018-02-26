@@ -1,0 +1,12 @@
+#!/bin/bash
+
+showlog() {
+    type=$1
+    [ "$type" = "" ] && type=error
+    [ "$type" = "boot" ] && journalctl -b -o short-precise -n $2
+    [ "$type" = "net" ] && journalctl -b -o short-precise -u systemd-networkd.service -n $2
+    [ "$type" = "error" ] && journalctl -p err -b -o short-precise -n $2
+    [ "$type" = "user" ] && journalctl _UID=$(id -u $2) --since today -n $3
+    [ "$type" = "group" ] && journalctl _GID=$(id -g $2) --since today -n $3
+    [ "$type" = "dmsg" ] && journalctl -k -o short-precise
+}

@@ -1,0 +1,6 @@
+[Unit]
+Description=timer for system updates
+[Timer]
+OnUnitInactiveSec=24h
+[Install]
+WantedBy=timers.target

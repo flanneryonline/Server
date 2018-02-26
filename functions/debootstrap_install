@@ -1,0 +1,17 @@
+#!/bin/bash
+
+debootstrap_install() {
+    debootstrap --components $components \
+        --exclude ifupdown,resolvconf,network-manager,rdnssd \
+        --include $packages \
+        $release "$root" $dist_url
+    echo "mounting system stuff into install location"
+    echo "running first boot setup"
+    systemd-firstboot \
+        --root="$root" \
+        --locale="en_US.UTF-8" \
+        --timezone="America\Chicago" \
+        --hostname=$hostname \
+        --setup-machine-id
+    echo "debootstrap install complete!"
+}

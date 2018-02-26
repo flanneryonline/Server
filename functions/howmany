@@ -1,0 +1,15 @@
+#!/bin/bash
+
+howmany() {
+case $- in
+    *f* )
+        set -- $1
+    ;;
+    * )
+        set -f
+        set -- $1
+        set +f
+    ;;
+esac
+echo $#
+}
