@@ -1,4 +1,5 @@
 #!/bin/bash
+# chmod +x install/install.sh
 # SERVER_INSTALL=$(pwd) ./install//install.sh |& tee /var/log/debootstrap.log
 
 [ "$UID" -eq 0 ] || exec sudo bash "$0" "$@"
@@ -6,7 +7,7 @@
 export DEBIAN_FRONTEND=noninteractive
 
 . "${SERVER_INSTALL:-~/server}/install/include"
-. "${SERVER_INSTALL:-~/server}/install/environmnet"
+. "${SERVER_INSTALL:-~/server}/install/environment"
 
 apt-get install -qq \
     zfs-initramfs \
