@@ -350,7 +350,17 @@ initialize_networking() {
     fi
 
     printf "waiting for network."
-    while ! ping -q -c 1 google.com >/dev/null; do printf "."; done && printf "\n"
+    timeout=1
+    while ! ping -q -c 1 google.com >/dev/null
+    do
+        [ timeout -eq 500 ] && \
+            printf "\n" && \
+            echoerr "timeout while waiting for network." && \
+            return 1
+        printf "."
+        timeout=$((timeout+1))
+    done
+    printf "\n"
 
     return 0
 }
