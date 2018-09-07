@@ -1,15 +1,12 @@
 #!/bin/bash
-# SERVER_INSTALL=$(pwd) ./install.sh |& tee /var/log/debootstrap.log
+# SERVER_INSTALL=$(pwd) ./install//install.sh |& tee /var/log/debootstrap.log
 
 [ "$UID" -eq 0 ] || exec sudo bash "$0" "$@"
 
 export DEBIAN_FRONTEND=noninteractive
 
 . "${SERVER_INSTALL:-~/server}/install/include"
-
-root=
-initialize_networking
-initialize_apt
+. "${SERVER_INSTALL:-~/server}/install/environmnet"
 
 apt-get install -qq \
     zfs-initramfs \
@@ -17,6 +14,13 @@ apt-get install -qq \
     debootstrap \
     curl \
     apt-transport-https
+errorcheck && exit 1
+
+root=
+initialize_networking
+errorcheck && exit 1
+initialize_apt
+errorcheck && exit 1
 
 clear
 

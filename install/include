@@ -294,7 +294,7 @@ howmany() {
 initialize_networking() {
     [ x$root = x ] && local chroot_eval=
     nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
-    rm -r "$root/etc/systemd/network/"*
+    [ "$(ls -A "$root/etc/systemd/network >/dev/null")" ] && rm -r "$root/etc/systemd/network/"*
     if [ $(howmany $nets) -eq 1 ]; then
         echo "[Match]" > "$root/etc/systemd/network/$nets.network"
         echo "Name=$nets" >> "$root/etc/systemd/network/$nets.network"
@@ -334,11 +334,13 @@ initialize_networking() {
     echo "net.ipv6.conf.default.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
     echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
 
-    eval "$chroot_eval systemctl enable systemd-networkd.service"
-    errorcheck && echoerr "error enabling network services (chroot)" && return 1
-    eval "$chroot_eval systemctl enable systemd-resolved.service"
-    errorcheck && echoerr "error enabling dns services (chroot)" && return 1
-    if [ x$root = x ]; then
+    if [ x$root != x ]
+    then
+        eval "$chroot_eval systemctl enable systemd-networkd.service"
+        errorcheck && echoerr "error enabling network services (chroot)" && return 1
+        eval "$chroot_eval systemctl enable systemd-resolved.service"
+        errorcheck && echoerr "error enabling dns services (chroot)" && return 1
+    else
         systemctl restart systemd-sysctl
         errorcheck && echoerr "error restarting system services" && return 1
         systemctl restart systemd-networkd
