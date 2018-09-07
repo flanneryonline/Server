@@ -15,7 +15,7 @@ initialize_apt() {
     echo "setting up system package management"
     [ -f "$root/etc/apt/sources.list" ] && rm "$root/etc/apt/sources.list"
     touch "$root/etc/apt/sources.list"
-    [ "$(ls -A "$root/etc/apt/sources.list.d" >/dev/null)" ] && \
+    [ "$(ls -A "$root/etc/apt/sources.list.d")" ] && \
         rm "$root/etc/apt/sources.list.d/"*
     eval "curl -fsSL https://download.docker.com/linux/$SERVER_DIST/gpg | \
         $chroot_eval apt-key add -"
@@ -295,7 +295,7 @@ howmany() {
 initialize_networking() {
     [ x$root = x ] && local chroot_eval=
     nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
-    [ "$(ls -A "$root/etc/systemd/network" >/dev/null)" ] && \
+    [ "$(ls -A "$root/etc/systemd/network")" ] && \
         rm -r "$root/etc/systemd/network/"*
     if [ $(howmany $nets) -eq 1 ]; then
         echo "[Match]" > "$root/etc/systemd/network/$nets.network"
