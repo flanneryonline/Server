@@ -348,6 +348,10 @@ initialize_networking() {
         systemctl restart systemd-networkd
         errorcheck && echoerr "error restarting network services" && return 1
     fi
+
+    printf "waiting for network."
+    while ! ping -q -c 1 google.com >/dev/null; do printf "."; done && printf "\n"
+
     return 0
 }
 
