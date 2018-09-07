@@ -1,0 +1,677 @@
+#!/bin/bash
+
+echoerr() {
+    cat <<< "$@" 1>&2
+    return 0
+}
+
+errorcheck() {
+    [ $? -ne 0 ] && return 0
+    return 1
+}
+
+initialize_apt() {
+    [ x$root = x ] && local chroot_eval=
+    echo "setting up system package management"
+    [ -f "$root/etc/apt/sources.list" ] && rm "$root/etc/apt/sources.list"
+    touch "$root/etc/apt/sources.list"
+    rm "$root/etc/apt/sources.list.d/"*
+    eval "curl -fsSL https://download.docker.com/linux/$SERVER_DIST/gpg | \
+        $chroot_eval apt-key add -"
+
+    echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE main universe" \
+        >>  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.list"
+
+    echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-updates main universe" \
+        >>  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.updates.list"
+
+    echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-security main universe" \
+        >>  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.security.list"
+
+    echo "deb [arch=amd64] https://download.docker.com/linux/$SERVER_DIST $SERVER_DIST_RELEASE stable" \
+        >  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list"
+
+    eval "$chroot_eval apt-get update -qq >/dev/null"
+    errorcheck && echoerr "error during apt-get update" && return 1
+    eval "$chroot_eval apt-get upgrade -qq >/dev/null"
+    errorcheck && echoerr "error during apt-get upgrade" && return 1
+
+    return 0
+}
+
+initialize_email() {
+    echo "$ADMIN_EMAIL" >> "$root/root/.forward"
+    [ -d "$root/home/$ADMIN_USERNAME" ] && echo "$ADMIN_EMAIL" >> "$root/home/$ADMIN_USERNAME/.forward"
+    return 0
+}
+
+initialize_users() {
+    groupadd -R "$root" -g $ADMIN_GROUP_ID $ADMIN_USERNAME
+    errorcheck && return 1
+    groupadd -R "$root" -g $DOCKER_PGID docker_group
+    errorcheck && return 1
+    useradd -R "$root" -m -u $ADMIN_USER_ID -g $ADMIN_USERNAME \
+        -G plugdev,sudo,docker_group -s /bin/bash $ADMIN_USERNAME
+    errorcheck && return 1
+    useradd -R "$root" -r -u $DOCKER_PUID -g docker_group -s /sbin/nologin docker_user
+    errorcheck && return 1
+    echo "$ADMIN_USERNAME:$admin_password" | chpasswd -R "$root"
+    errorcheck && return 1
+
+    return 0
+}
+
+initialize_mounts() {
+
+    mount --rbind /dev "$root/dev"
+    errorcheck && return 1
+    mount --rbind /dev/pts "$root/dev/pts"
+    errorcheck && return 1
+    mount --rbind /proc "$root/proc"
+    errorcheck && return 1
+    mount --rbind /sys  "$root/sys"
+    errorcheck && return 1
+
+    eval "$chroot_eval zpool import $SSD_POOL"
+    errorcheck && echoerr "error importing ssd pool to chroot" && return 1
+    eval "$chroot_eval zpool import $STORAGE_POOL"
+    errorcheck && echoerr "error importing storage pool to chroot" && return 1
+
+    echo "$SSD_POOL/var /var zfs defaults 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/var/log /var/log zfs defaults 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/var/tmp /var/tmp zfs defaults 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/home /usr/home zfs defaults 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/home/root /root zfs defaults 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/home/$ADMIN_USERNAME /usr/home/$ADMIN_USERNAME zfs defaults 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/docker /var/lib/docker zfs defaults 0 0" >> "$root/etc/fstab"
+
+    eval "$chroot_eval mount -a"
+    errorcheck && echoerr "error mounting directories in chroot" && return 1
+
+    return 0
+}
+
+deinitialize_mounts() {
+
+    umount -l "$root/dev/pts"
+    errorcheck && return 1
+    umount -l "$root/dev"
+    errorcheck && return 1
+    umount -l "$root/proc"
+    errorcheck && return 1
+    umount -l "$root/sys"
+    errorcheck && return 1
+
+    zfs umount $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
+    errorcheck && echoerr "error unmounting root pool" && return 1
+    zpool export $ROOT_POOL
+    errorcheck && echoerr "error exporting root pool" && return 1
+
+    return 0
+}
+
+initialize_efi() {
+    echo "formating efi partition"
+    starting_disk=
+    disk_num=1
+    eval "$chroot_eval apt-get install -qq grub-efi-amd64"
+    for boot_disk in $boot_disks
+    do
+        if [ "x$starting_disk" = "x" ]
+        then
+            starting_disk=$boot_disk
+            mkfs.fat -n EFI -F32 ${starting_disk}1 >/dev/null
+            errorcheck && echoerr "error foratting efi on $boot_disk" && return 1
+            sleep 1s
+            echo "setting up system for efi"
+            [ ! -d "$root/boot/efi" ] && mkdir -p "$root/boot/efi"
+            echo "PARTUUID=$(trim_disk_link $(get_disk_link ${starting_disk}1 partuuid)) /boot/efi vfat defaults 0 1" >> "$root/etc/fstab"
+            eval "$chroot_eval mount /boot/efi"
+            errorcheck && echoerr "error mounting efi on $boot_disk" && return 1
+
+            echo "for x in \$(cat /proc/cmdline); do" > "$root/usr/share/initramfs-tools/conf.d/zfs"
+            echo "    case \$x in" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
+            echo "        root=ZFS=*)" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
+            echo "            BOOT=zfs;;" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
+            echo "    esac" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
+            echo "done" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
+
+            sed -i 's/GRUB_HIDDEN_TIMEOUT=0/#GRUB_HIDDEN_TIMEOUT=0/' "$root/etc/default/grub"
+
+            echo "updating initramfs"
+            eval "$chroot_eval update-initramfs -u -k all >/dev/null"
+            errorcheck && echoerr "error updating initramfs on $boot_disk" && return 1
+            echo "updating grub config"
+            eval "$chroot_eval update-grub >/dev/null"
+            errorcheck && echoerr "error updating grub on $boot_disk" && return 1
+            echo "installing efi grub"
+            eval "$chroot_eval grub-install \
+                --target=x86_64-efi \
+                --efi-directory=/boot/efi \
+                --bootloader-id=$SERVER_DIST-$SERVER_DIST_RELEASE \
+                --recheck \
+                --no-floppy >/dev/null"
+            errorcheck && echoerr "error installing grub on $boot_disk" && return 1
+            sleep 1s
+            eval "$chroot_eval umount /boot/efi"
+        else
+            dd if=$(get_disk_link ${starting_disk}1) \
+                of=$(get_disk_link ${boot_disk}1)
+            errorcheck && echoerr "error copying efi from $starting_disk to $boot_disk" && return 1
+
+            eval "$chroot_eval efibootmgr -q -c -g -d $(get_disk_link ${boot_disk}1) \
+                -p 1 -L '$SERVER_DIST-$SERVER_DIST_RELEASE-$disk_num' \
+                -l '\\EFI\\$SERVER_DIST-$SERVER_DIST_RELEASE\\grubx64.efi' >/dev/null"
+            errorcheck && echoerr "error updating efi on $boot_disk" && return 1
+        fi
+        disk_num=$((disk_num+1))
+    done
+    echo "efi grub setup complete"
+    return 0
+}
+
+#required:
+#   functions:
+#       initialize_mounts
+#       initialize_apt
+#       initialize_users
+#       initialize_networking
+#       initialize_docker
+initialize_os() {
+
+    initialize_mounts
+    errorcheck && echoerr "error in initialize_mounts" && return 1
+
+    eval "$chroot_eval locale-gen --purge en_US.UTF-8"
+    errorcheck && return 1
+    eval "$chroot_eval dpkg-reconfigure --frontend noninteractive locales"
+    errorcheck && return 1
+    eval "$chroot_eval update-locale LANG=en_US.UTF-8"
+    errorcheck && return 1
+    eval "$chroot_eval hostnamectl set-hostname $SERVER_HOSTNAME"
+    errorcheck && return 1
+
+    for file in "$root/etc/logrotate.d/"*
+    do
+        if grep -Eq "(^|[^#y])compress" "$file"
+        then
+            sed -i -r "s/(^|[^#y])(compress)/\1#\2/" "$file"
+        fi
+    done
+
+    initialize_apt
+    errorcheck && echoerr "error in initialize_apt" && return 1
+    initialize_users
+    errorcheck && echoerr "error in initialize_users" && return 1
+    initialize_networking
+    errorcheck && echoerr "error in initialize_networking" && return 1
+    #initialize_docker
+    #errorcheck && echoerr "error in initialize_docker" && return 1
+    initialize_efi
+    errorcheck && echoerr "error in initialize_efi" && return 1
+
+    deinitialize_mounts
+    errorcheck && echoerr "error in deinitialize_mounts" && return 1
+
+    return 0
+}
+
+
+debootstrap_install() {
+
+    ! zfs list -H -o name | grep "$ROOT_POOL/ROOT" >/dev/null && \
+        zfs create -o canmount=off -o mountpoint=none $ROOT_POOL/ROOT
+    ! zfs list -H -o name | grep "$ROOT_POOL/ROOT/$SERVER_DIST" >/dev/null && \
+        zfs create -o canmount=off -o mountpoint=none $ROOT_POOL/ROOT/$SERVER_DIST
+    zfs list -H -o name | grep "$ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE" >/dev/null &&
+        [ "$(zpool get -H altroot $ROOT_POOL | cut -f 3)" == "-" ] && \
+        echoerr "Can't replace mounted root file system." && return 1
+    if zfs list -H -o name | grep "$ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE" >/dev/null
+    then
+        zfs snap $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@backup
+        zfs clone $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@backup \
+            $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE-$(date --iso-8601=seconds)
+        zfs destroy $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@backup
+        zfs destroy $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
+    fi
+    zfs create -o canmount=noauto -o mountpoint="/" $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
+    errorcheck && echoerr "error creating zfs root pool" && return 1
+
+    zfs mount $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
+    errorcheck && echoerr "error mounting root pool" && return 1
+
+    mount zfs "$SSD_POOL/var" "/var"
+    errorcheck && echoerr "error mounting var" && return 1
+    mount zfs "$SSD_POOL/var/log" "/var/log"
+    errorcheck && echoerr "error mounting var log" && return 1
+    mount zfs "$SSD_POOL/var/tmp" "/var/tmp"
+    errorcheck && echoerr "error mounting var tmp" && return 1
+
+    debootstrap --components $SERVER_DIST_COMPONENTS \
+        --include $packages \
+        $SERVER_DIST_RELEASE "$root" $SERVER_DIST_URL
+
+    errorcheck && echoerr "error in debootstrap" && return 1
+
+    umount -l "/var/log"
+    errorcheck && echoerr "error unmounting var log" && return 1
+    umount -l "/var/tmp"
+    errorcheck && echoerr "error unmounting var tmp" && return 1
+    umount -l "/var"
+    errorcheck && echoerr "error unmounting var" && return 1
+
+    zfs export -f $SSD_POOL
+    errorcheck && echoerr "error exporting ssd pool" && return 1
+    zfs export -f $STORAGE_POOL
+    errorcheck && echoerr "error exporting storage pool" && return 1
+
+    initialize_os
+    errorcheck && echoerr "error in initialize_os" && return 1
+
+    echo "debootstrap install complete"
+    return 0
+}
+
+#count number of arguments
+howmany() {
+    case $- in
+        *f* )
+            set -- $1
+        ;;
+        * )
+            set -f
+            set -- $1
+            set +f
+        ;;
+    esac
+    echo $#
+}
+
+#systemd-networkd configuration
+#required:
+#   functions:
+#       howmany
+initialize_networking() {
+    [ x$root = x ] && local chroot_eval=
+    nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
+    rm -r "$root/etc/systemd/network/"*
+    if [ $(howmany $nets) -eq 1 ]; then
+        echo "[Match]" > "$root/etc/systemd/network/$nets.network"
+        echo "Name=$nets" >> "$root/etc/systemd/network/$nets.network"
+        echo "[Network]" >> "$root/etc/systemd/network/$nets.network"
+        echo "DHCP=yes" >> "$root/etc/systemd/network/$nets.network"
+        echo "IPv6AcceptRA=no" >> "$root/etc/systemd/network/$nets.network"
+        echo "LinkLocalAddressing=ipv4" >> "$root/etc/systemd/network/$nets.network"
+    fi
+    if [ $(howmany $nets) -gt 1 ]; then
+        for net in $nets; do
+            echo "[Match]" > "$root/etc/systemd/network/$net.network"
+            echo "Name=$net" >> "$root/etc/systemd/network/$net.network"
+            echo "[Network]" >> "$root/etc/systemd/network/$net.network"
+            echo "Bond=lacp0" >> "$root/etc/systemd/network/$net.network"
+        done
+
+        echo "[Match]" > "$root/etc/systemd/network/lacp0.network"
+        echo "Name=lacp0" >> "$root/etc/systemd/network/lacp0.network"
+        echo "[Network]" >> "$root/etc/systemd/network/lacp0.network"
+        echo "DHCP=yes" >> "$root/etc/systemd/network/lacp0.network"
+        echo "IPv6AcceptRA=no" >> "$root/etc/systemd/network/lacp0.network"
+        echo "LinkLocalAddressing=ipv4" >> "$root/etc/systemd/network/lacp0.network"
+        echo "BindCarrier=$(echo $nets | sed 's/\n/ /')" >> "$root/etc/systemd/network/lacp0.network"
+
+        echo "[NetDev]" > "$root/etc/systemd/network/lacp0.netdev"
+        echo "Name=lacp0" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "Kind=bond" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "[Bond]" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "Mode=802.3ad" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "LACPTransmitRate=fast" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "MIIMonitorSec=1s" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "UpDelaySec=2s" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "DownDelaySec=8s" >> "$root/etc/systemd/network/lacp0.netdev"
+    fi
+
+    echo "net.ipv6.conf.all.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
+    echo "net.ipv6.conf.default.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
+    echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
+
+    eval "$chroot_eval systemctl enable systemd-networkd.service"
+    errorcheck && echoerr "error enabling network services (chroot)" && return 1
+    eval "$chroot_eval systemctl enable systemd-resolved.service"
+    errorcheck && echoerr "error enabling dns services (chroot)" && return 1
+    if [ x$root = x ]; then
+        systemctl restart systemd-sysctl
+        errorcheck && echoerr "error restarting system services" && return 1
+        systemctl restart systemd-networkd
+        errorcheck && echoerr "error restarting network services" && return 1
+    fi
+    return 0
+}
+
+docker_compose_update() {
+    [ x$root = x ] && local chroot_eval=
+
+    current_version=$(which docker-compose >/dev/null && docker-compose --version)
+    current_version=$(echo $current_version | awk '"{print $3}"')
+    current_version=${current_version%%,}
+    version=$(curl -ILsS -w "%{url_effective}" "https://github.com/docker/compose/releases/latest" -o /dev/null)
+    version=${version##*/}
+
+    if [ x$version != x$current_version ]; then
+        [ -f "$root/usr/bin/docker-compose" ] && rm "$root/usr/bin/docker-compose"
+        curl -fsSL "https://github.com/docker/compose/releases/download/$version/docker-compose-Linux-x86_64" \
+            -o "$root/usr/bin/docker-compose"
+        errorcheck && echoerr "error downloading docker compose" && return 1
+        chmod +x "$root/usr/bin/docker-compose"
+    fi
+
+    [ -f "$root/etc/bash_completion.d/docker-compose" ] && rm "$root/etc/bash_completion.d/docker-compose"
+    curl -fsSL "https://raw.githubusercontent.com/docker/compose/master/contrib/completion/bash/docker-compose" \
+        -o "$root/etc/bash_completion.d/docker-compose"
+    errorcheck && echoerr "error downloading docker compose bash completion" && return 1
+    return 0
+}
+
+#systemd-networkd configuration
+#required:
+#   functions:
+#       docker_compose_update
+initialize_docker() {
+
+    [ x$root = x ] && local chroot_eval=
+
+    eval "$chroot_eval apt-get update -qq"
+    errorcheck && echoerr "error in apt-get update (initialize_docker)" && return 1
+    eval "$chroot_eval apt-get install -qq docker-ce"
+    errorcheck && echoerr "error installing docker" && return 1
+
+    docker_compose_update
+    errorcheck && return 1
+
+    usermod -R "$root" -g docker $ADMIN_USERNAME
+
+    [ -d "$root/etc/docker/compose" ] \
+        && rm -r "$root/etc/docker/compose"
+    cp -r "${SERVER_INSTALL:-~/server}/docker-compose" "$root/etc/docker/compose"
+    return 0
+}
+
+initialize_services() {
+    [ x$root = x ] && local chroot_eval=
+
+    for compose in $(ls -l $root/etc/docker/compose | grep "^d" | tr -s ' ' | cut -d' ' -f 9-); do
+        eval "$chroot_eval systemctl enable docker-compose@$compose"
+        errorcheck && echoerr "error initializing $compose" && return 1
+    done
+    return 0
+}
+
+#gets a single /dev/disk/by-
+#link based on the dev provided
+#
+#parameters:
+#   1 - base dev ex: "/dev/sda"
+#   2 - (optional) link type ex: "uuid"
+#       this is anything under /dev/disk/by-
+#       that would show up under DEVLINKS in udevadm
+get_disk_link() {
+    filter="by-"${2:-"id"}
+    udevadm info -q all $1 | grep DEVLINKS | sed 's/ /\n/g' | grep /dev/ | sed 's/DEVLINKS=//' | grep $filter | sort | head -n1
+    errorcheck && return 1
+    return 0
+}
+
+#removes all mounts/swaps/zpools from disk. anything that would prevent repartitioning.
+#
+#variables
+#   1=dev disk ex: "/dev/sda"
+clear_disk() {
+    local disk=$1
+    for swap in $(cat /proc/swaps | awk -v d=$disk '$1 ~ d {print $1}'); do swapoff $swap; done
+    for mountpoint in $(mount | awk -v d=$disk '$1 ~ d {print $1}' | sort | uniq); do umount -lAR $mountpoint; done
+    for pool in $(zpool list -H | awk '{print $1}'); do
+        [ -n "$(zpool status -P $pool | grep $(get_disk_link $disk))" ] && zpool destroy $pool
+    done
+    for pool in $(zpool list -H | awk '{print $1}'); do
+        [ -n "$(zpool status -P $pool | grep $disk)" ] && zpool destroy $pool;
+    done
+    which mdadm >/dev/null && mdadm --zero-superblock --force $disk
+    sgdisk --zap $disk >/dev/null
+    return 0
+}
+
+#filters quotes out of whatever is passed in
+#useful for whiptail values with quotes in them
+filter_quotes() {
+    echo "$1" | sed 's/"//g'
+}
+
+#ex:
+#input: /dev/sda
+#output: sda
+#removes everything to the left of and including the last "/"
+trim_disk_link() {
+    echo ${1##*/}
+}
+
+#this is used to pass to whiptail to print available disks
+#   note: disk with root "/" mounted is filtered automatically (if it is a disk)
+#optional variables:
+#   anything passed will act as a filter for output
+#   ex: whiptail_disks /dev/sda /dev/sdb
+#   this will print all available disks EXCEPT sda and adb.
+whiptail_disks() {
+    whiptail_filter=$@
+    whiptail_output=$(lsblk -npr -o KNAME,MODEL,SIZE,TYPE,RO | \
+    awk '$5 == 0 && $4 == "disk" {print $1 FS "\42"$2" ("$3")\42 OFF"}' | sed 's/\\x20/ /g')
+    for f in $whiptail_filter; do
+        whiptail_output=$(echo "$whiptail_output" | grep -v $f)
+    done
+    root_mount_name=$(mount | awk '/\ \/\ / {print $1}')
+    echo "$(echo "$whiptail_output" | grep -v ${root_mount_name##/dev/})"
+}
+
+#requires variables:
+#   boot_disks
+#       must be set to dev disk ex: "/dev/sda"
+zfs_boot_setup() {
+    boot_disk_list=
+    space=
+    echo "clearing all storage disks"
+    for boot_disk in $boot_disks
+    do
+        echo "clearing boot disk $boot_disk"
+        clear_disk $boot_disk
+        echo "partitioning boot disk $boot_disk"
+        sleep 1s
+        parted -s $boot_disk "mktable gpt"
+        errorcheck && return 1
+        parted -s $boot_disk "mkpart primary 1mb 513mb"
+        errorcheck && return 1
+        parted -s $boot_disk "mkpart primary 513mb -1"
+        errorcheck && return 1
+        parted -s $boot_disk "name 1 efi"
+        errorcheck && return 1
+        parted -s $boot_disk "set 1 boot on"
+        errorcheck && return 1
+        parted -s $boot_disk "name 2 system"
+        errorcheck && return 1
+        parted -s $boot_disk "set 2 bios_grub on"
+        errorcheck && return 1
+        sleep 1s
+        boot_disk_list="${boot_disk_list:-}${space:-}$(get_disk_link ${boot_disk}2)"
+        space=" "
+    done
+    echo "creating zfs boot pool"
+    sleep 1s
+    eval "zpool create -f \
+        -o ashift=12 \
+        -O atime=off \
+        -O compression=lz4 \
+        -O canmount=off \
+        -m none \
+        -R "$root" \
+        $ROOT_POOL mirror $boot_disk_list"
+    errorcheck && echoerr "error creating root pool" && return 1
+    echo "setting up boot datasets"
+    zfs create -o canmount=off -o mountpoint=none $ROOT_POOL/ROOT
+    errorcheck && echoerr "error creating root pool dataset" && return 1
+
+    echo "boot disk setup complete"
+    return 0
+}
+
+#requires variables:
+#   ssd_disk
+#       must be set to list of dev disk ex: "/dev/sda"
+#   ssd_pool
+#       zfs pool name for root ex: "zssd"
+zfs_ssd_setup() {
+    ssd_disk_list=
+    space=
+    echo "clearing all storage disks"
+    for ssd_disk in $ssd_disks; do
+        echo "clearing disk: $ssd_disk"
+        clear_disk $ssd_disk
+        sleep 1s
+        ssd_disk_list="${ssd_disk_list:-}${space:-}$(get_disk_link $ssd_disk)"
+        space=" "
+    done
+    sleep 1s
+    echo "creating ssd pool"
+    eval "zpool create -f \
+        -o ashift=13 \
+        -O atime=off \
+        -O compression=lz4 \
+        -O mountpoint=legacy \
+        -O canmount=off \
+        -R "$root" \
+        $SSD_POOL mirror $ssd_disk_list"
+    errorcheck && echoerr "error creating ssd pool" && return 1
+    echo "ssd disk setup complete"
+
+    zfs create $SSD_POOL/var
+    errorcheck && echoerr "error creating ssd pool dataset" && return 1
+    zfs create $SSD_POOL/var/log
+    errorcheck && echoerr "error creating ssd pool dataset" && return 1
+    zfs create $SSD_POOL/var/tmp
+    errorcheck && echoerr "error creating ssd pool dataset" && return 1
+
+    zfs create $SSD_POOL/home
+    errorcheck && echoerr "error creating ssd pool dataset" && return 1
+    zfs create $SSD_POOL/home/root
+    errorcheck && echoerr "error creating ssd pool dataset" && return 1
+    zfs create $SSD_POOL/home/$ADMIN_USERNAME
+    errorcheck && echoerr "error creating ssd pool dataset" && return 1
+
+    zfs create $SSD_POOL/docker
+    errorcheck && echoerr "error creating ssd pool dataset" && return 1
+
+    return 0
+}
+
+#requires variables:
+#   storage_disks
+#       must be set to list of dev disk ex: "/dev/sda /dev/sdb"
+#   storage_pool
+#       zfs pool name for root ex: "zstorage"
+zfs_storage_setup() {
+    storage_disk_list=
+    space=
+    echo "clearing all storage disks"
+    for storage_disk in $storage_disks; do
+        echo "clearing disk: $storage_disk"
+        clear_disk $storage_disk
+        sleep 1s
+        storage_disk_list="${storage_disk_list:-}${space:-}$(get_disk_link $storage_disk)"
+        space=" "
+    done
+    sleep 1s
+    echo "creating storage pool"
+    eval "zpool create -f \
+        -o ashift=12 \
+        -O atime=off \
+        -O compression=lz4 \
+        -O mountpoint=/mnt/$STORAGE_POOL \
+        -O canmount=off \
+        -R "$root" \
+        $STORAGE_POOL raidz2 $storage_disk_list"
+    errorcheck && echoerr "error creating storage pool" && return 1
+
+    zfs create $STORAGE_POOL/media
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+
+    zfs create $STORAGE_POOL/media/shows
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/media/shows/main
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/media/shows/other
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/media/shows/mandy
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/media/shows/pat
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+
+    zfs create $STORAGE_POOL/media/movies
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/media/movies/main
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/media/movies/standup
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/media/movies/documentary
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/media/movies/music
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+
+    zfs create $STORAGE_POOL/media/unsorted
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/media/unsorted/workout
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/media/unsorted/music
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/media/unsorted/extras
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+
+    zfs create $STORAGE_POOL/downloads
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+
+    zfs create $STORAGE_POOL/shares
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+
+    zfs create $STORAGE_POOL/configs
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/configs/nextcloud
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/configs/mariadb
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/configs/portainer
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/configs/plex
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/configs/tautulli
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/configs/ombi
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/configs/radarr
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/configs/sonarr
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    zfs create $STORAGE_POOL/configs/nzbget
+    errorcheck && echoerr "error creating storage pool dataset" && return 1
+
+    echo "storage disk setup complete"
+
+    return 0
+}
+
+#main entry point for install
+clean_install(){
+    zfs_boot_setup
+    errorcheck && echoerr "error setting up boot disks." && return 1
+    zfs_ssd_setup
+    errorcheck && echoerr "error setting up ssd disks." && return 1
+    zfs_storage_setup
+    errorcheck && echoerr "error setting up storage disks." && return 1
+    debootstrap_install
+    errorcheck && echoerr "error in debootstrap_install." && return 1
+    return 0
+}

@@ -1,9 +1,0 @@
-#!/bin/bash
-
-#ex:
-#input: /dev/sda
-#output: sda
-#removes everything to the left of and including the last "/"
-trim_disk_link() {
-echo ${1##*/}
-}

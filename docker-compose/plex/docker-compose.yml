@@ -1,0 +1,54 @@
+version: '3'
+services:
+  plex:
+    image: linuxserver/plex
+    hostname: plex
+    domainname: ${SERVER_DOMAIN}
+    logging:
+      driver: syslog
+      options:
+        syslog-address: udp://${SYSLOG_ADDRESS}:${SYSLOG_PORT}
+    volumes:
+      - ${DOCKER_CONFIGS}/plex:/config
+      - ${DOCKER_MEDIA}:/media
+    ports:
+      - 32400:32400
+      - 32400:32400/udp
+      - 32469:32469
+      - 32469:32469/udp
+      - 5353:5353/udp
+      - 1900:1900/udp
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${SERVER_TIMEZONE}
+      - VERSION=latest
+  tautulli:
+    image: linuxserver/tautulli
+    hostname: tautulli
+    domainname: ${SERVER_DOMAIN}
+    logging:
+      driver: syslog
+      options:
+        syslog-address: udp://${SYSLOG_ADDRESS}:${SYSLOG_PORT}
+    volumes:
+      - ${DOCKER_CONFIGS}/tautulli:/config
+      - ${DOCKER_CONFIGS}/plex:/logs:ro
+    ports:
+      - 8181:8181
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${SERVER_TIMEZONE}
+  ombi:
+    image: linuxserver/ombi
+    hostname: ombi
+    domainname: ${SERVER_DOMAIN}
+    volumes:
+      - ${DOCKER_CONFIGS}/ombi:/config
+    ports:
+      - 3579:3579
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${SERVER_TIMEZONE}

@@ -2,7 +2,7 @@
 
 # parameter list:
 #   (1) the filesystem to be used to start decendant recursion
-#       example: apool/zones/webzone
+#       example: pool/dataset/files
 #   (2) the snapshot to which the filesystems should be rolled back
 #       example: 2013-07-21-083500
 
