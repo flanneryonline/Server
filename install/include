@@ -561,7 +561,7 @@ zfs_ssd_setup() {
         -O atime=off \
         -O compression=lz4 \
         -O mountpoint=legacy \
-        -O canmount=off \
+        -O canmount=noauto \
         -R "$root" \
         $SSD_POOL mirror $ssd_disk_list"
     errorcheck && echoerr "error creating ssd pool" && return 1
@@ -609,9 +609,8 @@ zfs_storage_setup() {
         -o ashift=12 \
         -O atime=off \
         -O compression=lz4 \
-        -O mountpoint=/mnt/$STORAGE_POOL \
-        -O canmount=off \
-        -R "$root" \
+        -O mountpoint=/mnt \
+        -O canmount=noauto \
         $STORAGE_POOL raidz2 $storage_disk_list"
     errorcheck && echoerr "error creating storage pool" && return 1
 
