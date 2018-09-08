@@ -82,9 +82,8 @@ initialize_mounts() {
     echo "$SSD_POOL/var /var zfs defaults 0 0" >> "$root/etc/fstab"
     echo "$SSD_POOL/var/log /var/log zfs defaults 0 0" >> "$root/etc/fstab"
     echo "$SSD_POOL/var/tmp /var/tmp zfs defaults 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/home /usr/home zfs defaults 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/home /home zfs defaults 0 0" >> "$root/etc/fstab"
     echo "$SSD_POOL/home/root /root zfs defaults 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/home/$ADMIN_USERNAME /usr/home/$ADMIN_USERNAME zfs defaults 0 0" >> "$root/etc/fstab"
     echo "$SSD_POOL/docker /var/lib/docker zfs defaults 0 0" >> "$root/etc/fstab"
 
     eval "$chroot_eval mount -a"
@@ -190,8 +189,6 @@ initialize_os() {
     errorcheck && return 1
     eval "$chroot_eval update-locale LANG=en_US.UTF-8"
     errorcheck && return 1
-    eval "$chroot_eval hostnamectl set-hostname $SERVER_HOSTNAME"
-    errorcheck && return 1
 
     for file in "$root/etc/logrotate.d/"*
     do
@@ -255,8 +252,9 @@ debootstrap_install() {
     debootstrap --components $SERVER_DIST_COMPONENTS \
         --include $packages \
         $SERVER_DIST_RELEASE "$root" $SERVER_DIST_URL
-
     errorcheck && echoerr "error in debootstrap" && return 1
+
+    mkdir -p "$root/var/lib/docker"
 
     umount -l "$root/var/log"
     errorcheck && echoerr "error unmounting var log" && return 1
@@ -336,35 +334,38 @@ initialize_networking() {
         echo "DownDelaySec=8s" >> "$root/etc/systemd/network/lacp0.netdev"
     fi
 
-    echo "net.ipv6.conf.all.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
+    echo "net.ipv6.conf.all.disable_ipv6 = 1" > "$root/etc/sysctl.d/10-disable-ipv6.conf"
     echo "net.ipv6.conf.default.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
     echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
 
-    if [ x$root != x ]
+    if [ x$root == x ]
     then
-        eval "$chroot_eval systemctl enable systemd-networkd.service"
-        errorcheck && echoerr "error enabling network services (chroot)" && return 1
-        eval "$chroot_eval systemctl enable systemd-resolved.service"
-        errorcheck && echoerr "error enabling dns services (chroot)" && return 1
-    else
         systemctl restart systemd-sysctl
         errorcheck && echoerr "error restarting system services" && return 1
         systemctl restart systemd-networkd
         errorcheck && echoerr "error restarting network services" && return 1
+#    else
+#        eval "$chroot_eval systemctl enable systemd-networkd.service"
+#        errorcheck && echoerr "error enabling network services (chroot)" && return 1
+#        eval "$chroot_eval systemctl enable systemd-resolved.service"
+#        errorcheck && echoerr "error enabling dns services (chroot)" && return 1
     fi
 
-    printf "waiting for network."
-    timeout=1
-    while ! ping -q -c 1 google.com >/dev/null 2>&1
-    do
-        [ $timeout -eq 5000 ] && \
-            printf "\n" && \
-            echoerr "timeout while waiting for network." && \
-            return 1
-        printf "."
-        timeout=$((timeout+1))
-    done
-    printf "\n"
+    if [ x$root == x ]
+    then
+        printf "waiting for network."
+        timeout=1
+        while ! ping -q -c 1 google.com >/dev/null 2>&1
+        do
+            [ $timeout -eq 5000 ] && \
+                printf "\n" && \
+                echoerr "timeout while waiting for network." && \
+                return 1
+            printf "."
+            timeout=$((timeout+1))
+        done
+        printf "\n"
+    fi
 
     return 0
 }
@@ -581,8 +582,6 @@ zfs_ssd_setup() {
     zfs create $SSD_POOL/home
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
     zfs create $SSD_POOL/home/root
-    errorcheck && echoerr "error creating ssd pool dataset" && return 1
-    zfs create $SSD_POOL/home/$ADMIN_USERNAME
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
 
     zfs create $SSD_POOL/docker
