@@ -242,11 +242,14 @@ debootstrap_install() {
     zfs mount $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
     errorcheck && echoerr "error mounting root pool" && return 1
 
-    mount zfs "$SSD_POOL/var" "/var"
+    mkdir -p "$root/var"
+    mount -t zfs "$SSD_POOL/var" "$root/var"
     errorcheck && echoerr "error mounting var" && return 1
-    mount zfs "$SSD_POOL/var/log" "/var/log"
+    mkdir -p "$root/var/log"
+    mount -t zfs "$SSD_POOL/var/log" "$root/var/log"
     errorcheck && echoerr "error mounting var log" && return 1
-    mount zfs "$SSD_POOL/var/tmp" "/var/tmp"
+    mkdir -p "$root/var/tmp"
+    mount -t zfs "$SSD_POOL/var/tmp" "$root/var/tmp"
     errorcheck && echoerr "error mounting var tmp" && return 1
 
     debootstrap --components $SERVER_DIST_COMPONENTS \
@@ -255,16 +258,16 @@ debootstrap_install() {
 
     errorcheck && echoerr "error in debootstrap" && return 1
 
-    umount -l "/var/log"
+    umount -l "$root/var/log"
     errorcheck && echoerr "error unmounting var log" && return 1
-    umount -l "/var/tmp"
+    umount -l "$root/var/tmp"
     errorcheck && echoerr "error unmounting var tmp" && return 1
-    umount -l "/var"
+    umount -l "$root/var"
     errorcheck && echoerr "error unmounting var" && return 1
 
-    zfs export -f $SSD_POOL
+    zpool export -f $SSD_POOL
     errorcheck && echoerr "error exporting ssd pool" && return 1
-    zfs export -f $STORAGE_POOL
+    zpool export -f $STORAGE_POOL
     errorcheck && echoerr "error exporting storage pool" && return 1
 
     initialize_os
@@ -677,7 +680,8 @@ zfs_storage_setup() {
     zfs create $STORAGE_POOL/configs/nzbget
     errorcheck && echoerr "error creating storage pool dataset" && return 1
 
-    for mountpoint in $(mount | awk -v d=$STORAGE_POOL '$1 ~ d {print $1}' | sort | uniq); do umount -lAR $mountpoint; done
+    umount -lAR $STORAGE_POOL
+    rm -r $root/*
 
     echo "storage disk setup complete"
 
