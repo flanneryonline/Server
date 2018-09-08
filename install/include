@@ -17,6 +17,7 @@ initialize_apt() {
     touch "$root/etc/apt/sources.list"
     [ "$(ls -A "$root/etc/apt/sources.list.d")" ] && \
         rm "$root/etc/apt/sources.list.d/"*
+    # this causes a warning and should be changed... however it is still in the docker docs and works
     eval "curl -fsSL https://download.docker.com/linux/$SERVER_DIST/gpg | \
         $chroot_eval apt-key add -"
 
@@ -611,6 +612,7 @@ zfs_storage_setup() {
         -O compression=lz4 \
         -O mountpoint=/mnt \
         -O canmount=noauto \
+        -R "$root" \
         $STORAGE_POOL raidz2 $storage_disk_list"
     errorcheck && echoerr "error creating storage pool" && return 1
 
@@ -674,6 +676,8 @@ zfs_storage_setup() {
     errorcheck && echoerr "error creating storage pool dataset" && return 1
     zfs create $STORAGE_POOL/configs/nzbget
     errorcheck && echoerr "error creating storage pool dataset" && return 1
+
+    for mountpoint in $(mount | awk -v d=$STORAGE_POOL '$1 ~ d {print $1}' | sort | uniq); do umount -lAR $mountpoint; done
 
     echo "storage disk setup complete"
 
