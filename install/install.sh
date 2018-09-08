@@ -27,7 +27,7 @@ clear
 
 root=/mnt/install
 chroot_eval="chroot "$root" /usr/bin/env PATH=/usr/sbin:/usr/bin/:/bin:/sbin DEBIAN_FRONTEND=noninteractive"
-packages="openssh-server,dosfstools,man-db,ubuntu-standard,"
+packages="openssh-server,dosfstools,man-db,ubuntu-standard,gnupg,"
 packages="${packages}apt-transport-https,linux-image-generic,"
 packages="${packages}curl,bash-completion,sudo,zfs-initramfs"
 
