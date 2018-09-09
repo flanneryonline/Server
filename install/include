@@ -33,9 +33,9 @@ initialize_apt() {
     echo "deb [arch=amd64] https://download.docker.com/linux/$SERVER_DIST $SERVER_DIST_RELEASE stable" \
         >  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list"
 
-    eval "$chroot_eval apt-get update -qq >/dev/null"
+    eval "$chroot_eval apt-get update -qq"
     errorcheck && echoerr "error during apt-get update" && return 1
-    eval "$chroot_eval apt-get upgrade -qq >/dev/null"
+    eval "$chroot_eval apt-get upgrade -qq"
     errorcheck && echoerr "error during apt-get upgrade" && return 1
 
     return 0
@@ -94,14 +94,16 @@ initialize_mounts() {
 
 deinitialize_mounts() {
 
+    eval "$chroot_eval umount -a"
+
     umount -l "$root/dev/pts"
-    errorcheck && return 1
+    #errorcheck && return 1
     umount -l "$root/dev"
-    errorcheck && return 1
+    #errorcheck && return 1
     umount -l "$root/proc"
-    errorcheck && return 1
+    #errorcheck && return 1
     umount -l "$root/sys"
-    errorcheck && return 1
+    #errorcheck && return 1
 
     zfs umount $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
     errorcheck && echoerr "error unmounting root pool" && return 1
@@ -114,58 +116,45 @@ deinitialize_mounts() {
 initialize_efi() {
     echo "formating efi partition"
     starting_disk=
-    disk_num=1
     eval "$chroot_eval apt-get install -qq grub-efi-amd64"
+
+    sed -i 's/GRUB_HIDDEN_TIMEOUT=0/#GRUB_HIDDEN_TIMEOUT=0/' "$root/etc/default/grub"
+    sed -i 's/quiet splace//' "$root/etc/default/grub"
+
     for boot_disk in $boot_disks
     do
-        if [ "x$starting_disk" = "x" ]
-        then
-            starting_disk=$boot_disk
-            mkfs.fat -n EFI -F32 ${starting_disk}1 >/dev/null
-            errorcheck && echoerr "error foratting efi on $boot_disk" && return 1
-            sleep 1s
-            echo "setting up system for efi"
-            [ ! -d "$root/boot/efi" ] && mkdir -p "$root/boot/efi"
-            echo "PARTUUID=$(trim_disk_link $(get_disk_link ${starting_disk}1 partuuid)) /boot/efi vfat defaults 0 1" >> "$root/etc/fstab"
-            eval "$chroot_eval mount /boot/efi"
-            errorcheck && echoerr "error mounting efi on $boot_disk" && return 1
+        mkfs.fat -n EFI -F32 ${boot_disk}1
+        errorcheck && echoerr "error foratting efi on $boot_disk" && return 1
+        sleep 1s
+        echo "setting up system for efi"
+        [ ! -d "$root/boot/efi" ] && mkdir -p "$root/boot/efi"
+        echo "PARTUUID=$(trim_disk_link $(get_disk_link ${boot_disk}1 partuuid)) /boot/efi vfat nofail,x-systemd.device-timeout=1 0 1" >> "$root/etc/fstab"
+        eval "$chroot_eval mount /boot/efi"
+        errorcheck && echoerr "error mounting efi on $boot_disk" && return 1
 
-            echo "for x in \$(cat /proc/cmdline); do" > "$root/usr/share/initramfs-tools/conf.d/zfs"
-            echo "    case \$x in" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
-            echo "        root=ZFS=*)" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
-            echo "            BOOT=zfs;;" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
-            echo "    esac" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
-            echo "done" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
+        #echo "for x in \$(cat /proc/cmdline); do" > "$root/usr/share/initramfs-tools/conf.d/zfs"
+        #echo "    case \$x in" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
+        #echo "        root=ZFS=*)" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
+        #echo "            BOOT=zfs;;" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
+        #echo "    esac" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
+        #echo "done" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
 
-            sed -i 's/GRUB_HIDDEN_TIMEOUT=0/#GRUB_HIDDEN_TIMEOUT=0/' "$root/etc/default/grub"
-
-            echo "updating initramfs"
-            eval "$chroot_eval update-initramfs -u -k all >/dev/null"
-            errorcheck && echoerr "error updating initramfs on $boot_disk" && return 1
-            echo "updating grub config"
-            eval "$chroot_eval update-grub >/dev/null"
-            errorcheck && echoerr "error updating grub on $boot_disk" && return 1
-            echo "installing efi grub"
-            eval "$chroot_eval grub-install \
-                --target=x86_64-efi \
-                --efi-directory=/boot/efi \
-                --bootloader-id=$SERVER_DIST-$SERVER_DIST_RELEASE \
-                --recheck \
-                --no-floppy >/dev/null"
-            errorcheck && echoerr "error installing grub on $boot_disk" && return 1
-            sleep 1s
-            eval "$chroot_eval umount /boot/efi"
-        else
-            dd if=$(get_disk_link ${starting_disk}1) \
-                of=$(get_disk_link ${boot_disk}1)
-            errorcheck && echoerr "error copying efi from $starting_disk to $boot_disk" && return 1
-
-            eval "$chroot_eval efibootmgr -q -c -g -d $(get_disk_link ${boot_disk}1) \
-                -p 1 -L '$SERVER_DIST-$SERVER_DIST_RELEASE-$disk_num' \
-                -l '\\EFI\\$SERVER_DIST-$SERVER_DIST_RELEASE\\grubx64.efi' >/dev/null"
-            errorcheck && echoerr "error updating efi on $boot_disk" && return 1
-        fi
-        disk_num=$((disk_num+1))
+        echo "updating initramfs"
+        eval "$chroot_eval update-initramfs -u -k all"
+        errorcheck && echoerr "error updating initramfs on $boot_disk" && return 1
+        echo "updating grub config"
+        eval "$chroot_eval update-grub"
+        errorcheck && echoerr "error updating grub on $boot_disk" && return 1
+        echo "installing efi grub"
+        eval "$chroot_eval grub-install \
+            --target=x86_64-efi \
+            --efi-directory=/boot/efi \
+            --bootloader-id=$SERVER_DIST-$SERVER_DIST_RELEASE \
+            --recheck \
+            --no-floppy"
+        errorcheck && echoerr "error installing grub on $boot_disk" && return 1
+        sleep 1s
+        eval "$chroot_eval umount /boot/efi"
     done
     echo "efi grub setup complete"
     return 0
@@ -251,6 +240,7 @@ debootstrap_install() {
 
     debootstrap --components $SERVER_DIST_COMPONENTS \
         --include $packages \
+        --exclude "os-prober,cryptsetup" \
         $SERVER_DIST_RELEASE "$root" $SERVER_DIST_URL
     errorcheck && echoerr "error in debootstrap" && return 1
 
