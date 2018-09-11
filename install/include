@@ -127,6 +127,7 @@ initialize_efi() {
     sed -i 's/GRUB_HIDDEN_TIMEOUT=0/#GRUB_HIDDEN_TIMEOUT=0/' "$root/etc/default/grub"
     sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/GRUB_CMDLINE_LINUX_DEFAULT=""/' "$root/etc/default/grub"
 
+    disk_num=1
     for boot_disk in $boot_disks
     do
         mkfs.fat -n EFI -F32 ${boot_disk}1
@@ -155,12 +156,13 @@ initialize_efi() {
         eval "$chroot_eval grub-install \
             --target=x86_64-efi \
             --efi-directory=/boot/efi \
-            --bootloader-id=$SERVER_DIST-$SERVER_DIST_RELEASE \
+            --bootloader-id=$SERVER_DIST-$SERVER_DIST_RELEASE-$disk_num \
             --recheck \
             --no-floppy"
         errorcheck && echoerr "error installing grub on $boot_disk" && return 1
         sleep 1s
         eval "$chroot_eval umount /boot/efi"
+        disk_num=$((disk_num+1))
     done
     echo "efi grub setup complete"
     return 0
