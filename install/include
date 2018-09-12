@@ -29,9 +29,9 @@ initialize_apt() {
 
     eval "$chroot_eval apt-get update -qq"
     errorcheck && echoerr "error during apt-get update" && return 1
-    eval "$chroot_eval apt-get upgrade -qq"
+    eval "$chroot_eval apt-get upgrade -qq --no-install-recommends"
     errorcheck && echoerr "error during apt-get upgrade" && return 1
-    eval "$chroot_eval apt-get dist-upgrade -qq"
+    eval "$chroot_eval apt-get dist-upgrade -qq --no-install-recommends"
     errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
 
     return 0
@@ -46,9 +46,9 @@ initialize_syslog() {
 initialize_motd() {
     rm "$root/etc/update-motd.d/"*
     errorcheck && return 1
-    cp "${SERVER_INSTALL:-~/server}/bin/motd.sh" "$root/etc/update-motd.d/00-motd"
+    cp ${SERVER_INSTALL:-~/server}/motd/* "$root/etc/update-motd.d/"
     errorcheck && return 1
-    chmod a+x "$root/etc/update-motd.d/00-motd"
+    chmod a+x "$root/etc/update-motd.d/"*
     errorcheck && return 1
     return 0
 }
@@ -127,7 +127,7 @@ deinitialize_mounts() {
 initialize_efi() {
     echo "formating efi partition"
 
-    eval "$chroot_eval apt-get install -qq grub-efi-amd64"
+    eval "$chroot_eval apt-get install -qq --no-install-recommends grub-efi-amd64"
     eval "$chroot_eval apt-get remove -qq os-prober"
 
     sed -i 's/GRUB_HIDDEN_TIMEOUT=0/#GRUB_HIDDEN_TIMEOUT=0/' "$root/etc/default/grub"
@@ -141,7 +141,6 @@ initialize_efi() {
         sleep 1s
         echo "setting up system for efi"
         [ ! -d "$root/boot/efi" ] && mkdir -p "$root/boot/efi"
-        echo "PARTUUID=$(trim_disk_link $(get_disk_link ${boot_disk}1 partuuid)) /boot/efi vfat nofail,x-systemd.device-timeout=1 0 1" >> "$root/etc/fstab"
         eval "$chroot_eval mount $(get_disk_link ${boot_disk}1 partuuid) /boot/efi"
         errorcheck && echoerr "error mounting efi on $boot_disk" && return 1
 
@@ -206,6 +205,8 @@ initialize_os() {
     errorcheck && echoerr "error in initialize_syslog" && return 1
     initialize_efi
     errorcheck && echoerr "error in initialize_efi" && return 1
+    initialize_motd
+    errorcheck && echoerr "error in initialize_motd" && return 1
     #do not enable until docker services have been tested
     #and rsync tasks are enabled/tested
     #initialize_services
@@ -345,6 +346,9 @@ initialize_networking() {
         errorcheck && echoerr "error restarting system services" && return 1
         systemctl restart systemd-networkd
         errorcheck && echoerr "error restarting network services" && return 1
+    else
+        eval "$chroot_eval systemctl enable systemd-networkd"
+        errorcheck && echoerr "error enabling network services" && return 1
     fi
 
     if [ x$root == x ]
@@ -358,6 +362,7 @@ initialize_networking() {
                 echoerr "timeout while waiting for network." && \
                 return 1
             printf "."
+            sleep 1s
             timeout=$((timeout+1))
         done
         printf "\n"
@@ -367,8 +372,6 @@ initialize_networking() {
 }
 
 docker_compose_update() {
-    [ x$root = x ] && local chroot_eval=
-
     current_version=$(which docker-compose >/dev/null && docker-compose --version)
     current_version=$(echo $current_version | awk '"{print $3}"')
     current_version=${current_version%%,}
@@ -406,9 +409,9 @@ initialize_docker() {
     echo "deb [arch=amd64] https://download.docker.com/linux/$SERVER_DIST $SERVER_DIST_RELEASE stable" \
         >  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list"
 
-    eval "$chroot_eval apt-get update -qq"
+    eval "$chroot_eval apt-get update -qq "
     errorcheck && echoerr "error in apt-get update (initialize_docker)" && return 1
-    eval "$chroot_eval apt-get install -qq docker-ce"
+    eval "$chroot_eval apt-get install -qq --no-install-recommends docker-ce"
     errorcheck && echoerr "error installing docker" && return 1
 
     docker_compose_update
@@ -418,7 +421,7 @@ initialize_docker() {
 
     [ -d "$root/etc/docker/compose" ] \
         && rm -r "$root/etc/docker/compose"
-    cp -r "${SERVER_INSTALL:-~/server}/docker-compose" "$root/etc/docker/compose"
+    cp -r ${SERVER_INSTALL:-~/server}/docker-compose "$root/etc/docker/compose"
     return 0
 }
 

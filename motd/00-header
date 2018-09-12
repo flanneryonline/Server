@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+echo "
+$(figlet ${SERVER_NAME-$(hostname)})"
