@@ -41,9 +41,19 @@ initialize_apt() {
     return 0
 }
 
-initialize_email() {
-    echo "$ADMIN_EMAIL" >> "$root/root/.forward"
-    [ -d "$root/home/$ADMIN_USERNAME" ] && echo "$ADMIN_EMAIL" >> "$root/home/$ADMIN_USERNAME/.forward"
+initialize_syslog() {
+    rm "$root/etc/rsyslog.d/"*
+    echo "*.* @$SYSLOG_ADDRESS:$SYSLOG_PORT" > "$root/etc/rsyslog.d/50-default.conf"
+    return 0
+}
+
+initialize_motd() {
+    rm "$root/etc/update-motd.d/"*
+    errorcheck && return 1
+    cp "${SERVER_INSTALL:-~/server}/bin/motd.sh" "$root/etc/update-motd.d/00-motd"
+    errorcheck && return 1
+    chmod a+x "$root/etc/update-motd.d/00-motd"
+    errorcheck && return 1
     return 0
 }
 
@@ -77,12 +87,12 @@ initialize_mounts() {
     eval "$chroot_eval zpool import $SSD_POOL"
     errorcheck && echoerr "error importing ssd pool to chroot" && return 1
 
-    echo "$SSD_POOL/var /var zfs defaults 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/var/log /var/log zfs defaults 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/var/tmp /var/tmp zfs defaults 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/home /home zfs defaults 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/home/root /root zfs defaults 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/docker /var/lib/docker zfs defaults 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/var /var zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/var/log /var/log zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/var/tmp /var/tmp zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/home /home zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/home/root /root zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
 
     eval "$chroot_eval mount -a"
     errorcheck && echoerr "error mounting directories in chroot" && return 1
@@ -139,13 +149,6 @@ initialize_efi() {
         eval "$chroot_eval mount $(get_disk_link ${boot_disk}1 partuuid) /boot/efi"
         errorcheck && echoerr "error mounting efi on $boot_disk" && return 1
 
-        #echo "for x in \$(cat /proc/cmdline); do" > "$root/usr/share/initramfs-tools/conf.d/zfs"
-        #echo "    case \$x in" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
-        #echo "        root=ZFS=*)" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
-        #echo "            BOOT=zfs;;" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
-        #echo "    esac" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
-        #echo "done" >> "$root/usr/share/initramfs-tools/conf.d/zfs"
-
         echo "updating initramfs"
         eval "$chroot_eval update-initramfs -u -k all"
         errorcheck && echoerr "error updating initramfs on $boot_disk" && return 1
@@ -201,17 +204,22 @@ initialize_os() {
     errorcheck && echoerr "error in initialize_users" && return 1
     initialize_networking
     errorcheck && echoerr "error in initialize_networking" && return 1
-    #initialize_docker
-    #errorcheck && echoerr "error in initialize_docker" && return 1
+    initialize_docker
+    errorcheck && echoerr "error in initialize_docker" && return 1
+    initialize_syslog
+    errorcheck && echoerr "error in initialize_syslog" && return 1
     initialize_efi
     errorcheck && echoerr "error in initialize_efi" && return 1
+    #do not enable until docker services have been tested
+    #and rsync tasks are enabled/tested
+    #initialize_services
+    #errorcheck && echoerr "error in initialize_services" && return 1
 
     deinitialize_mounts
     errorcheck && echoerr "error in deinitialize_mounts" && return 1
 
     return 0
 }
-
 
 debootstrap_install() {
 
@@ -341,11 +349,6 @@ initialize_networking() {
         errorcheck && echoerr "error restarting system services" && return 1
         systemctl restart systemd-networkd
         errorcheck && echoerr "error restarting network services" && return 1
-#    else
-#        eval "$chroot_eval systemctl enable systemd-networkd.service"
-#        errorcheck && echoerr "error enabling network services (chroot)" && return 1
-#        eval "$chroot_eval systemctl enable systemd-resolved.service"
-#        errorcheck && echoerr "error enabling dns services (chroot)" && return 1
     fi
 
     if [ x$root == x ]
@@ -706,7 +709,86 @@ clean_install(){
     errorcheck && echoerr "error setting up ssd disks." && return 1
     zfs_storage_setup
     errorcheck && echoerr "error setting up storage disks." && return 1
-    debootstrap_install
-    errorcheck && echoerr "error in debootstrap_install." && return 1
+    long_running_stuff
+    errorcheck && return 1
+
+    return 0
+}
+
+long_running_stuff() {
+
+    #run these async
+    debootstrap_install &
+    debootstrap_pid=$!
+    rsync_movies &
+    movies_pid=$!
+    rsync_shows &
+    shows_pid=$!
+    rsync_configs &
+    configs_pid=$!
+    rsync_data &
+    data_pid=$!
+    rsync_other &
+    other_pid=$!
+
+    wait $debootstrap_pid
+    errorcheck && echoerr "error in debootstrap_install." && kill_others && return 1
+    echo "debootstrap_install complete."
+
+    wait $configs_pid
+    errorcheck && echoerr "error in rsync_configs." && kill_others && return 1
+    echo "rsync_configs complete."
+
+    wait $other_pid
+    errorcheck && echoerr "error in rsync_other." && kill_others && return 1
+    echo "rsync_other complete."
+
+    wait $data_pid
+    errorcheck && echoerr "error in rsync_data." && kill_others && return 1
+    echo "rsync_data complete."
+
+    wait $shows_pid
+    errorcheck && echoerr "error in rsync_shows." && kill_others && return 1
+    echo "rsync_shows complete."
+
+    wait $movies_pid
+    errorcheck && echoerr "error in rsync_movies." && return 1
+    echo "rsync_movies complete."
+
+    return 0
+}
+
+kill_others() {
+    kill -0 $configs_pid && kill_children $configs_pid
+    kill -0 $other_pid && kill_children $other_pid
+    kill -0 $data_pid && kill_children $data_pid
+    kill -0 $shows_pid && kill_children $shows_pid
+    kill -0 $movies_pid && kill_children $movies_pid
+
+    return 0
+}
+
+kill_children() {
+    for child in $(ps -o pid,ppid -ax | awk "{ if ( \$2 == $1 ) { print \$1 }}")
+    do
+        kill_children $child
+    done
+    kill $1
+    return 0
+}
+
+rsync_configs() {
+    return 0
+}
+
+rsync_data() {
+    return 0
+}
+
+rsync_movies() {
+    return 0
+}
+
+rsync_other() {
     return 0
 }

@@ -24,9 +24,9 @@ clear
 
 root=/mnt/install
 chroot_eval="chroot "$root" /usr/bin/env PATH=/usr/sbin:/usr/bin/:/bin:/sbin DEBIAN_FRONTEND=noninteractive"
-packages="openssh-server,dosfstools,man-db,ubuntu-standard,gnupg,"
+packages="openssh-server,ubuntu-standard,ubuntu-minimal,gnupg,"
 packages="${packages}apt-transport-https,linux-image-generic,"
-packages="${packages}curl,bash-completion,sudo,zfs-initramfs"
+packages="${packages}curl,bash-completion,zfs-initramfs,figlet"
 
 admin_password=$(whiptail --title "Set $ADMIN_USERNAME password" --passwordbox "Please enter password for user $ADMIN_USERNAME:" 0 10 2>&1 >/dev/tty)
 wt_boot='whiptail --title "Choose All boot Disks" --checklist "Boot disks will be ERASED!" 0 10 0 '
