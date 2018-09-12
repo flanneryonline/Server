@@ -387,6 +387,7 @@ docker_compose_update() {
     fi
 
     [ -f "$root/etc/bash_completion.d/docker-compose" ] && rm "$root/etc/bash_completion.d/docker-compose"
+    [ ! -d "$root/etc/bash_completion.d" ] && mkdir -p "$root/etc/bash_completion.d"
     curl -fsSL "https://raw.githubusercontent.com/docker/compose/master/contrib/completion/bash/docker-compose" \
         -o "$root/etc/bash_completion.d/docker-compose"
     errorcheck && echoerr "error downloading docker compose bash completion" && return 1
@@ -403,6 +404,7 @@ initialize_docker() {
 
     eval "curl -fsSL https://download.docker.com/linux/$SERVER_DIST/gpg | \
         $chroot_eval apt-key add -"
+    errorcheck && echoerr "error adding docker apt key" && return 1
 
     [ -f "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list" ] && \
         rm "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list"
@@ -414,10 +416,11 @@ initialize_docker() {
     eval "$chroot_eval apt-get install -qq --no-install-recommends docker-ce"
     errorcheck && echoerr "error installing docker" && return 1
 
+    usermod -R "$root" -g docker $ADMIN_USERNAME
+    errorcheck && echoerr "error adding $ADMIN_USERNAME to docker group" && return 1
+
     docker_compose_update
     errorcheck && return 1
-
-    usermod -R "$root" -g docker $ADMIN_USERNAME
 
     [ -d "$root/etc/docker/compose" ] \
         && rm -r "$root/etc/docker/compose"
