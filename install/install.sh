@@ -6,26 +6,28 @@ export DEBIAN_FRONTEND=noninteractive
 . ${SERVER_INSTALL:-~/server}/install/include
 . ${SERVER_INSTALL:-~/server}/install/environment
 
-apt-get install -qq \
-    zfs-initramfs \
-    gdisk \
-    debootstrap \
-    curl \
-    apt-transport-https
-errorcheck && exit 1
-
 root=
 initialize_networking
 errorcheck && exit 1
 initialize_apt
 errorcheck && exit 1
 
+apt-get install -qq \
+    --no-install-recommends \
+    zfs-initramfs \
+    gdisk \
+    debootstrap \
+    curl \
+    apt-transport-https \
+    systemd-container
+errorcheck && exit 1
+
 clear
 
 root=/mnt/install
 chroot_eval="chroot "$root" /usr/bin/env PATH=/usr/sbin:/usr/bin/:/bin:/sbin DEBIAN_FRONTEND=noninteractive"
-packages="openssh-server,ubuntu-standard,ubuntu-minimal,gnupg,"
-packages="${packages}apt-transport-https,linux-image-generic,"
+packages="ubuntu-minimal,ubuntu-standard,linux-image-generic,"
+packages="${packages}apt-transport-https,gnupg,openssh-server,"
 packages="${packages}curl,bash-completion,zfs-initramfs,figlet"
 
 admin_password=$(whiptail --title "Set $ADMIN_USERNAME password" --passwordbox "Please enter password for user $ADMIN_USERNAME:" 0 10 2>&1 >/dev/tty)

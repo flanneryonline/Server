@@ -17,9 +17,6 @@ initialize_apt() {
     touch "$root/etc/apt/sources.list"
     [ "$(ls -A "$root/etc/apt/sources.list.d")" ] && \
         rm "$root/etc/apt/sources.list.d/"*
-    # this causes a warning and should be changed... however it is still in the docker docs and works
-    eval "curl -fsSL https://download.docker.com/linux/$SERVER_DIST/gpg | \
-        $chroot_eval apt-key add -"
 
     echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE main universe" \
         >>  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.list"
@@ -30,13 +27,12 @@ initialize_apt() {
     echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-security main universe" \
         >>  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.security.list"
 
-    echo "deb [arch=amd64] https://download.docker.com/linux/$SERVER_DIST $SERVER_DIST_RELEASE stable" \
-        >  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list"
-
     eval "$chroot_eval apt-get update -qq"
     errorcheck && echoerr "error during apt-get update" && return 1
     eval "$chroot_eval apt-get upgrade -qq"
     errorcheck && echoerr "error during apt-get upgrade" && return 1
+    eval "$chroot_eval apt-get dist-upgrade -qq"
+    errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
 
     return 0
 }
@@ -401,6 +397,14 @@ docker_compose_update() {
 initialize_docker() {
 
     [ x$root = x ] && local chroot_eval=
+
+    eval "curl -fsSL https://download.docker.com/linux/$SERVER_DIST/gpg | \
+        $chroot_eval apt-key add -"
+
+    [ -f "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list" ] && \
+        rm "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list"
+    echo "deb [arch=amd64] https://download.docker.com/linux/$SERVER_DIST $SERVER_DIST_RELEASE stable" \
+        >  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list"
 
     eval "$chroot_eval apt-get update -qq"
     errorcheck && echoerr "error in apt-get update (initialize_docker)" && return 1
@@ -778,6 +782,10 @@ kill_children() {
 }
 
 rsync_configs() {
+    return 0
+}
+
+rsync_shows() {
     return 0
 }
 
