@@ -626,7 +626,7 @@ zfs_ssd_setup() {
     zfs create -o mountpoint=/mnt/configs $SSD_POOL/configs
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
 
-    umount -lAR $SSD_POOL
+    umount -lAR $root/mnt/configs
     rm -r $root/*
 
     echo "ssd disk setup complete"
