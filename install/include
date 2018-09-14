@@ -194,6 +194,7 @@ initialize_os() {
     eval "$chroot_eval update-locale LANG=en_US.UTF-8"
     errorcheck && return 1
 
+    [ ! -d "$root/etc/server/environment" ] && mkdir -p "$root/etc/server/environment"
     cp ${SERVER_INSTALL:-~/server}/install/environment "$root/etc/server/environment"
     errorcheck && echoerr "error copying environment file" && return 1
     cp ${SERVER_INSTALL:-~/server}/install/include "$root/etc/server/include"
