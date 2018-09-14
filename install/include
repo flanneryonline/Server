@@ -53,15 +53,6 @@ initialize_motd() {
     return 0
 }
 
-initialize_systemd() {
-
-    [ ! -d "$root/etc/systemd/system" ] && mkdir -p "$root/etc/systemd/system"
-    cp -r ${SERVER_INSTALL:-~/server}/systemd/* "$root/etc/systemd/system/"
-    errorcheck && echoerr "error copying systemd files" && return 1
-
-    return 0
-}
-
 initialize_users() {
     groupadd -R "$root" -g $ADMIN_GROUP_ID $ADMIN_USERNAME
     errorcheck && return 1
@@ -201,6 +192,9 @@ initialize_os() {
     errorcheck && echoerr "error copying include file" && return 1
     cp ${SERVER_INSTALL:-~/server}/bin/* "$root/usr/bin/"
     errorcheck && echoerr "error copying bin file" && return 1
+    [ ! -d "$root/etc/systemd/system" ] && mkdir -p "$root/etc/systemd/system"
+    cp -r ${SERVER_INSTALL:-~/server}/systemd/* "$root/etc/systemd/system/"
+    errorcheck && echoerr "error copying systemd files" && return 1
 
     for file in "$root/etc/logrotate.d/"*
     do
