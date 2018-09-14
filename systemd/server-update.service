@@ -1,11 +1,12 @@
 [Unit]
-Description=system update service (runs on timer)
+Description=server update service (runs on timer)
 
 [Service]
 Type=oneshot
 WorkingDirectory=/tmp
 User=root
 Group=root
-ExecStart=/usr/bin/system-update.sh
+ExecStart=/usr/bin/server-update
+
 [Install]
 WantedBy=multi-user.target

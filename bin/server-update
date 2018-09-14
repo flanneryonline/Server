@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+. /etc/server/environment
+. /etc/server/include
+
+docker_compose_update
+
+apt-get update -qq
+errorcheck && echoerr "error during apt-get update" && return 1
+apt-get upgrade -qq --no-install-recommends
+errorcheck && echoerr "error during apt-get upgrade" && return 1
+apt-get dist-upgrade -qq --no-install-recommends
+errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
+
+needrestart
+
+exit 0

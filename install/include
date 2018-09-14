@@ -53,6 +53,15 @@ initialize_motd() {
     return 0
 }
 
+initialize_systemd() {
+
+    [ ! -d "$root/etc/systemd/system" ] && mkdir -p "$root/etc/systemd/system"
+    cp -r ${SERVER_INSTALL:-~/server}/systemd/* "$root/etc/systemd/system/"
+    errorcheck && echoerr "error copying systemd files" && return 1
+
+    return 0
+}
+
 initialize_users() {
     groupadd -R "$root" -g $ADMIN_GROUP_ID $ADMIN_USERNAME
     errorcheck && return 1
@@ -185,6 +194,13 @@ initialize_os() {
     eval "$chroot_eval update-locale LANG=en_US.UTF-8"
     errorcheck && return 1
 
+    cp ${SERVER_INSTALL:-~/server}/install/environment "$root/etc/server/environment"
+    errorcheck && echoerr "error copying environment file" && return 1
+    cp ${SERVER_INSTALL:-~/server}/install/include "$root/etc/server/include"
+    errorcheck && echoerr "error copying include file" && return 1
+    cp ${SERVER_INSTALL:-~/server}/bin/* "$root/usr/bin/"
+    errorcheck && echoerr "error copying bin file" && return 1
+
     for file in "$root/etc/logrotate.d/"*
     do
         if grep -Eq "(^|[^#y])compress" "$file"
@@ -207,10 +223,8 @@ initialize_os() {
     errorcheck && echoerr "error in initialize_efi" && return 1
     initialize_motd
     errorcheck && echoerr "error in initialize_motd" && return 1
-    #do not enable until docker services have been tested
-    #and rsync tasks are enabled/tested
-    #initialize_services
-    #errorcheck && echoerr "error in initialize_services" && return 1
+    initialize_services
+    errorcheck && echoerr "error in initialize_services" && return 1
 
     deinitialize_mounts
     errorcheck && echoerr "error in deinitialize_mounts" && return 1
@@ -272,6 +286,9 @@ debootstrap_install() {
 
     initialize_os
     errorcheck && echoerr "error in initialize_os" && return 1
+
+    #don't want this to exist on first boot so all pools are imported correctly
+    [ -f "$root/etc/zfs/zpool.cache" ] && rm "$root/etc/zfs/zpool.cache"
 
     echo "debootstrap install complete"
     return 0
@@ -391,6 +408,7 @@ docker_compose_update() {
     curl -fsSL "https://raw.githubusercontent.com/docker/compose/master/contrib/completion/bash/docker-compose" \
         -o "$root/etc/bash_completion.d/docker-compose"
     errorcheck && echoerr "error downloading docker compose bash completion" && return 1
+
     return 0
 }
 
@@ -422,9 +440,10 @@ initialize_docker() {
     docker_compose_update
     errorcheck && return 1
 
-    [ -d "$root/etc/docker/compose" ] \
-        && rm -r "$root/etc/docker/compose"
-    cp -r ${SERVER_INSTALL:-~/server}/docker-compose "$root/etc/docker/compose"
+    [ ! -d "$root/etc/docker/compose" ] && mkdir -p "$root/etc/docker/compose"
+    cp -r ${SERVER_INSTALL:-~/server}/docker-compose/* "$root/etc/docker/compose/"
+    errorcheck && echoerr "error copying compose files" && return 1
+
     return 0
 }
 
@@ -585,11 +604,9 @@ zfs_ssd_setup() {
         -O atime=off \
         -O compression=lz4 \
         -O mountpoint=legacy \
-        -O canmount=noauto \
         -R "$root" \
         $SSD_POOL $raid_type $ssd_disk_list"
     errorcheck && echoerr "error creating ssd pool" && return 1
-    echo "ssd disk setup complete"
 
     zfs create $SSD_POOL/var
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
@@ -605,6 +622,14 @@ zfs_ssd_setup() {
 
     zfs create $SSD_POOL/docker
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
+
+    zfs create -o mountpoint=/mnt/configs $SSD_POOL/configs
+    errorcheck && echoerr "error creating ssd pool dataset" && return 1
+
+    umount -lAR $SSD_POOL
+    rm -r $root/*
+
+    echo "ssd disk setup complete"
 
     return 0
 }
@@ -637,70 +662,23 @@ zfs_storage_setup() {
         -O atime=off \
         -O compression=lz4 \
         -O mountpoint=/mnt \
-        -O canmount=noauto \
         -R "$root" \
         $STORAGE_POOL $raid_type $storage_disk_list"
     errorcheck && echoerr "error creating storage pool" && return 1
 
     zfs create $STORAGE_POOL/media
     errorcheck && echoerr "error creating storage pool dataset" && return 1
-
     zfs create $STORAGE_POOL/media/shows
     errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/shows/main
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/shows/other
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/shows/mandy
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/shows/pat
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-
     zfs create $STORAGE_POOL/media/movies
     errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/movies/main
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/movies/standup
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/movies/documentary
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/movies/music
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-
     zfs create $STORAGE_POOL/media/unsorted
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/unsorted/workout
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/unsorted/music
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/unsorted/extras
     errorcheck && echoerr "error creating storage pool dataset" && return 1
 
     zfs create $STORAGE_POOL/downloads
     errorcheck && echoerr "error creating storage pool dataset" && return 1
 
     zfs create $STORAGE_POOL/shares
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-
-    zfs create $STORAGE_POOL/configs
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/configs/nextcloud
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/configs/mariadb
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/configs/portainer
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/configs/plex
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/configs/tautulli
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/configs/ombi
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/configs/radarr
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/configs/sonarr
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/configs/nzbget
     errorcheck && echoerr "error creating storage pool dataset" && return 1
 
     umount -lAR $STORAGE_POOL
@@ -788,21 +766,41 @@ kill_children() {
 }
 
 rsync_configs() {
+
+    #rsync -azqHAX -e ssh root@$BACKUP_ADDRESS:/$BACKUP_FOLDER/ $STORAGE_CONFIG_DIR
+    #errorcheck && echoerr "error while syncing configs." && return 1
+
     return 0
 }
 
 rsync_shows() {
+
+    #rsync -azqHAX -e ssh root@$BACKUP_ADDRESS:/$BACKUP_FOLDER/media/ $STORAGE_MEDIA_DIR/shows
+    #errorcheck && echoerr "error while syncing shows." && return 1
+
     return 0
 }
 
 rsync_data() {
+
+    #rsync -azqHAX -e ssh root@$BACKUP_ADDRESS:/$BACKUP_FOLDER/ $STORAGE_MEDIA_DIR/shares
+    #errorcheck && echoerr "error while syncing shares." && return 1
+
     return 0
 }
 
 rsync_movies() {
+
+    #rsync -azqHAX -e ssh root@$BACKUP_ADDRESS:/$BACKUP_FOLDER/media/ $STORAGE_MEDIA_DIR/movies
+    #errorcheck && echoerr "error while syncing movies." && return 1
+
     return 0
 }
 
 rsync_other() {
+
+    #rsync -azqHAX -e ssh root@$BACKUP_ADDRESS:/$BACKUP_FOLDER/media/ $STORAGE_MEDIA_DIR/other
+    #errorcheck && echoerr "error while syncing other media." && return 1
+
     return 0
 }

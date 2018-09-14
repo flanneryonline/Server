@@ -4,20 +4,10 @@ services:
     image: linuxserver/plex
     hostname: plex
     domainname: ${SERVER_DOMAIN}
-    logging:
-      driver: syslog
-      options:
-        syslog-address: udp://${SYSLOG_ADDRESS}:${SYSLOG_PORT}
+    network_mode: host
     volumes:
       - ${DOCKER_CONFIGS}/plex:/config
       - ${DOCKER_MEDIA}:/media
-    ports:
-      - 32400:32400
-      - 32400:32400/udp
-      - 32469:32469
-      - 32469:32469/udp
-      - 5353:5353/udp
-      - 1900:1900/udp
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -27,10 +17,6 @@ services:
     image: linuxserver/tautulli
     hostname: tautulli
     domainname: ${SERVER_DOMAIN}
-    logging:
-      driver: syslog
-      options:
-        syslog-address: udp://${SYSLOG_ADDRESS}:${SYSLOG_PORT}
     volumes:
       - ${DOCKER_CONFIGS}/tautulli:/config
       - ${DOCKER_CONFIGS}/plex:/logs:ro

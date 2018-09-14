@@ -1,130 +1,107 @@
 version: '3'
 services:
-  nzbget:
-    image: linuxserver/nzbget
-    network_mode: container:pia
-    hostname: nzbget
-    domainname: ${SERVER_DOMAIN}
-    logging:
-      driver: syslog
-      options:
-        syslog-address: udp://${SYSLOG_ADDRESS}:${SYSLOG_PORT}
-    volumes:
-      - ${DOCKER_CONFIGS}/nzbget:/config
-      - ${DOCKER_DOWNLOADS}:/downloads
-    ports:
-      - 6789:6789
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${SERVER_TIMEZONE}
-  deluge:
-    image: linuxserver/deluge
-    network_mode: container:pia
-    hostname: deluge
-    domainname: ${SERVER_DOMAIN}
-    logging:
-      driver: syslog
-      options:
-        syslog-address: udp://${SYSLOG_ADDRESS}:${SYSLOG_PORT}
-    ports:
-      - 8112:8112
-      - 58846:58846
-      - 58946:58946
-      - 58946:58946/udp
-    volumes:
-      - ${DOCKER_CONFIGS}/deluge:/config
-      - ${DOCKER_DOWNLOADS}:/downloads
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${SERVER_TIMEZONE}
-  hydra:
-    image: linuxserver/hydra
-    network_mode: container:pia
-    hostname: hydra
-    domainname: ${SERVER_DOMAIN}
-    logging:
-      driver: syslog
-      options:
-        syslog-address: udp://${SYSLOG_ADDRESS}:${SYSLOG_PORT}
-    volumes:
-      - ${DOCKER_CONFIGS}/hydra:/config
-    ports:
-      - 5075:5075
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${SERVER_TIMEZONE}
-  jackett:
-    image: linuxserver/jackett
-    network_mode: container:pia
-    hostname: jackett
-    domainname: ${SERVER_DOMAIN}
-    logging:
-      driver: syslog
-      options:
-        syslog-address: udp://${SYSLOG_ADDRESS}:${SYSLOG_PORT}
-    volumes:
-      - ${DOCKER_CONFIGS}/jackett:/config
-    ports:
-      - 9117:9117
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${SERVER_TIMEZONE}
-  sonarr:
-    image: linuxserver/sonarr
-    network_mode: container:pia
-    hostname: sonarr
-    domainname: ${SERVER_DOMAIN}
-    logging:
-      driver: syslog
-      options:
-        syslog-address: udp://${SYSLOG_ADDRESS}:${SYSLOG_PORT}
-    volumes:
-      - ${DOCKER_CONFIGS}/sonarr:/config
-      - ${DOCKER_MEDIA}/shows:/shows
-      - ${DOCKER_DOWNLOADS}:/downloads
-    ports:
-      - 8989:8989
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${SERVER_TIMEZONE}
-  radarr:
-    image: linuxserver/radarr
-    network_mode: container:pia
-    hostname: radarr
-    domainname: ${SERVER_DOMAIN}
-    logging:
-      driver: syslog
-      options:
-        syslog-address: udp://${SYSLOG_ADDRESS}:${SYSLOG_PORT}
-    volumes:
-      - ${DOCKER_CONFIGS}/radarr:/config
-      - ${DOCKER_MEDIA}/movies:/movies
-      - ${DOCKER_DOWNLOADS}:/downloads
-    ports:
-      - 7878:7878
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${SERVER_TIMEZONE}
   pia:
-    image: colinhebert/pia-openvpn
-    command: --auth-user-pass auth.conf
+    image: dperson/openvpn-client
+    command: -r 10.0.0.0/8 -f "" -d
     cap_add:
       - NET_ADMIN
     devices:
       - /dev/net/tun
-    hostname: radarr
+    ports:
+      - 6789:6789       #nzbget
+      - 8112:8112       #deluge
+      - 58846:58846     #deluge
+      - 58946:58946     #deluge
+      - 58946:58946/udp #deluge
+      - 5075:5075       #hydra
+      - 9117:9117       #jackett
+      - 8989:8989       #sonarr
+      - 7878:7878       #radarr
+    tmpfs:
+      - /tmp
+    security_opt:
+      - label:disable
     domainname: ${SERVER_DOMAIN}
-    logging:
-      driver: syslog
-      options:
-        syslog-address: udp://${SYSLOG_ADDRESS}:${SYSLOG_PORT}
     volumes:
-      - ${DOCKER_CONFIGS}/pia/auth.conf:auth.conf
+      - ${STORAGE_CONFIG_DIR}/pia:/vpn
     environment:
       - REGION=US Midwest
+      - TZ=${SERVER_TIMEZONE}
+  nzbget:
+    image: linuxserver/nzbget
+    depends_on:
+      - pia
+    network_mode: service:pia
+    domainname: ${SERVER_DOMAIN}
+    volumes:
+      - ${STORAGE_CONFIG_DIR}/nzbget:/config
+      - ${STORAGE_DOWNLOAD_DIR}:/downloads
+    environment:
+      - PUID=${DOCKER_PUID}
+      - PGID=${DOCKER_PGID}
+      - TZ=${SERVER_TIMEZONE}
+  deluge:
+    image: linuxserver/deluge
+    depends_on:
+      - pia
+    network_mode: service:pia
+    domainname: ${SERVER_DOMAIN}
+    volumes:
+      - ${STORAGE_CONFIG_DIR}/deluge:/config
+      - ${STORAGE_DOWNLOAD_DIR}:/downloads
+    environment:
+      - PUID=${DOCKER_PUID}
+      - PGID=${DOCKER_PGID}
+      - TZ=${SERVER_TIMEZONE}
+  hydra:
+    image: linuxserver/hydra
+    depends_on:
+      - pia
+    network_mode: service:pia
+    domainname: ${SERVER_DOMAIN}
+    volumes:
+      - ${STORAGE_CONFIG_DIR}/hydra:/config
+    environment:
+      - PUID=${DOCKER_PUID}
+      - PGID=${DOCKER_PGID}
+      - TZ=${SERVER_TIMEZONE}
+  jackett:
+    image: linuxserver/jackett
+    depends_on:
+      - pia
+    network_mode: service:pia
+    domainname: ${SERVER_DOMAIN}
+    volumes:
+      - ${STORAGE_CONFIG_DIR}/jackett:/config
+    environment:
+      - PUID=${DOCKER_PUID}
+      - PGID=${DOCKER_PGID}
+      - TZ=${SERVER_TIMEZONE}
+  sonarr:
+    image: linuxserver/sonarr
+    depends_on:
+      - pia
+    network_mode: service:pia
+    domainname: ${SERVER_DOMAIN}
+    volumes:
+      - ${STORAGE_CONFIG_DIR}/sonarr:/config
+      - ${STORAGE_MEDIA_DIR}/shows:/shows
+      - ${STORAGE_DOWNLOAD_DIR}:/downloads
+    environment:
+      - PUID=${DOCKER_PUID}
+      - PGID=${DOCKER_PGID}
+      - TZ=${SERVER_TIMEZONE}
+  radarr:
+    image: linuxserver/radarr
+    depends_on:
+      - pia
+    network_mode: service:pia
+    domainname: ${SERVER_DOMAIN}
+    volumes:
+      - ${STORAGE_CONFIG_DIR}/radarr:/config
+      - ${STORAGE_MEDIA_DIR}/movies:/movies
+      - ${STORAGE_DOWNLOAD_DIR}:/downloads
+    environment:
+      - PUID=${DOCKER_PUID}
+      - PGID=${DOCKER_PGID}
+      - TZ=${SERVER_TIMEZONE}

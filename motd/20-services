@@ -7,6 +7,8 @@ declare -a services=(
 "rsyslog"
 "ssh"
 "docker"
+"docker-compose@download"
+"docker-compose@plex"
 )
 declare -a serviceName=(
 "Networking"
@@ -14,6 +16,8 @@ declare -a serviceName=(
 "Syslog"
 "SSH"
 "Docker"
+"Download Services"
+"Plex Services"
 )
 declare -a serviceStatus=()
 
