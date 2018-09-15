@@ -122,9 +122,6 @@ deinitialize_mounts() {
     umount -l "$root/sys"
     errorcheck && return 1
 
-    #don't want this to exist on first boot so all pools are imported correctly
-    [ -f "$root/etc/zfs/zpool.cache" ] && rm "$root/etc/zfs/zpool.cache"
-
     umount -lAR "$root"
     errorcheck && echoerr "error unmounting root pool" && return 1
     zpool export $ROOT_POOL
