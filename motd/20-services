@@ -38,8 +38,8 @@ for i in ${!serviceStatus[@]}
 do
     # Color the next line green if it's active, else red
     if [ "${serviceStatus[$i]}" == "active" ]; then
-	echo -e "  ${serviceName[$i]}: \e[32m● Active\e[0m\n"
+	echo -e "  ${serviceName[$i]}: \e[32m● Active\e[0m"
     else
-	echo -e "  ${serviceName[$i]}: \e[31m▲ Failed\e[0m\n"
+	echo -e "  ${serviceName[$i]}: \e[31m▲ Failed\e[0m"
     fi
 done

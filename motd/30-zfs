@@ -21,9 +21,11 @@ dehumanise() {
 
 for pool in $(zpool list -H -o name)
 do
-    used=$(zfs list -H -o used $pool | dehumanise)
-    available=$(zfs list -H -o avail $pool  | dehumanise)
-    percent=$((50*used/available))
+    used=$(zfs list -H -o used $pool)
+    used_bites=$(echo $used | dehumanise)
+    available=$(zfs list -H -o avail $pool)
+    available_bites=$(echo $available | dehumanise)
+    percent=$((70*used_bites/available_bites))
     line="[\e[42m" #green
     [ $percent -gt 60 ] && line="[\e[43m" #yellow
     [ $percent -gt 68 ] && line="[\e[41m" #red
@@ -34,7 +36,7 @@ do
         i=$((i+1))
     done
     line+="\e[49m"
-    while [ $i -lt 50 ]
+    while [ $i -lt 70 ]
     do
         line+=" "
         i=$((i+1))
@@ -43,5 +45,5 @@ do
 
     echo -e "  $pool: $([ "$(zpool status -x $pool)" == "pool '$pool' is healthy" ] && echo "\e[32mHEALTHY\e[0m" || echo "\e[31mUNHEALTHY\e[0m" )
     used: $used  |  available: $available
-    $line"
+$line"
 done

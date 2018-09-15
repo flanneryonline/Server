@@ -122,7 +122,10 @@ deinitialize_mounts() {
     umount -l "$root/sys"
     errorcheck && return 1
 
-    zfs umount $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
+    #don't want this to exist on first boot so all pools are imported correctly
+    [ -f "$root/etc/zfs/zpool.cache" ] && rm "$root/etc/zfs/zpool.cache"
+
+    umount -lAR "$root"
     errorcheck && echoerr "error unmounting root pool" && return 1
     zpool export $ROOT_POOL
     errorcheck && echoerr "error exporting root pool" && return 1
@@ -285,9 +288,6 @@ debootstrap_install() {
 
     initialize_os
     errorcheck && echoerr "error in initialize_os" && return 1
-
-    #don't want this to exist on first boot so all pools are imported correctly
-    [ -f "$root/etc/zfs/zpool.cache" ] && rm "$root/etc/zfs/zpool.cache"
 
     echo "debootstrap install complete"
     return 0
