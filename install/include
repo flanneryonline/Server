@@ -616,7 +616,7 @@ zfs_ssd_setup() {
     zfs create $SSD_POOL/docker
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
 
-    zfs create -o mountpoint=/mnt $SSD_POOL/configs
+    zfs create -o mountpoint=/mnt/configs $SSD_POOL/configs
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
 
     umount -lAR "$root/mnt/configs"
