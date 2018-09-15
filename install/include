@@ -80,6 +80,8 @@ initialize_mounts() {
     mount --rbind /sys  "$root/sys"
     errorcheck && return 1
 
+    eval "$chroot_eval zpool import $STORAGE_POOL"
+    errorcheck && echoerr "error importing storage pool to chroot" && return 1
     eval "$chroot_eval zpool import $SSD_POOL"
     errorcheck && echoerr "error importing ssd pool to chroot" && return 1
 
@@ -111,9 +113,6 @@ deinitialize_mounts() {
     eval "$chroot_eval umount /root"
     errorcheck && echoerr "error unmounting" && return 1
 
-    eval "$chroot_eval zpool export $SSD_POOL"
-    errorcheck && echoerr "error exporting ssd pool" && return 1
-
     umount -l "$root/dev/pts"
     errorcheck && return 1
     umount -l "$root/dev"
@@ -122,9 +121,6 @@ deinitialize_mounts() {
     errorcheck && return 1
     umount -l "$root/sys"
     errorcheck && return 1
-
-    rm "$root/etc/zfs/zpool.cache"
-    errorcheck && echoerr "error removing zpool cache" && return 1
 
     zfs umount $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
     errorcheck && echoerr "error unmounting root pool" && return 1
@@ -521,7 +517,7 @@ whiptail_disks() {
 zfs_boot_setup() {
     boot_disk_list=
     space=
-    echo "clearing all storage disks"
+    echo "clearing all boot disks"
     for boot_disk in $boot_disks
     do
         echo "clearing boot disk $boot_disk"
@@ -577,7 +573,7 @@ zfs_boot_setup() {
 zfs_ssd_setup() {
     ssd_disk_list=
     space=
-    echo "clearing all storage disks"
+    echo "clearing all ssd disks"
     for ssd_disk in $ssd_disks; do
         echo "clearing disk: $ssd_disk"
         clear_disk $ssd_disk
