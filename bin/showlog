@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Shows logs of various types.
 #   (1) The type of logs to show

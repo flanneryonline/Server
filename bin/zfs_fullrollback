@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # parameter list:
 #   (1) the filesystem to be used to start decendant recursion

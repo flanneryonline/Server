@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 echoerr() {
     cat <<< "$@" 1>&2
@@ -82,6 +82,8 @@ initialize_mounts() {
 
     eval "$chroot_eval zpool import $SSD_POOL"
     errorcheck && echoerr "error importing ssd pool to chroot" && return 1
+    eval "$chroot_eval zpool import $STORAGE_POOL"
+    errorcheck && echoerr "error importing storage pool to chroot" && return 1
 
     echo "$SSD_POOL/var /var zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
     echo "$SSD_POOL/var/log /var/log zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
@@ -89,6 +91,14 @@ initialize_mounts() {
     echo "$SSD_POOL/home /home zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
     echo "$SSD_POOL/home/root /root zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
     echo "$SSD_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    echo "$SSD_POOL/configs /mnt/configs zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+
+    echo "$STORAGE_POOL/media /mnt/media zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    echo "$STORAGE_POOL/media/shows /mnt/media/shows zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    echo "$STORAGE_POOL/media/movies /mnt/media/movies zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    echo "$STORAGE_POOL/media/unsorted /mnt/media/unsorted zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    echo "$STORAGE_POOL/downloads /mnt/downloads zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    echo "$STORAGE_POOL/shares /mnt/shares zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
 
     eval "$chroot_eval mount -a"
     errorcheck && echoerr "error mounting directories in chroot" && return 1
@@ -104,6 +114,15 @@ deinitialize_mounts() {
     eval "$chroot_eval umount /var"
     eval "$chroot_eval umount /home"
     eval "$chroot_eval umount /root"
+    eval "$chroot_eval umount /mnt/configs"
+
+    eval "$chroot_eval umount /media/shows"
+    eval "$chroot_eval umount /media/shows"
+    eval "$chroot_eval umount /media/movies"
+    eval "$chroot_eval umount /media/unsorted"
+    eval "$chroot_eval umount /media"
+    eval "$chroot_eval umount /downloads"
+    eval "$chroot_eval umount /shares"
 
     eval "$chroot_eval zpool export $SSD_POOL"
 
@@ -195,6 +214,7 @@ initialize_os() {
     [ ! -d "$root/etc/systemd/system" ] && mkdir -p "$root/etc/systemd/system"
     cp -r ${SERVER_INSTALL:-~/server}/systemd/* "$root/etc/systemd/system/"
     errorcheck && echoerr "error copying systemd files" && return 1
+    git clone https://github.com/flanneryonline/server.git "$root/root/server"
 
     for file in "$root/etc/logrotate.d/"*
     do
@@ -218,8 +238,8 @@ initialize_os() {
     errorcheck && echoerr "error in initialize_efi" && return 1
     initialize_motd
     errorcheck && echoerr "error in initialize_motd" && return 1
-    initialize_services
-    errorcheck && echoerr "error in initialize_services" && return 1
+    #initialize_services
+    #errorcheck && echoerr "error in initialize_services" && return 1
 
     deinitialize_mounts
     errorcheck && echoerr "error in deinitialize_mounts" && return 1
@@ -442,16 +462,6 @@ initialize_docker() {
     return 0
 }
 
-initialize_services() {
-    [ x$root = x ] && local chroot_eval=
-
-    for compose in $(ls -l $root/etc/docker/compose | grep "^d" | tr -s ' ' | cut -d' ' -f 9-); do
-        eval "$chroot_eval systemctl enable docker-compose@$compose"
-        errorcheck && echoerr "error initializing $compose" && return 1
-    done
-    return 0
-}
-
 #gets a single /dev/disk/by-
 #link based on the dev provided
 #
@@ -599,7 +609,6 @@ zfs_ssd_setup() {
         -O atime=off \
         -O compression=lz4 \
         -O mountpoint=legacy \
-        -R "$root" \
         $SSD_POOL $raid_type $ssd_disk_list"
     errorcheck && echoerr "error creating ssd pool" && return 1
 
@@ -618,11 +627,8 @@ zfs_ssd_setup() {
     zfs create $SSD_POOL/docker
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
 
-    zfs create -o mountpoint=/mnt/configs $SSD_POOL/configs
+    zfs create $SSD_POOL/configs
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
-
-    umount -lAR $root/mnt/configs
-    rm -r $root/*
 
     echo "ssd disk setup complete"
 
@@ -656,8 +662,7 @@ zfs_storage_setup() {
         -o ashift=12 \
         -O atime=off \
         -O compression=lz4 \
-        -O mountpoint=/mnt \
-        -R "$root" \
+        -O mountpoint=legacy \
         $STORAGE_POOL $raid_type $storage_disk_list"
     errorcheck && echoerr "error creating storage pool" && return 1
 
@@ -676,9 +681,6 @@ zfs_storage_setup() {
     zfs create $STORAGE_POOL/shares
     errorcheck && echoerr "error creating storage pool dataset" && return 1
 
-    umount -lAR $STORAGE_POOL
-    rm -r $root/*
-
     echo "storage disk setup complete"
 
     return 0
@@ -692,110 +694,8 @@ clean_install(){
     errorcheck && echoerr "error setting up ssd disks." && return 1
     zfs_storage_setup
     errorcheck && echoerr "error setting up storage disks." && return 1
-    long_running_stuff
-    errorcheck && return 1
-
-    return 0
-}
-
-long_running_stuff() {
-
-    #run these async
-    debootstrap_install &
-    debootstrap_pid=$!
-    rsync_movies &
-    movies_pid=$!
-    rsync_shows &
-    shows_pid=$!
-    rsync_configs &
-    configs_pid=$!
-    rsync_data &
-    data_pid=$!
-    rsync_other &
-    other_pid=$!
-
-    wait $debootstrap_pid
+    debootstrap_install
     errorcheck && echoerr "error in debootstrap_install." && kill_others && return 1
-    echo "debootstrap_install complete."
-
-    wait $configs_pid
-    errorcheck && echoerr "error in rsync_configs." && kill_others && return 1
-    echo "rsync_configs complete."
-
-    wait $other_pid
-    errorcheck && echoerr "error in rsync_other." && kill_others && return 1
-    echo "rsync_other complete."
-
-    wait $data_pid
-    errorcheck && echoerr "error in rsync_data." && kill_others && return 1
-    echo "rsync_data complete."
-
-    wait $shows_pid
-    errorcheck && echoerr "error in rsync_shows." && kill_others && return 1
-    echo "rsync_shows complete."
-
-    wait $movies_pid
-    errorcheck && echoerr "error in rsync_movies." && return 1
-    echo "rsync_movies complete."
-
-    return 0
-}
-
-kill_others() {
-    kill -0 $configs_pid && kill_children $configs_pid
-    kill -0 $other_pid && kill_children $other_pid
-    kill -0 $data_pid && kill_children $data_pid
-    kill -0 $shows_pid && kill_children $shows_pid
-    kill -0 $movies_pid && kill_children $movies_pid
-
-    return 0
-}
-
-kill_children() {
-    for child in $(ps -o pid,ppid -ax | awk "{ if ( \$2 == $1 ) { print \$1 }}")
-    do
-        kill_children $child
-    done
-    kill $1
-    return 0
-}
-
-rsync_configs() {
-
-    #rsync -azqHAX -e ssh root@$BACKUP_ADDRESS:/$BACKUP_FOLDER/ $STORAGE_CONFIG_DIR
-    #errorcheck && echoerr "error while syncing configs." && return 1
-
-    return 0
-}
-
-rsync_shows() {
-
-    #rsync -azqHAX -e ssh root@$BACKUP_ADDRESS:/$BACKUP_FOLDER/media/ $STORAGE_MEDIA_DIR/shows
-    #errorcheck && echoerr "error while syncing shows." && return 1
-
-    return 0
-}
-
-rsync_data() {
-
-    #rsync -azqHAX -e ssh root@$BACKUP_ADDRESS:/$BACKUP_FOLDER/ $STORAGE_MEDIA_DIR/shares
-    #errorcheck && echoerr "error while syncing shares." && return 1
-
-    return 0
-}
-
-rsync_movies() {
-
-    #rsync -azqHAX -e ssh root@$BACKUP_ADDRESS:/$BACKUP_FOLDER/media/ $STORAGE_MEDIA_DIR/movies
-    #errorcheck && echoerr "error while syncing movies." && return 1
-
-    return 0
-}
-
-rsync_other() {
-
-    #rsync -azqHAX -e ssh root@$BACKUP_ADDRESS:/$BACKUP_FOLDER/media/ $STORAGE_MEDIA_DIR/other
-    #errorcheck && echoerr "error while syncing other media." && return 1
 
     return 0
 }

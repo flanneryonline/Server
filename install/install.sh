@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # chmod +x install/install.sh && ./install/install.sh |& tee /var/log/debootstrap.log
 
 export DEBIAN_FRONTEND=noninteractive
@@ -18,8 +18,7 @@ apt-get install -qq \
     gdisk \
     debootstrap \
     curl \
-    apt-transport-https \
-    systemd-container
+    apt-transport-https
 errorcheck && exit 1
 
 clear
