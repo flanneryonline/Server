@@ -225,8 +225,8 @@ initialize_os() {
     errorcheck && echoerr "error in initialize_efi" && return 1
     initialize_motd
     errorcheck && echoerr "error in initialize_motd" && return 1
-    deinitialize_mounts
-    errorcheck && echoerr "error in deinitialize_mounts" && return 1
+    #deinitialize_mounts
+    #errorcheck && echoerr "error in deinitialize_mounts" && return 1
 
     return 0
 }
