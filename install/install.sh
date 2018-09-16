@@ -18,6 +18,7 @@ apt-get install -qq \
     gdisk \
     debootstrap \
     curl \
+    nfs-common \
     apt-transport-https
 errorcheck && exit 1
 
