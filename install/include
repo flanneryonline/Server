@@ -80,11 +80,6 @@ initialize_mounts() {
     mount --rbind /sys  "$root/sys"
     errorcheck && return 1
 
-    eval "$chroot_eval zpool import $STORAGE_POOL"
-    errorcheck && echoerr "error importing storage pool to chroot" && return 1
-    eval "$chroot_eval zpool import $SSD_POOL"
-    errorcheck && echoerr "error importing ssd pool to chroot" && return 1
-
     echo "$SSD_POOL/var /var zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
     echo "$SSD_POOL/var/log /var/log zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
     echo "$SSD_POOL/var/tmp /var/tmp zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
@@ -94,8 +89,6 @@ initialize_mounts() {
 
     eval "$chroot_eval mount -a"
     errorcheck && echoerr "error mounting directories in chroot" && return 1
-
-    set_var "ready_for_mounts" 1
 
     return 0
 }
@@ -119,6 +112,16 @@ deinitialize_mounts() {
     errorcheck && echoerr "error unmounting" && return 1
     eval "$chroot_eval umount /root"
     errorcheck && echoerr "error unmounting" && return 1
+
+    zpool export -f $SSD_POOL
+    errorcheck && echoerr "error exporting ssd pool" && return 1
+    zpool export -f $STORAGE_POOL
+    errorcheck && echoerr "error exporting storage pool" && return 1
+
+    eval "$chroot_eval zpool import $STORAGE_POOL"
+    errorcheck && echoerr "error importing storage pool to chroot" && return 1
+    eval "$chroot_eval zpool import $SSD_POOL"
+    errorcheck && echoerr "error importing ssd pool to chroot" && return 1
 
     umount -l "$root/dev/pts"
     errorcheck && return 1
@@ -272,13 +275,14 @@ debootstrap_install() {
     mkdir -p "$root/var/tmp"
     mount -t zfs "$SSD_POOL/var/tmp" "$root/var/tmp"
     errorcheck && echoerr "error mounting var tmp" && return 1
+    mkdir -p "$root/var/lib/docker"
+
+    set_var "ready_for_mounts" 1
 
     debootstrap --components $SERVER_DIST_COMPONENTS \
         --include $packages \
         $SERVER_DIST_RELEASE "$root" $SERVER_DIST_URL
     errorcheck && echoerr "error in debootstrap" && return 1
-
-    mkdir -p "$root/var/lib/docker"
 
     umount -l "$root/var/log"
     errorcheck && echoerr "error unmounting var log" && return 1
@@ -286,11 +290,6 @@ debootstrap_install() {
     errorcheck && echoerr "error unmounting var tmp" && return 1
     umount -l "$root/var"
     errorcheck && echoerr "error unmounting var" && return 1
-
-    zpool export -f $SSD_POOL
-    errorcheck && echoerr "error exporting ssd pool" && return 1
-    zpool export -f $STORAGE_POOL
-    errorcheck && echoerr "error exporting storage pool" && return 1
 
     initialize_os
     errorcheck && echoerr "error in initialize_os" && return 1
@@ -731,7 +730,6 @@ long_running_stuff() {
     initialize_nfs_mounts
     errorcheck && return 1
 
-    #run these async
     debootstrap_install &
     debootstrap_pid=$!
 
@@ -750,6 +748,11 @@ long_running_stuff() {
     data_pid=$!
     copy_other &
     other_pid=$!
+
+    #####TEMP
+    #REMOVE WHEN DONE TESTING
+    kill_others && return 1
+    ##################
 
     wait $configs_pid
     errorcheck && echoerr "error in copy_configs." && kill_others && return 1
