@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
 
+. /etc/server/environment
+
 echo "
 $(figlet ${SERVER_NAME-$(hostname)})"
