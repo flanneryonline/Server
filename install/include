@@ -277,6 +277,9 @@ debootstrap_install() {
     errorcheck && echoerr "error mounting var tmp" && return 1
     mkdir -p "$root/var/lib/docker"
 
+    zfs list -rH -o name $STORAGE_POOL | xargs -L 1 zfs mount
+    zfs mount $SSD_POOL/configs
+
     set_var "ready_for_mounts" 1
 
     debootstrap --components $SERVER_DIST_COMPONENTS \
@@ -785,6 +788,8 @@ long_running_stuff() {
 
 kill_others() {
 
+    kill_children $debootstrap_pid
+    errorcheck && return 1
     kill_children $configs_pid
     errorcheck && return 1
     kill_children $other_pid
