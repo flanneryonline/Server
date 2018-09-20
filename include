@@ -10,6 +10,32 @@ errorcheck() {
     return 1
 }
 
+server_update() {
+    [ x$root = x ] && local chroot_eval=
+
+    #get latest server code
+    [ ! -d "$root/opt/server" ] && git clone https://github.com/flanneryonline/server.git "$root/opt/server"
+    pushd "$root/opt/server"
+    git remote update
+    local_rev=$(git rev-parse master)
+    server_rev=$(git rev-parse origin/master)
+    [ $local_rev != $server_rev ] && git pull
+    popd
+
+    chmod +x "$root/opt/server/bin/"*
+    $root/opt/bin/server-update-helper
+
+    #binary updates
+    eval "$chroot_eval apt-get update -qq"
+    errorcheck && echoerr "error during apt-get update" && return 1
+    eval "$chroot_eval apt-get upgrade -qq --no-install-recommends"
+    errorcheck && echoerr "error during apt-get upgrade" && return 1
+    eval "$chroot_eval apt-get dist-upgrade -qq --no-install-recommends"
+    errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
+
+    return 0
+}
+
 initialize_apt() {
     [ x$root = x ] && local chroot_eval=
     echo "setting up system package management"
@@ -43,16 +69,6 @@ initialize_syslog() {
     return 0
 }
 
-initialize_motd() {
-    rm "$root/etc/update-motd.d/"*
-    errorcheck && return 1
-    cp ${SERVER_INSTALL:-~/server}/motd/* "$root/etc/update-motd.d/"
-    errorcheck && return 1
-    chmod a+x "$root/etc/update-motd.d/"*
-    errorcheck && return 1
-    return 0
-}
-
 initialize_users() {
     groupadd -R "$root" -g $ADMIN_GROUP_ID $ADMIN_USERNAME
     errorcheck && return 1
@@ -81,10 +97,6 @@ initialize_mounts() {
     errorcheck && return 1
 
     echo "$SSD_POOL/var /var zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/var/log /var/log zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/var/tmp /var/tmp zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/home /home zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/home/root /root zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
     echo "$SSD_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
 
     eval "$chroot_eval mount -a"
@@ -100,17 +112,14 @@ deinitialize_mounts() {
         sleep 5s
     done
 
-    eval "$chroot_eval umount /var/log"
-    errorcheck && echoerr "error unmounting" && return 1
-    eval "$chroot_eval umount /var/tmp"
-    errorcheck && echoerr "error unmounting" && return 1
+    echo "$BACKUP_ADDRESS:/$BACKUP_FOLDER /mnt/backup nfs defaults,x-systemd.requires=nfs-client.target 0 0" >> "$root/etc/fstab"
+    eval "$chroot_eval ln -s /mnt/backup/media/shows /mnt/media/shows"
+    eval "$chroot_eval ln -s /mnt/backup/media/movies /mnt/media/movies"
+    eval "$chroot_eval ln -s /mnt/backup/media/other /mnt/media/unsorted"
+
     eval "$chroot_eval umount /var/lib/docker"
     errorcheck && echoerr "error unmounting" && return 1
     eval "$chroot_eval umount /var"
-    errorcheck && echoerr "error unmounting" && return 1
-    eval "$chroot_eval umount /home"
-    errorcheck && echoerr "error unmounting" && return 1
-    eval "$chroot_eval umount /root"
     errorcheck && echoerr "error unmounting" && return 1
 
     zpool export -f $SSD_POOL
@@ -182,18 +191,7 @@ initialize_efi() {
     return 0
 }
 
-#required:
-#   functions:
-#       initialize_mounts
-#       initialize_apt
-#       initialize_users
-#       initialize_networking
-#       initialize_docker
-initialize_os() {
-
-    initialize_mounts
-    errorcheck && echoerr "error in initialize_mounts" && return 1
-
+initialize_locale() {
     eval "$chroot_eval locale-gen --purge en_US.UTF-8"
     errorcheck && return 1
     eval "$chroot_eval dpkg-reconfigure --frontend noninteractive locales"
@@ -201,26 +199,16 @@ initialize_os() {
     eval "$chroot_eval update-locale LANG=en_US.UTF-8"
     errorcheck && return 1
 
-    [ ! -d "$root/etc/server/environment" ] && mkdir -p "$root/etc/server/environment"
-    cp ${SERVER_INSTALL:-~/server}/install/environment "$root/etc/server/environment"
-    errorcheck && echoerr "error copying environment file" && return 1
-    cp ${SERVER_INSTALL:-~/server}/install/include "$root/etc/server/include"
-    errorcheck && echoerr "error copying include file" && return 1
-    cp ${SERVER_INSTALL:-~/server}/bin/* "$root/usr/bin/"
-    errorcheck && echoerr "error copying bin file" && return 1
-    [ ! -d "$root/etc/systemd/system" ] && mkdir -p "$root/etc/systemd/system"
-    cp -r ${SERVER_INSTALL:-~/server}/systemd/* "$root/etc/systemd/system/"
-    errorcheck && echoerr "error copying systemd files" && return 1
-    git clone https://github.com/flanneryonline/server.git "$root/root/server"
+    return 0
+}
 
-    for file in "$root/etc/logrotate.d/"*
-    do
-        if grep -Eq "(^|[^#y])compress" "$file"
-        then
-            sed -i -r "s/(^|[^#y])(compress)/\1#\2/" "$file"
-        fi
-    done
+initialize_os() {
 
+    initialize_mounts
+    errorcheck && echoerr "error in initialize_mounts" && return 1
+
+    initialize_locale
+    errorcheck && echoerr "error in initialize_locale" && return 1
     initialize_apt
     errorcheck && echoerr "error in initialize_apt" && return 1
     initialize_users
@@ -233,10 +221,10 @@ initialize_os() {
     errorcheck && echoerr "error in initialize_syslog" && return 1
     initialize_efi
     errorcheck && echoerr "error in initialize_efi" && return 1
-    initialize_motd
-    errorcheck && echoerr "error in initialize_motd" && return 1
-    initialize_services
-    errorcheck && echoerr "error in initialize_services" && return 1
+
+    server_update
+    errorcheck && echoerr "error in server_update" && return 1
+
     deinitialize_mounts
     errorcheck && echoerr "error in deinitialize_mounts" && return 1
 
@@ -419,7 +407,6 @@ docker_compose_update() {
     return 0
 }
 
-#systemd-networkd configuration
 #required:
 #   functions:
 #       docker_compose_update
@@ -600,27 +587,19 @@ zfs_ssd_setup() {
         -o ashift=13 \
         -O atime=off \
         -O compression=lz4 \
-        -O mountpoint=legacy \
+        -O mountpoint=/mnt \
+        -O canmount=off \
         -R "$root" \
         $SSD_POOL $raid_type $ssd_disk_list"
     errorcheck && echoerr "error creating ssd pool" && return 1
 
-    zfs create $SSD_POOL/var
-    errorcheck && echoerr "error creating ssd pool dataset" && return 1
-    zfs create $SSD_POOL/var/log
-    errorcheck && echoerr "error creating ssd pool dataset" && return 1
-    zfs create $SSD_POOL/var/tmp
+    zfs create -o mountpoint=legacy $SSD_POOL/var
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
 
-    zfs create $SSD_POOL/home
-    errorcheck && echoerr "error creating ssd pool dataset" && return 1
-    zfs create $SSD_POOL/home/root
+    zfs create -o mountpoint=legacy $SSD_POOL/docker
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
 
-    zfs create $SSD_POOL/docker
-    errorcheck && echoerr "error creating ssd pool dataset" && return 1
-
-    zfs create -o mountpoint=/mnt/configs $SSD_POOL/configs
+    zfs create $SSD_POOL/configs
     errorcheck && echoerr "error creating ssd pool dataset" && return 1
 
     umount -lAR "$root/mnt/configs"
@@ -665,12 +644,12 @@ zfs_storage_setup() {
 
     zfs create $STORAGE_POOL/media
     errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/shows
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/movies
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    zfs create $STORAGE_POOL/media/unsorted
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
+    #zfs create $STORAGE_POOL/media/shows
+    #errorcheck && echoerr "error creating storage pool dataset" && return 1
+    #zfs create $STORAGE_POOL/media/movies
+    #errorcheck && echoerr "error creating storage pool dataset" && return 1
+    #zfs create $STORAGE_POOL/media/unsorted
+    #errorcheck && echoerr "error creating storage pool dataset" && return 1
 
     zfs create $STORAGE_POOL/downloads
     errorcheck && echoerr "error creating storage pool dataset" && return 1
@@ -697,21 +676,6 @@ clean_install(){
     long_running_stuff
     errorcheck && echoerr "error in long_running_stuff." && return 1
 
-    return 0
-}
-
-initialize_services() {
-    [ x$root = x ] && local chroot_eval=
-
-    eval "$chroot_eval systemctl enable docker-cleanup"
-    errorcheck && echoerr "error initializing docker-cleanup" && return 1
-    eval "$chroot_eval systemctl enable server-update"
-    errorcheck && echoerr "error initializing server-update" && return 1
-
-    for compose in $(ls -l $root/etc/docker/compose | grep "^d" | tr -s ' ' | cut -d' ' -f 9-); do
-        eval "$chroot_eval systemctl enable docker-compose@$compose"
-        errorcheck && echoerr "error initializing $compose" && return 1
-    done
     return 0
 }
 
@@ -815,39 +779,51 @@ copy_configs() {
     rsync -aqHXAp /mnt/backup/configs/* "$root/mnt/configs/"
     errorcheck && echoerr "error while copying configs." && return 1
 
+    [ ! -d "$root/mnt/configs/plex" ] && mkdir "$root/mnt/configs/plex"
+    [ ! -d "$root/mnt/configs/tautulli" ] && mkdir "$root/mnt/configs/tautulli"
+    [ ! -d "$root/mnt/configs/ombi" ] && mkdir "$root/mnt/configs/ombi"
+    [ ! -d "$root/mnt/configs/pia" ] && mkdir "$root/mnt/configs/pia"
+    [ ! -d "$root/mnt/configs/nzbget" ] && mkdir "$root/mnt/configs/nzbget"
+    [ ! -d "$root/mnt/configs/deluge" ] && mkdir "$root/mnt/configs/deluge"
+    [ ! -d "$root/mnt/configs/hydra" ] && mkdir "$root/mnt/configs/hydra"
+    [ ! -d "$root/mnt/configs/jackett" ] && mkdir "$root/mnt/configs/jackett"
+    [ ! -d "$root/mnt/configs/sonarr" ] && mkdir "$root/mnt/configs/sonarr"
+    [ ! -d "$root/mnt/configs/radarr" ] && mkdir "$root/mnt/configs/radarr"
+    [ ! -d "$root/mnt/configs/portainer" ] && mkdir "$root/mnt/configs/portainer"
+
     return 0
 }
 
 copy_shows() {
 
-    rsync -aqHXAp /mnt/backup/media/shows/* "$root/mnt/media/shows/"
-    errorcheck && echoerr "error while copying shows." && return 1
+    #rsync -aqHXAp /mnt/backup/media/shows/* "$root/mnt/media/shows/"
+    #errorcheck && echoerr "error while copying shows." && return 1
 
     return 0
 }
 
 copy_data() {
 
-    rsync -aqHXAp /mnt/backup/files/* "$root/mnt/shares/"
-    errorcheck && echoerr "error while copying shares." && return 1
-    rsync -aqHXAp /mnt/backup/backup/* "$root/mnt/shares/media_backup/"
-    errorcheck && echoerr "error while copying shares." && return 1
+    #rsync -aqHXAp /mnt/backup/files/* "$root/mnt/shares/"
+    #errorcheck && echoerr "error while copying shares." && return 1
+    #rsync -aqHXAp /mnt/backup/backup/* "$root/mnt/shares/media_backup/"
+    #errorcheck && echoerr "error while copying shares." && return 1
 
     return 0
 }
 
 copy_movies() {
 
-    rsync -aqHXAp /mnt/backup/media/movies/* "$root/mnt/media/movies/"
-    errorcheck && echoerr "error while copying movies." && return 1
+    #rsync -aqHXAp /mnt/backup/media/movies/* "$root/mnt/media/movies/"
+    #errorcheck && echoerr "error while copying movies." && return 1
 
     return 0
 }
 
 copy_other() {
 
-    rsync -aqHXAp /mnt/backup/media/other/* "$root/mnt/media/unsorted/"
-    errorcheck && echoerr "error while copying unsorted media." && return 1
+    #rsync -aqHXAp /mnt/backup/media/other/* "$root/mnt/media/unsorted/"
+    #errorcheck && echoerr "error while copying unsorted media." && return 1
 
     return 0
 }

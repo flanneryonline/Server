@@ -1,0 +1,13 @@
+[Unit]
+Description=Service for syncing config files to backup host.
+Requires=nfs-client.target zfs.target
+After=nfs-client.target zfs.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/bin/rsync -aqHXAp --delete /mnt/configs/* /mnt/backup/configs/
+
+[Install]
+WantedBy=multi-user.target

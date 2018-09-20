@@ -1,15 +1,35 @@
 #!/usr/bin/env bash
 
-. /etc/server/environment
-. /etc/server/include
+. /opt/server/environment
+. /opt/server/include
 
-docker_compose_update
+snapshot_date=$(date -Is)
 
-apt-get update -qq
-errorcheck && echoerr "error during apt-get update" && exit 1
-apt-get upgrade -qq --no-install-recommends
-errorcheck && echoerr "error during apt-get upgrade" && exit 1
-apt-get dist-upgrade -qq --no-install-recommends
-errorcheck && echoerr "error during apt-get dist-upgrade" && exit 1
+take_snapshot() {
+    zfs snapshot $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@$snapshot_date
+    errorcheck && echoerr "error during zfs snapshot" && return 1
+
+    return 0
+}
+
+run_updates() {
+    docker_compose_update
+    errorcheck && echoerr "error during docker compose update" && return 1
+
+    server_update
+    errorcheck && echoerr "error during server update" && return 1
+
+    return 0
+}
+
+rollback_snapshot() {
+    zfs rollback $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@$snapshot_date
+}
+
+take_snapshot
+errorcheck && exit 1
+
+run_updates
+errorcheck && rollback_snapshot && exit 1
 
 exit 0

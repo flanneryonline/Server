@@ -1,5 +1,5 @@
 [Unit]
-Description=Docker cleanup timer
+Description=Docker cleanup timer.
 
 [Timer]
 OnUnitInactiveSec=12h

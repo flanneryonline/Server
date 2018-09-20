@@ -6,7 +6,7 @@ Type=oneshot
 WorkingDirectory=/tmp
 User=root
 Group=root
-ExecStart=/usr/bin/server-update
+ExecStart=/opt/server/bin/server-update
 
 [Install]
 WantedBy=multi-user.target

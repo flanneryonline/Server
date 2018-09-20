@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# chmod +x install/install.sh && ./install/install.sh |& tee /var/log/debootstrap.log
+# chmod +x install.sh && ./install.sh |& tee /var/log/debootstrap.log
 
 export DEBIAN_FRONTEND=noninteractive
 
-. ${SERVER_INSTALL:-~/server}/install/include
-. ${SERVER_INSTALL:-~/server}/install/environment
+. ${SERVER_INSTALL:-~/server}/include
+. ${SERVER_INSTALL:-~/server}/environment
 
 root=
 initialize_networking
@@ -26,9 +26,9 @@ clear
 
 root=/mnt/install
 chroot_eval="chroot "$root" /usr/bin/env PATH=/usr/sbin:/usr/bin/:/bin:/sbin DEBIAN_FRONTEND=noninteractive"
-packages="ubuntu-minimal,ubuntu-standard,linux-image-generic,"
-packages="${packages}apt-transport-https,gnupg,openssh-server,"
-packages="${packages}curl,bash-completion,zfs-initramfs,figlet"
+packages="ubuntu-minimal,ubuntu-standard,linux-image-generic,smartmontools,git,"
+packages="${packages}apt-transport-https,gnupg,openssh-server,nfs-common,"
+packages="${packages}curl,bash-completion,zfs-initramfs,postfix,figlet"
 
 admin_password=$(whiptail --title "Set $ADMIN_USERNAME password" --passwordbox "Please enter password for user $ADMIN_USERNAME:" 0 10 2>&1 >/dev/tty)
 wt_boot='whiptail --title "Choose All boot Disks" --checklist "Boot disks will be ERASED!" 0 10 0 '
