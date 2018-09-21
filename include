@@ -575,7 +575,7 @@ zfs_boot_setup() {
     sleep 1s
 
     raid_type="mirror"
-    [ $(howmany $storage_disk_list) -eq 1 ] && raid_type=""
+    [ $(howmany $boot_disk_list) -eq 1 ] && raid_type=""
 
     eval "zpool create -f \
         -o ashift=12 \
@@ -616,8 +616,8 @@ zfs_ssd_setup() {
         echo "creating ssd pool"
 
         raid_type="mirror"
-        [ $(howmany $storage_disk_list) -eq 1 ] && raid_type=""
-        [ $(howmany $storage_disk_list) -gt 3 ] && raid_type="raidz"
+        [ $(howmany $ssd_disk_list) -eq 1 ] && raid_type=""
+        [ $(howmany $ssd_disk_list) -gt 3 ] && raid_type="raidz"
 
         eval "zpool create -f \
             -o ashift=13 \
