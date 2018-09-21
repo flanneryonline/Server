@@ -96,41 +96,60 @@ initialize_mounts() {
     mount --rbind /sys  "$root/sys"
     errorcheck && return 1
 
-    echo "$SSD_POOL/var /var zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
-    echo "$SSD_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+    if [ $SSD_ENABLED -eq 1 ]
+    then
+        echo "$SSD_POOL/var /var zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+        echo "$SSD_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
 
-    eval "$chroot_eval mount -a"
-    errorcheck && echoerr "error mounting directories in chroot" && return 1
+        eval "$chroot_eval mount -a"
+        errorcheck && echoerr "error mounting directories in chroot" && return 1
+    fi
 
     return 0
 }
 
 deinitialize_mounts() {
 
-    while [ $(check_var "done_with_mounts") -ne 1 ]
-    do
-        sleep 5s
-    done
+    if [ $SYNC_DATA -eq 1 ]
+    then
+        while [ $(check_var "done_with_mounts") -ne 1 ]
+        do
+            sleep 5s
+        done
+    fi
 
     echo "$BACKUP_ADDRESS:/$BACKUP_FOLDER /mnt/backup nfs defaults,x-systemd.requires=nfs-client.target 0 0" >> "$root/etc/fstab"
-    eval "$chroot_eval ln -s /mnt/backup/media/shows /mnt/media/shows"
-    eval "$chroot_eval ln -s /mnt/backup/media/movies /mnt/media/movies"
-    eval "$chroot_eval ln -s /mnt/backup/media/other /mnt/media/unsorted"
 
-    eval "$chroot_eval umount /var/lib/docker"
-    errorcheck && echoerr "error unmounting" && return 1
-    eval "$chroot_eval umount /var"
-    errorcheck && echoerr "error unmounting" && return 1
+    if [ $SYNC_DATA -eq 0 ]
+    then
+        eval "$chroot_eval ln -s /mnt/backup/media /mnt/media"
+        eval "$chroot_eval ln -s /mnt/backup/downloads /mnt/downloads"
+        eval "$chroot_eval ln -s /mnt/backup/configs /mnt/configs"
+        eval "$chroot_eval ln -s /mnt/backup/files /mnt/shares"
+    fi
 
-    zpool export -f $SSD_POOL
-    errorcheck && echoerr "error exporting ssd pool" && return 1
-    zpool export -f $STORAGE_POOL
-    errorcheck && echoerr "error exporting storage pool" && return 1
+    if [ $SSD_ENABLED -eq 1 ]
+    then
+        eval "$chroot_eval umount /var/lib/docker"
+        errorcheck && echoerr "error unmounting" && return 1
+        eval "$chroot_eval umount /var"
+        errorcheck && echoerr "error unmounting" && return 1
 
-    eval "$chroot_eval zpool import $STORAGE_POOL"
-    errorcheck && echoerr "error importing storage pool to chroot" && return 1
-    eval "$chroot_eval zpool import $SSD_POOL"
-    errorcheck && echoerr "error importing ssd pool to chroot" && return 1
+        zpool export -f $SSD_POOL
+        errorcheck && echoerr "error exporting ssd pool" && return 1
+
+        eval "$chroot_eval zpool import $SSD_POOL"
+        errorcheck && echoerr "error importing ssd pool to chroot" && return 1
+    fi
+
+    if [ $STORAGE_ENABLED -eq 1 ]
+    then
+        zpool export -f $STORAGE_POOL
+        errorcheck && echoerr "error exporting storage pool" && return 1
+
+        eval "$chroot_eval zpool import $STORAGE_POOL"
+        errorcheck && echoerr "error importing storage pool to chroot" && return 1
+    fi
 
     umount -l "$root/dev/pts"
     errorcheck && return 1
@@ -254,33 +273,48 @@ debootstrap_install() {
     zfs mount $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
     errorcheck && echoerr "error mounting root pool" && return 1
 
-    mkdir -p "$root/var"
-    mount -t zfs "$SSD_POOL/var" "$root/var"
-    errorcheck && echoerr "error mounting var" && return 1
-    mkdir -p "$root/var/log"
-    mount -t zfs "$SSD_POOL/var/log" "$root/var/log"
-    errorcheck && echoerr "error mounting var log" && return 1
-    mkdir -p "$root/var/tmp"
-    mount -t zfs "$SSD_POOL/var/tmp" "$root/var/tmp"
-    errorcheck && echoerr "error mounting var tmp" && return 1
-    mkdir -p "$root/var/lib/docker"
+    if [ $SSD_ENABLED -eq 1 ]
+    then
+        mkdir -p "$root/var"
+        mount -t zfs "$SSD_POOL/var" "$root/var"
+        errorcheck && echoerr "error mounting var" && return 1
+        mkdir -p "$root/var/log"
+        mount -t zfs "$SSD_POOL/var/log" "$root/var/log"
+        errorcheck && echoerr "error mounting var log" && return 1
+        mkdir -p "$root/var/tmp"
+        mount -t zfs "$SSD_POOL/var/tmp" "$root/var/tmp"
+        errorcheck && echoerr "error mounting var tmp" && return 1
+        mkdir -p "$root/var/lib/docker"
+    fi
 
-    zfs list -rH -o name $STORAGE_POOL | xargs -L 1 zfs mount
-    zfs mount $SSD_POOL/configs
+    if [ $STORAGE_ENABLED -eq 1 ]
+    then
+        zfs list -rH -o name $STORAGE_POOL | xargs -L 1 zfs mount
+        errorcheck && echoerr "error mounting storage pool" && return 1
+    fi
 
-    set_var "ready_for_mounts" 1
+    if [ $SSD_ENABLED -eq 1 ]
+    then
+        zfs mount $SSD_POOL/configs
+        errorcheck && echoerr "error mounting configs" && return 1
+    fi
+
+    [ $SYNC_DATA -eq 1 ] && set_var "ready_for_mounts" 1
 
     debootstrap --components $SERVER_DIST_COMPONENTS \
         --include $packages \
         $SERVER_DIST_RELEASE "$root" $SERVER_DIST_URL
     errorcheck && echoerr "error in debootstrap" && return 1
 
-    umount -l "$root/var/log"
-    errorcheck && echoerr "error unmounting var log" && return 1
-    umount -l "$root/var/tmp"
-    errorcheck && echoerr "error unmounting var tmp" && return 1
-    umount -l "$root/var"
-    errorcheck && echoerr "error unmounting var" && return 1
+    if [ $SSD_ENABLED -eq 1 ]
+    then
+        umount -l "$root/var/log"
+        errorcheck && echoerr "error unmounting var log" && return 1
+        umount -l "$root/var/tmp"
+        errorcheck && echoerr "error unmounting var tmp" && return 1
+        umount -l "$root/var"
+        errorcheck && echoerr "error unmounting var" && return 1
+    fi
 
     initialize_os
     errorcheck && echoerr "error in initialize_os" && return 1
@@ -566,46 +600,51 @@ zfs_boot_setup() {
 #   ssd_pool
 #       zfs pool name for root ex: "zssd"
 zfs_ssd_setup() {
-    ssd_disk_list=
-    space=
-    echo "clearing all ssd disks"
-    for ssd_disk in $ssd_disks; do
-        echo "clearing disk: $ssd_disk"
-        clear_disk $ssd_disk
+    if [ $SSD_ENABLED -eq 1 ]
+    then
+        ssd_disk_list=
+        space=
+        echo "clearing all ssd disks"
+        for ssd_disk in $ssd_disks; do
+            echo "clearing disk: $ssd_disk"
+            clear_disk $ssd_disk
+            sleep 1s
+            ssd_disk_list="${ssd_disk_list:-}${space:-}$(get_disk_link $ssd_disk)"
+            space=" "
+        done
         sleep 1s
-        ssd_disk_list="${ssd_disk_list:-}${space:-}$(get_disk_link $ssd_disk)"
-        space=" "
-    done
-    sleep 1s
-    echo "creating ssd pool"
+        echo "creating ssd pool"
 
-    raid_type="mirror"
-    [ $(howmany $storage_disk_list) -eq 1 ] && raid_type=""
-    [ $(howmany $storage_disk_list) -gt 3 ] && raid_type="raidz"
+        raid_type="mirror"
+        [ $(howmany $storage_disk_list) -eq 1 ] && raid_type=""
+        [ $(howmany $storage_disk_list) -gt 3 ] && raid_type="raidz"
 
-    eval "zpool create -f \
-        -o ashift=13 \
-        -O atime=off \
-        -O compression=lz4 \
-        -O mountpoint=/mnt \
-        -O canmount=off \
-        -R "$root" \
-        $SSD_POOL $raid_type $ssd_disk_list"
-    errorcheck && echoerr "error creating ssd pool" && return 1
+        eval "zpool create -f \
+            -o ashift=13 \
+            -O atime=off \
+            -O compression=lz4 \
+            -O mountpoint=/mnt \
+            -O canmount=off \
+            -R "$root" \
+            $SSD_POOL $raid_type $ssd_disk_list"
+        errorcheck && echoerr "error creating ssd pool" && return 1
 
-    zfs create -o mountpoint=legacy $SSD_POOL/var
-    errorcheck && echoerr "error creating ssd pool dataset" && return 1
+        zfs create -o mountpoint=legacy $SSD_POOL/var
+        errorcheck && echoerr "error creating ssd pool dataset" && return 1
 
-    zfs create -o mountpoint=legacy $SSD_POOL/docker
-    errorcheck && echoerr "error creating ssd pool dataset" && return 1
+        zfs create -o mountpoint=legacy $SSD_POOL/docker
+        errorcheck && echoerr "error creating ssd pool dataset" && return 1
 
-    zfs create $SSD_POOL/configs
-    errorcheck && echoerr "error creating ssd pool dataset" && return 1
+        zfs create $SSD_POOL/configs
+        errorcheck && echoerr "error creating ssd pool dataset" && return 1
 
-    umount -lAR "$root/mnt/configs"
-    rm -r $root/*
+        umount -lAR "$root/mnt/configs"
+        rm -r $root/*
 
-    echo "ssd disk setup complete"
+        echo "ssd disk setup complete"
+    else
+        echo "Skipping SSD setup"
+    fi
 
     return 0
 }
@@ -616,51 +655,57 @@ zfs_ssd_setup() {
 #   storage_pool
 #       zfs pool name for root ex: "zstorage"
 zfs_storage_setup() {
-    storage_disk_list=
-    space=
-    echo "clearing all storage disks"
-    for storage_disk in $storage_disks; do
-        echo "clearing disk: $storage_disk"
-        clear_disk $storage_disk
+    if [ $STORAGE_ENABLED -eq 1 ]
+    then
+
+        storage_disk_list=
+        space=
+        echo "clearing all storage disks"
+        for storage_disk in $storage_disks; do
+            echo "clearing disk: $storage_disk"
+            clear_disk $storage_disk
+            sleep 1s
+            storage_disk_list="${storage_disk_list:-}${space:-}$(get_disk_link $storage_disk)"
+            space=" "
+        done
         sleep 1s
-        storage_disk_list="${storage_disk_list:-}${space:-}$(get_disk_link $storage_disk)"
-        space=" "
-    done
-    sleep 1s
-    echo "creating storage pool"
+        echo "creating storage pool"
 
-    raid_type="raidz"
-    [ $(howmany $storage_disk_list) -eq 1 ] && raid_type=""
-    [ $(howmany $storage_disk_list) -gt 6 ] && raid_type="raidz2"
+        raid_type="raidz"
+        [ $(howmany $storage_disk_list) -eq 1 ] && raid_type=""
+        [ $(howmany $storage_disk_list) -gt 6 ] && raid_type="raidz2"
 
-    eval "zpool create -f \
-        -o ashift=12 \
-        -O atime=off \
-        -O compression=lz4 \
-        -O mountpoint=/mnt \
-        -R "$root" \
-        $STORAGE_POOL $raid_type $storage_disk_list"
-    errorcheck && echoerr "error creating storage pool" && return 1
+        eval "zpool create -f \
+            -o ashift=12 \
+            -O atime=off \
+            -O compression=lz4 \
+            -O mountpoint=/mnt \
+            -R "$root" \
+            $STORAGE_POOL $raid_type $storage_disk_list"
+        errorcheck && echoerr "error creating storage pool" && return 1
 
-    zfs create $STORAGE_POOL/media
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
-    #zfs create $STORAGE_POOL/media/shows
-    #errorcheck && echoerr "error creating storage pool dataset" && return 1
-    #zfs create $STORAGE_POOL/media/movies
-    #errorcheck && echoerr "error creating storage pool dataset" && return 1
-    #zfs create $STORAGE_POOL/media/unsorted
-    #errorcheck && echoerr "error creating storage pool dataset" && return 1
+        zfs create $STORAGE_POOL/media
+        errorcheck && echoerr "error creating storage pool dataset" && return 1
+        zfs create $STORAGE_POOL/media/shows
+        errorcheck && echoerr "error creating storage pool dataset" && return 1
+        zfs create $STORAGE_POOL/media/movies
+        errorcheck && echoerr "error creating storage pool dataset" && return 1
+        zfs create $STORAGE_POOL/media/unsorted
+        errorcheck && echoerr "error creating storage pool dataset" && return 1
 
-    zfs create $STORAGE_POOL/downloads
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
+        zfs create $STORAGE_POOL/downloads
+        errorcheck && echoerr "error creating storage pool dataset" && return 1
 
-    zfs create $STORAGE_POOL/shares
-    errorcheck && echoerr "error creating storage pool dataset" && return 1
+        zfs create $STORAGE_POOL/shares
+        errorcheck && echoerr "error creating storage pool dataset" && return 1
 
-    umount -lAR $STORAGE_POOL
-    rm -r $root/*
+        umount -lAR $STORAGE_POOL
+        rm -r $root/*
 
-    echo "storage disk setup complete"
+        echo "storage disk setup complete"
+    else
+        echo "Skipping Storage pool setup."
+    fi
 
     return 0
 }
@@ -691,8 +736,8 @@ initialize_nfs_mounts() {
 
 long_running_stuff() {
 
-    set_var "ready_for_mounts" 0
-    set_var "done_with_mounts" 0
+    [ $SYNC_DATA -eq 1 ] && set_var "ready_for_mounts" 0
+    [ $SYNC_DATA -eq 1 ] && set_var "done_with_mounts" 0
 
     initialize_nfs_mounts
     errorcheck && return 1
@@ -700,43 +745,48 @@ long_running_stuff() {
     debootstrap_install &
     debootstrap_pid=$!
 
-    while [ $(check_var "ready_for_mounts") -ne 1 ]
-    do
-        sleep 5s
-    done
+    if [ $SYNC_DATA -eq 1 ]
+    then
 
-    copy_movies &
-    movies_pid=$!
-    copy_shows &
-    shows_pid=$!
-    copy_configs &
-    configs_pid=$!
-    copy_data &
-    data_pid=$!
-    copy_other &
-    other_pid=$!
+        while [ $(check_var "ready_for_mounts") -ne 1 ]
+        do
+            sleep 5s
+        done
 
-    wait $configs_pid
-    errorcheck && echoerr "error in copy_configs." && kill_others && return 1
-    echo "copy_configs complete."
+        copy_movies &
+        movies_pid=$!
+        copy_shows &
+        shows_pid=$!
+        copy_configs &
+        configs_pid=$!
+        copy_data &
+        data_pid=$!
+        copy_other &
+        other_pid=$!
 
-    wait $other_pid
-    errorcheck && echoerr "error in copy_other." && kill_others && return 1
-    echo "copy_other complete."
+        wait $configs_pid
+        errorcheck && echoerr "error in copy_configs." && kill_others && return 1
+        echo "copy_configs complete."
 
-    wait $data_pid
-    errorcheck && echoerr "error in copy_data." && kill_others && return 1
-    echo "copy_data complete."
+        wait $other_pid
+        errorcheck && echoerr "error in copy_other." && kill_others && return 1
+        echo "copy_other complete."
 
-    wait $shows_pid
-    errorcheck && echoerr "error in copy_shows." && kill_others && return 1
-    echo "copy_shows complete."
+        wait $data_pid
+        errorcheck && echoerr "error in copy_data." && kill_others && return 1
+        echo "copy_data complete."
 
-    wait $movies_pid
-    errorcheck && echoerr "error in copy_movies." && kill_others && return 1
-    echo "copy_movies complete."
+        wait $shows_pid
+        errorcheck && echoerr "error in copy_shows." && kill_others && return 1
+        echo "copy_shows complete."
 
-    set_var "done_with_mounts" 1
+        wait $movies_pid
+        errorcheck && echoerr "error in copy_movies." && kill_others && return 1
+        echo "copy_movies complete."
+
+        set_var "done_with_mounts" 1
+
+    fi
 
     wait $debootstrap_pid
     errorcheck && echoerr "error in debootstrap_install." && return 1
@@ -796,34 +846,34 @@ copy_configs() {
 
 copy_shows() {
 
-    #rsync -aqHXAp /mnt/backup/media/shows/* "$root/mnt/media/shows/"
-    #errorcheck && echoerr "error while copying shows." && return 1
+    rsync -aqHXAp /mnt/backup/media/shows/* "$root/mnt/media/shows/"
+    errorcheck && echoerr "error while copying shows." && return 1
 
     return 0
 }
 
 copy_data() {
 
-    #rsync -aqHXAp /mnt/backup/files/* "$root/mnt/shares/"
-    #errorcheck && echoerr "error while copying shares." && return 1
-    #rsync -aqHXAp /mnt/backup/backup/* "$root/mnt/shares/media_backup/"
-    #errorcheck && echoerr "error while copying shares." && return 1
+    rsync -aqHXAp /mnt/backup/files/* "$root/mnt/shares/"
+    errorcheck && echoerr "error while copying shares." && return 1
+    rsync -aqHXAp /mnt/backup/backup/* "$root/mnt/shares/media_backup/"
+    errorcheck && echoerr "error while copying shares." && return 1
 
     return 0
 }
 
 copy_movies() {
 
-    #rsync -aqHXAp /mnt/backup/media/movies/* "$root/mnt/media/movies/"
-    #errorcheck && echoerr "error while copying movies." && return 1
+    rsync -aqHXAp /mnt/backup/media/movies/* "$root/mnt/media/movies/"
+    errorcheck && echoerr "error while copying movies." && return 1
 
     return 0
 }
 
 copy_other() {
 
-    #rsync -aqHXAp /mnt/backup/media/other/* "$root/mnt/media/unsorted/"
-    #errorcheck && echoerr "error while copying unsorted media." && return 1
+    rsync -aqHXAp /mnt/backup/media/other/* "$root/mnt/media/unsorted/"
+    errorcheck && echoerr "error while copying unsorted media." && return 1
 
     return 0
 }
