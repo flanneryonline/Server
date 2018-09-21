@@ -19,7 +19,7 @@ server_update() {
     git remote update
     local_rev=$(git rev-parse master)
     server_rev=$(git rev-parse origin/master)
-    [ $local_rev != $server_rev ] && git pull
+    [ $local_rev != $server_rev ] && git reset --hard origin/master
     popd
 
     chmod +x "$root/opt/server/bin/"*
