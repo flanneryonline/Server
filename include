@@ -23,7 +23,7 @@ server_update() {
     popd
 
     chmod +x "$root/opt/server/bin/"*
-    $root/opt/bin/server-update-helper
+    eval "$chroot_eval /opt/server/bin/server-update-helper"
 
     #binary updates
     eval "$chroot_eval apt-get update -qq"
@@ -790,7 +790,6 @@ long_running_stuff() {
 
     wait $debootstrap_pid
     errorcheck && echoerr "error in debootstrap_install." && return 1
-    echo "debootstrap_install complete."
 
     return 0
 }

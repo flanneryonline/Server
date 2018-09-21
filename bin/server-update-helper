@@ -7,68 +7,68 @@
 . /opt/server/include
 
 #docker-compose
-[ ! -d "$root/etc/docker/compose" ] && mkdir -p "$root/etc/docker/compose"
-[ ! -e "$root/etc/docker/compose/media-services" ] && \
-    eval "$chroot_eval ln -s /opt/server/docker-compose/media-services /etc/docker/compose/media-services"
-[ ! -h "$root/etc/docker/compose/media-services" ] && \
-    rm -r "$root/etc/docker/compose/media-services" && \
-    eval "$chroot_eval ln -s /opt/server/docker-compose/media-services /etc/docker/compose/media-services"
+[ ! -d /etc/docker/compose ] && mkdir -p /etc/docker/compose
+[ ! -e /etc/docker/compose/media-services ] && \
+    ln -s /opt/server/docker-compose/media-services /etc/docker/compose/media-services
+[ ! -h /etc/docker/compose/media-services ] && \
+    rm -r /etc/docker/compose/media-services && \
+    ln -s /opt/server/docker-compose/media-services /etc/docker/compose/media-services
 
 #motd
-chmod +x "$root/opt/server/motd/"*
-[ ! -e "$root/etc/update-motd.d/00-header" ] && \
-    eval "$chroot_eval ln -s /opt/server/motd/00-header /etc/update-motd.d/00-header"
-[ ! -h "$root/etc/update-motd.d/00-header" ] && \
-    rm -r "$root/etc/update-motd.d/00-header" && \
-    eval "$chroot_eval ln -s /opt/server/motd /etc/update-motd.d/00-header"
+chmod +x /opt/server/motd/*
+[ ! -e /etc/update-motd.d/00-header ] && \
+    ln -s /opt/server/motd/00-header /etc/update-motd.d/00-header
+[ ! -h /etc/update-motd.d/00-header ] && \
+    rm -r /etc/update-motd.d/00-header && \
+    ln -s /opt/server/motd /etc/update-motd.d/00-header
 
-[ ! -e "$root/etc/update-motd.d/10-info" ] && \
-    eval "$chroot_eval ln -s /opt/server/motd/10-info /etc/update-motd.d/10-info"
-[ ! -h "$root/etc/update-motd.d/10-info" ] && \
-    rm -r "$root/etc/update-motd.d/10-info" && \
-    eval "$chroot_eval ln -s /opt/server/motd /etc/update-motd.d/10-info"
+[ ! -e /etc/update-motd.d/10-info ] && \
+    ln -s /opt/server/motd/10-info /etc/update-motd.d/10-info
+[ ! -h /etc/update-motd.d/10-info ] && \
+    rm -r /etc/update-motd.d/10-info && \
+    ln -s /opt/server/motd /etc/update-motd.d/10-info
 
-[ ! -e "$root/etc/update-motd.d/20-services" ] && \
-    eval "$chroot_eval ln -s /opt/server/motd/20-services /etc/update-motd.d/20-services"
-[ ! -h "$root/etc/update-motd.d/20-services" ] && \
-    rm -r "$root/etc/update-motd.d/20-services" && \
-    eval "$chroot_eval ln -s /opt/server/motd /etc/update-motd.d/20-services"
+[ ! -e /etc/update-motd.d/20-services ] && \
+    ln -s /opt/server/motd/20-services /etc/update-motd.d/20-services
+[ ! -h /etc/update-motd.d/20-services ] && \
+    rm -r /etc/update-motd.d/20-services && \
+    ln -s /opt/server/motd /etc/update-motd.d/20-services
 
-[ ! -e "$root/etc/update-motd.d/30-zfs" ] && \
-    eval "$chroot_eval ln -s /opt/server/motd/30-zfs /etc/update-motd.d/30-zfs"
-[ ! -h "$root/etc/update-motd.d/30-zfs" ] && \
-    rm -r "$root/etc/update-motd.d/30-zfs" && \
-    eval "$chroot_eval ln -s /opt/server/motd /etc/update-motd.d/30-zfs"
+[ ! -e /etc/update-motd.d/30-zfs ] && \
+    ln -s /opt/server/motd/30-zfs /etc/update-motd.d/30-zfs
+[ ! -h /etc/update-motd.d/30-zfs ] && \
+    rm -r /etc/update-motd.d/30-zfs && \
+    ln -s /opt/server/motd /etc/update-motd.d/30-zfs
 
 #systemd
-[ ! -e "$root/etc/systemd/system/media-services.service" ] && \
-    eval "$chroot_eval ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service"
-[ ! -h "$root/etc/systemd/system/media-services.service" ] && \
-    rm -r "$root/etc/systemd/system/media-services.service" && \
-    eval "$chroot_eval ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service"
+[ ! -e /etc/systemd/system/media-services.service ] && \
+    ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service
+[ ! -h /etc/systemd/system/media-services.service ] && \
+    rm -r /etc/systemd/system/media-services.service && \
+    ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service
 
-[ ! -e "$root/etc/systemd/system/docker-cleanup.service" ] && \
-    eval "$chroot_eval ln -s /opt/server/systemd/docker/docker-cleanup.service /etc/systemd/system/docker-cleanup.service"
-[ ! -h "$root/etc/systemd/system/docker-cleanup.service" ] && \
-    rm -r "$root/etc/systemd/system/docker-cleanup.service" && \
-    eval "$chroot_eval ln -s /opt/server/systemd/docker/docker-cleanup.service /etc/systemd/system/docker-cleanup.service"
+[ ! -e /etc/systemd/system/docker-cleanup.service ] && \
+    ln -s /opt/server/systemd/docker/docker-cleanup.service /etc/systemd/system/docker-cleanup.service
+[ ! -h /etc/systemd/system/docker-cleanup.service ] && \
+    rm -r /etc/systemd/system/docker-cleanup.service && \
+    ln -s /opt/server/systemd/docker/docker-cleanup.service /etc/systemd/system/docker-cleanup.service
 
-[ ! -e "$root/etc/systemd/system/docker-cleanup.timer" ] && \
-    eval "$chroot_eval ln -s /opt/server/systemd/docker/docker-cleanup.timer /etc/systemd/system/docker-cleanup.timer"
-[ ! -h "$root/etc/systemd/system/docker-cleanup.timer" ] && \
-    rm -r "$root/etc/systemd/system/docker-cleanup.timer" && \
-    eval "$chroot_eval ln -s /opt/server/systemd/docker/docker-cleanup.timer /etc/systemd/system/docker-cleanup.timer"
+[ ! -e /etc/systemd/system/docker-cleanup.timer ] && \
+    ln -s /opt/server/systemd/docker/docker-cleanup.timer /etc/systemd/system/docker-cleanup.timer
+[ ! -h /etc/systemd/system/docker-cleanup.timer ] && \
+    rm -r /etc/systemd/system/docker-cleanup.timer && \
+    ln -s /opt/server/systemd/docker/docker-cleanup.timer /etc/systemd/system/docker-cleanup.timer
 
-[ ! -e "$root/etc/systemd/system/server-update.service" ] && \
-    eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.service /etc/systemd/system/server-update.service"
-[ ! -h "$root/etc/systemd/system/server-update.service" ] && \
-    rm -r "$root/etc/systemd/system/server-update.service" && \
-    eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.service /etc/systemd/system/server-update.service"
+[ ! -e /etc/systemd/system/server-update.service ] && \
+    ln -s /opt/server/systemd/system/server-update.service /etc/systemd/system/server-update.service
+[ ! -h /etc/systemd/system/server-update.service ] && \
+    rm -r /etc/systemd/system/server-update.service && \
+    ln -s /opt/server/systemd/system/server-update.service /etc/systemd/system/server-update.service
 
-[ ! -e "$root/etc/systemd/system/server-update.timer" ] && \
-    eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.timer /etc/systemd/system/server-update.timer"
-[ ! -h "$root/etc/systemd/system/server-update.timer" ] && \
-    rm -r "$root/etc/systemd/system/server-update.timer" && \
-    eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.timer /etc/systemd/system/server-update.timer"
+[ ! -e /etc/systemd/system/server-update.timer ] && \
+    ln -s /opt/server/systemd/system/server-update.timer /etc/systemd/system/server-update.timer
+[ ! -h /etc/systemd/system/server-update.timer ] && \
+    rm -r /etc/systemd/system/server-update.timer && \
+    ln -s /opt/server/systemd/system/server-update.timer /etc/systemd/system/server-update.timer
 
 exit 0
