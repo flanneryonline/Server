@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-. /etc/server/environment
+. /opt/server/environment
 
 echo "
 $(figlet ${SERVER_NAME-$(hostname)})"
