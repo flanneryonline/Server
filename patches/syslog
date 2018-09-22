@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+. /opt/server/environment
+. /opt/server/include
+version=1
+
+check_version $version $0 && exit 0
+
+rm "/etc/rsyslog.d/"*
+echo "*.* @$SYSLOG_ADDRESS:$SYSLOG_PORT" > "/etc/rsyslog.d/50-default.conf"
+
+set_version $version $0
+exit 0

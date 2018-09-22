@@ -6,12 +6,6 @@ export DEBIAN_FRONTEND=noninteractive
 . ${SERVER_INSTALL:-~/server}/include
 . ${SERVER_INSTALL:-~/server}/environment
 
-root=
-initialize_networking
-errorcheck && exit 1
-initialize_apt
-errorcheck && exit 1
-
 apt-get install -qq \
     --no-install-recommends \
     zfs-initramfs \

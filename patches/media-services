@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+. /opt/server/environment
+. /opt/server/include
+version=1
+
+check_version $version $0 && exit 0
+
+[ ! -e /etc/systemd/system/media-services.service ] && \
+    ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service
+[ ! -h /etc/systemd/system/media-services.service ] && \
+    rm -r /etc/systemd/system/media-services.service && \
+    ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service
+
+[ ! -d /etc/docker/compose ] && mkdir -p /etc/docker/compose
+[ ! -e /etc/docker/compose/media-services ] && \
+    ln -s /opt/server/docker-compose/media-services /etc/docker/compose/media-services
+[ ! -h /etc/docker/compose/media-services ] && \
+    rm -r /etc/docker/compose/media-services && \
+    ln -s /opt/server/docker-compose/media-services /etc/docker/compose/media-services
+
+set_version $version $0
+exit 0

@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+. /opt/server/environment
+. /opt/server/include
+version=1
+
+check_version $version $0 && exit 0
+
+chmod +x /opt/server/motd/*
+
+rm /etc/update-motd.d/*
+
+[ ! -e /etc/update-motd.d/00-header ] && \
+    ln -s /opt/server/motd/00-header /etc/update-motd.d/00-header
+[ ! -h /etc/update-motd.d/00-header ] && \
+    rm -r /etc/update-motd.d/00-header && \
+    ln -s /opt/server/motd/00-header /etc/update-motd.d/00-header
+
+[ ! -e /etc/update-motd.d/10-info ] && \
+    ln -s /opt/server/motd/10-info /etc/update-motd.d/10-info
+[ ! -h /etc/update-motd.d/10-info ] && \
+    rm -r /etc/update-motd.d/10-info && \
+    ln -s /opt/server/motd/10-info /etc/update-motd.d/10-info
+
+[ ! -e /etc/update-motd.d/20-services ] && \
+    ln -s /opt/server/motd/20-services /etc/update-motd.d/20-services
+[ ! -h /etc/update-motd.d/20-services ] && \
+    rm -r /etc/update-motd.d/20-services && \
+    ln -s /opt/server/motd/20-services /etc/update-motd.d/20-services
+
+[ ! -e /etc/update-motd.d/30-zfs ] && \
+    ln -s /opt/server/motd/30-zfs /etc/update-motd.d/30-zfs
+[ ! -h /etc/update-motd.d/30-zfs ] && \
+    rm -r /etc/update-motd.d/30-zfs && \
+    ln -s /opt/server/motd/30-zfs /etc/update-motd.d/30-zfs
+
+set_version $version $0
+exit 0

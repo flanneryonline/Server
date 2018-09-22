@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+. /opt/server/environment
+. /opt/server/include
+version=1
+
+check_version $version $0 && exit 0
+
+
+
+set_version $version $0
+exit 0

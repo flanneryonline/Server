@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+
+. /opt/server/environment
+. /opt/server/include
+version=1
+
+check_version $version $0 && exit 0
+
+patch_requires "apt" 1
+errorcheck && exit 1
+patch_requires "locale" 1
+errorcheck && exit 1
+patch_requires "users" 1
+errorcheck && exit 1
+
+curl -fsSL https://download.docker.com/linux/$SERVER_DIST/gpg | apt-key add -
+errorcheck && echoerr "error adding docker apt key" && exit 1
+
+[ -f /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list ] && \
+    rm /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list
+echo "deb [arch=amd64] https://download.docker.com/linux/$SERVER_DIST $SERVER_DIST_RELEASE stable" \
+    >  /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list
+
+apt-get update -qq
+errorcheck && echoerr "error in apt-get update" && exit 1
+apt-get install -qq --no-install-recommends docker-ce
+errorcheck && echoerr "error installing docker" && exit 1
+usermod -g docker $ADMIN_USERNAME
+errorcheck && echoerr "error adding $ADMIN_USERNAME to docker group" && exit 1
+
+[ ! -e /etc/systemd/system/docker-cleanup.service ] && \
+    ln -s /opt/server/systemd/docker/docker-cleanup.service /etc/systemd/system/docker-cleanup.service
+[ ! -h /etc/systemd/system/docker-cleanup.service ] && \
+    rm -r /etc/systemd/system/docker-cleanup.service && \
+    ln -s /opt/server/systemd/docker/docker-cleanup.service /etc/systemd/system/docker-cleanup.service
+
+[ ! -e /etc/systemd/system/docker-cleanup.timer ] && \
+    ln -s /opt/server/systemd/docker/docker-cleanup.timer /etc/systemd/system/docker-cleanup.timer
+[ ! -h /etc/systemd/system/docker-cleanup.timer ] && \
+    rm -r /etc/systemd/system/docker-cleanup.timer && \
+    ln -s /opt/server/systemd/docker/docker-cleanup.timer /etc/systemd/system/docker-cleanup.timer
+
+set_version $version $0
+exit 0

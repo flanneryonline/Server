@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+
+. /opt/server/environment
+. /opt/server/include
+version=1
+
+check_version $version $0 && exit 0
+
+nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
+[ "$(ls -A "/etc/systemd/network")" ] && \
+    rm -r "/etc/systemd/network/"*
+if [ $(howmany $nets) -eq 1 ]; then
+    echo "[Match]" > "/etc/systemd/network/$nets.network"
+    echo "Name=$nets" >> "/etc/systemd/network/$nets.network"
+    echo "[Network]" >> "/etc/systemd/network/$nets.network"
+    echo "DHCP=yes" >> "/etc/systemd/network/$nets.network"
+    echo "IPv6AcceptRA=no" >> "/etc/systemd/network/$nets.network"
+    echo "LinkLocalAddressing=ipv4" >> "/etc/systemd/network/$nets.network"
+fi
+if [ $(howmany $nets) -gt 1 ]; then
+    for net in $nets; do
+        echo "[Match]" > "/etc/systemd/network/$net.network"
+        echo "Name=$net" >> "/etc/systemd/network/$net.network"
+        echo "[Network]" >> "/etc/systemd/network/$net.network"
+        echo "Bond=lacp0" >> "/etc/systemd/network/$net.network"
+    done
+
+    echo "[Match]" > "/etc/systemd/network/lacp0.network"
+    echo "Name=lacp0" >> "/etc/systemd/network/lacp0.network"
+    echo "[Network]" >> "/etc/systemd/network/lacp0.network"
+    echo "DHCP=yes" >> "/etc/systemd/network/lacp0.network"
+    echo "IPv6AcceptRA=no" >> "/etc/systemd/network/lacp0.network"
+    echo "LinkLocalAddressing=ipv4" >> "/etc/systemd/network/lacp0.network"
+    echo "BindCarrier=$(echo $nets | sed 's/\n/ /')" >> "/etc/systemd/network/lacp0.network"
+
+    echo "[NetDev]" > "/etc/systemd/network/lacp0.netdev"
+    echo "Name=lacp0" >> "/etc/systemd/network/lacp0.netdev"
+    echo "Kind=bond" >> "/etc/systemd/network/lacp0.netdev"
+    echo "[Bond]" >> "/etc/systemd/network/lacp0.netdev"
+    echo "Mode=802.3ad" >> "/etc/systemd/network/lacp0.netdev"
+    echo "LACPTransmitRate=fast" >> "/etc/systemd/network/lacp0.netdev"
+    echo "MIIMonitorSec=1s" >> "/etc/systemd/network/lacp0.netdev"
+    echo "UpDelaySec=2s" >> "/etc/systemd/network/lacp0.netdev"
+    echo "DownDelaySec=8s" >> "/etc/systemd/network/lacp0.netdev"
+fi
+
+echo "net.ipv6.conf.all.disable_ipv6 = 1" > "/etc/sysctl.d/10-disable-ipv6.conf"
+echo "net.ipv6.conf.default.disable_ipv6 = 1" >> "/etc/sysctl.d/10-disable-ipv6.conf"
+echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> "/etc/sysctl.d/10-disable-ipv6.conf"
+
+if ! ischroot
+then
+    systemctl restart systemd-sysctl
+    errorcheck && echoerr "error restarting system services" && exit 1
+    systemctl restart systemd-networkd
+    errorcheck && echoerr "error restarting network services" && exit 1
+fi
+
+set_version $version $0
+exit 0

@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 
-echoerr() {
-    cat <<< "$@" 1>&2
-    return 0
-}
+#main entry point for install
+clean_install(){
+    zfs_boot_setup
+    errorcheck && echoerr "error setting up boot disks." && return 1
+    zfs_ssd_setup
+    errorcheck && echoerr "error setting up ssd disks." && return 1
+    zfs_storage_setup
+    errorcheck && echoerr "error setting up storage disks." && return 1
+    long_running_stuff
+    errorcheck && echoerr "error in long_running_stuff." && return 1
 
-errorcheck() {
-    [ $? -ne 0 ] && return 0
-    return 1
+    return 0
 }
 
 server_update() {
     [ x$root = x ] && local chroot_eval=
 
     #get latest server code
-    [ ! -d "$root/opt/server" ] && git clone https://github.com/flanneryonline/server.git "$root/opt/server"
+    [ ! -d "$root/opt/server" ] && git clone $SERVER_GIT_LOCALTION "$root/opt/server"
     pushd "$root/opt/server"
     git remote update
     local_rev=$(git rev-parse master)
@@ -23,7 +27,14 @@ server_update() {
     popd
 
     chmod +x "$root/opt/server/bin/"*
-    eval "$chroot_eval /opt/server/bin/server-update-helper"
+    chmod +x "$root/opt/server/patches/"*
+
+    for patch in $(ls "$root/opt/server/patches")
+    do
+        echo "Running patch: $patch"
+        eval "$chroot_eval /opt/server/patches/$patch"
+        errorcheck && echoerr "error running $patch patch" && return 1
+    done
 
     #binary updates
     eval "$chroot_eval apt-get update -qq"
@@ -32,55 +43,6 @@ server_update() {
     errorcheck && echoerr "error during apt-get upgrade" && return 1
     eval "$chroot_eval apt-get dist-upgrade -qq --no-install-recommends"
     errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
-
-    return 0
-}
-
-initialize_apt() {
-    [ x$root = x ] && local chroot_eval=
-    echo "setting up system package management"
-    [ -f "$root/etc/apt/sources.list" ] && rm "$root/etc/apt/sources.list"
-    touch "$root/etc/apt/sources.list"
-    [ "$(ls -A "$root/etc/apt/sources.list.d")" ] && \
-        rm "$root/etc/apt/sources.list.d/"*
-
-    echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE main universe" \
-        >>  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.list"
-
-    echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-updates main universe" \
-        >>  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.updates.list"
-
-    echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-security main universe" \
-        >>  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.security.list"
-
-    eval "$chroot_eval apt-get update -qq"
-    errorcheck && echoerr "error during apt-get update" && return 1
-    eval "$chroot_eval apt-get upgrade -qq --no-install-recommends"
-    errorcheck && echoerr "error during apt-get upgrade" && return 1
-    eval "$chroot_eval apt-get dist-upgrade -qq --no-install-recommends"
-    errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
-
-    return 0
-}
-
-initialize_syslog() {
-    rm "$root/etc/rsyslog.d/"*
-    echo "*.* @$SYSLOG_ADDRESS:$SYSLOG_PORT" > "$root/etc/rsyslog.d/50-default.conf"
-    return 0
-}
-
-initialize_users() {
-    groupadd -R "$root" -g $ADMIN_GROUP_ID $ADMIN_USERNAME
-    errorcheck && return 1
-    groupadd -R "$root" -g $DOCKER_PGID docker_group
-    errorcheck && return 1
-    useradd -R "$root" -m -u $ADMIN_USER_ID -g $ADMIN_USERNAME \
-        -G plugdev,sudo,docker_group -s /bin/bash $ADMIN_USERNAME
-    errorcheck && return 1
-    useradd -R "$root" -r -u $DOCKER_PUID -g docker_group -s /sbin/nologin docker_user
-    errorcheck && return 1
-    echo "$ADMIN_USERNAME:$admin_password" | chpasswd -R "$root"
-    errorcheck && return 1
 
     return 0
 }
@@ -168,88 +130,6 @@ deinitialize_mounts() {
     return 0
 }
 
-initialize_efi() {
-    echo "formating efi partition"
-
-    eval "$chroot_eval apt-get install -qq --no-install-recommends grub-efi-amd64"
-    eval "$chroot_eval apt-get remove -qq os-prober"
-
-    sed -i 's/GRUB_HIDDEN_TIMEOUT=0/#GRUB_HIDDEN_TIMEOUT=0/' "$root/etc/default/grub"
-    sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/GRUB_CMDLINE_LINUX_DEFAULT=""/' "$root/etc/default/grub"
-
-    disk_num=1
-    for boot_disk in $boot_disks
-    do
-        mkfs.fat -n EFI -F32 ${boot_disk}1
-        errorcheck && echoerr "error foratting efi on $boot_disk" && return 1
-        sleep 1s
-        echo "setting up system for efi"
-        [ ! -d "$root/boot/efi" ] && mkdir -p "$root/boot/efi"
-        eval "$chroot_eval mount $(get_disk_link ${boot_disk}1 partuuid) /boot/efi"
-        errorcheck && echoerr "error mounting efi on $boot_disk" && return 1
-
-        echo "updating initramfs"
-        eval "$chroot_eval update-initramfs -u -k all"
-        errorcheck && echoerr "error updating initramfs on $boot_disk" && return 1
-        echo "updating grub config"
-        eval "$chroot_eval update-grub"
-        errorcheck && echoerr "error updating grub on $boot_disk" && return 1
-        echo "installing efi grub"
-        eval "$chroot_eval grub-install \
-            --target=x86_64-efi \
-            --efi-directory=/boot/efi \
-            --bootloader-id=$SERVER_DIST-$SERVER_DIST_RELEASE-$disk_num \
-            --recheck \
-            --no-floppy"
-        errorcheck && echoerr "error installing grub on $boot_disk" && return 1
-        sleep 1s
-        eval "$chroot_eval umount /boot/efi"
-        disk_num=$((disk_num+1))
-    done
-    echo "efi grub setup complete"
-    return 0
-}
-
-initialize_locale() {
-    eval "$chroot_eval locale-gen --purge en_US.UTF-8"
-    errorcheck && return 1
-    eval "$chroot_eval dpkg-reconfigure --frontend noninteractive locales"
-    errorcheck && return 1
-    eval "$chroot_eval update-locale LANG=en_US.UTF-8"
-    errorcheck && return 1
-
-    return 0
-}
-
-initialize_os() {
-
-    initialize_mounts
-    errorcheck && echoerr "error in initialize_mounts" && return 1
-
-    initialize_locale
-    errorcheck && echoerr "error in initialize_locale" && return 1
-    initialize_apt
-    errorcheck && echoerr "error in initialize_apt" && return 1
-    initialize_users
-    errorcheck && echoerr "error in initialize_users" && return 1
-    initialize_networking
-    errorcheck && echoerr "error in initialize_networking" && return 1
-    initialize_docker
-    errorcheck && echoerr "error in initialize_docker" && return 1
-    initialize_syslog
-    errorcheck && echoerr "error in initialize_syslog" && return 1
-    initialize_efi
-    errorcheck && echoerr "error in initialize_efi" && return 1
-
-    server_update
-    errorcheck && echoerr "error in server_update" && return 1
-
-    deinitialize_mounts
-    errorcheck && echoerr "error in deinitialize_mounts" && return 1
-
-    return 0
-}
-
 debootstrap_install() {
 
     ! zfs list -H -o name | grep "$ROOT_POOL/ROOT" >/dev/null && \
@@ -316,228 +196,19 @@ debootstrap_install() {
         errorcheck && echoerr "error unmounting var" && return 1
     fi
 
-    initialize_os
-    errorcheck && echoerr "error in initialize_os" && return 1
+    initialize_mounts
+    errorcheck && echoerr "error in initialize_mounts" && return 1
 
-    echo "debootstrap install complete"
-    return 0
-}
+    mkdir -p "$root/opt/patches"
+    echo $admin_password > "$root/opt/patches/password"
+    chmod 600 "$root/opt/patches/password"
 
-#count number of arguments
-howmany() {
-    case $- in
-        *f* )
-            set -- $1
-        ;;
-        * )
-            set -f
-            set -- $1
-            set +f
-        ;;
-    esac
-    echo $#
-}
-
-#systemd-networkd configuration
-#required:
-#   functions:
-#       howmany
-initialize_networking() {
-    [ x$root = x ] && local chroot_eval=
-    nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
-    [ "$(ls -A "$root/etc/systemd/network")" ] && \
-        rm -r "$root/etc/systemd/network/"*
-    if [ $(howmany $nets) -eq 1 ]; then
-        echo "[Match]" > "$root/etc/systemd/network/$nets.network"
-        echo "Name=$nets" >> "$root/etc/systemd/network/$nets.network"
-        echo "[Network]" >> "$root/etc/systemd/network/$nets.network"
-        echo "DHCP=yes" >> "$root/etc/systemd/network/$nets.network"
-        echo "IPv6AcceptRA=no" >> "$root/etc/systemd/network/$nets.network"
-        echo "LinkLocalAddressing=ipv4" >> "$root/etc/systemd/network/$nets.network"
-    fi
-    if [ $(howmany $nets) -gt 1 ]; then
-        for net in $nets; do
-            echo "[Match]" > "$root/etc/systemd/network/$net.network"
-            echo "Name=$net" >> "$root/etc/systemd/network/$net.network"
-            echo "[Network]" >> "$root/etc/systemd/network/$net.network"
-            echo "Bond=lacp0" >> "$root/etc/systemd/network/$net.network"
-        done
-
-        echo "[Match]" > "$root/etc/systemd/network/lacp0.network"
-        echo "Name=lacp0" >> "$root/etc/systemd/network/lacp0.network"
-        echo "[Network]" >> "$root/etc/systemd/network/lacp0.network"
-        echo "DHCP=yes" >> "$root/etc/systemd/network/lacp0.network"
-        echo "IPv6AcceptRA=no" >> "$root/etc/systemd/network/lacp0.network"
-        echo "LinkLocalAddressing=ipv4" >> "$root/etc/systemd/network/lacp0.network"
-        echo "BindCarrier=$(echo $nets | sed 's/\n/ /')" >> "$root/etc/systemd/network/lacp0.network"
-
-        echo "[NetDev]" > "$root/etc/systemd/network/lacp0.netdev"
-        echo "Name=lacp0" >> "$root/etc/systemd/network/lacp0.netdev"
-        echo "Kind=bond" >> "$root/etc/systemd/network/lacp0.netdev"
-        echo "[Bond]" >> "$root/etc/systemd/network/lacp0.netdev"
-        echo "Mode=802.3ad" >> "$root/etc/systemd/network/lacp0.netdev"
-        echo "LACPTransmitRate=fast" >> "$root/etc/systemd/network/lacp0.netdev"
-        echo "MIIMonitorSec=1s" >> "$root/etc/systemd/network/lacp0.netdev"
-        echo "UpDelaySec=2s" >> "$root/etc/systemd/network/lacp0.netdev"
-        echo "DownDelaySec=8s" >> "$root/etc/systemd/network/lacp0.netdev"
-    fi
-
-    echo "net.ipv6.conf.all.disable_ipv6 = 1" > "$root/etc/sysctl.d/10-disable-ipv6.conf"
-    echo "net.ipv6.conf.default.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
-    echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
-
-    if [ x$root == x ]
-    then
-        systemctl restart systemd-sysctl
-        errorcheck && echoerr "error restarting system services" && return 1
-        systemctl restart systemd-networkd
-        errorcheck && echoerr "error restarting network services" && return 1
-    else
-        eval "$chroot_eval systemctl enable systemd-networkd"
-        errorcheck && echoerr "error enabling network services" && return 1
-    fi
-
-    if [ x$root == x ]
-    then
-        printf "waiting for network."
-        timeout=1
-        while ! ping -q -c 1 google.com >/dev/null 2>&1
-        do
-            [ $timeout -eq 5000 ] && \
-                printf "\n" && \
-                echoerr "timeout while waiting for network." && \
-                return 1
-            printf "."
-            sleep 1s
-            timeout=$((timeout+1))
-        done
-        printf "\n"
-    fi
+    server_update
+    errorcheck && echoerr "error in server_update" && return 1
+    deinitialize_mounts
+    errorcheck && echoerr "error in deinitialize_mounts" && return 1
 
     return 0
-}
-
-docker_compose_update() {
-    current_version=$(which docker-compose >/dev/null && docker-compose --version)
-    current_version=$(echo $current_version | awk '"{print $3}"')
-    current_version=${current_version%%,}
-    version=$(curl -ILsS -w "%{url_effective}" "https://github.com/docker/compose/releases/latest" -o /dev/null)
-    version=${version##*/}
-
-    if [ x$version != x$current_version ]; then
-        [ -f "$root/usr/bin/docker-compose" ] && rm "$root/usr/bin/docker-compose"
-        curl -fsSL "https://github.com/docker/compose/releases/download/$version/docker-compose-Linux-x86_64" \
-            -o "$root/usr/bin/docker-compose"
-        errorcheck && echoerr "error downloading docker compose" && return 1
-        chmod +x "$root/usr/bin/docker-compose"
-    fi
-
-    [ -f "$root/etc/bash_completion.d/docker-compose" ] && rm "$root/etc/bash_completion.d/docker-compose"
-    [ ! -d "$root/etc/bash_completion.d" ] && mkdir -p "$root/etc/bash_completion.d"
-    curl -fsSL "https://raw.githubusercontent.com/docker/compose/master/contrib/completion/bash/docker-compose" \
-        -o "$root/etc/bash_completion.d/docker-compose"
-    errorcheck && echoerr "error downloading docker compose bash completion" && return 1
-
-    return 0
-}
-
-#required:
-#   functions:
-#       docker_compose_update
-initialize_docker() {
-
-    [ x$root = x ] && local chroot_eval=
-
-    eval "curl -fsSL https://download.docker.com/linux/$SERVER_DIST/gpg | \
-        $chroot_eval apt-key add -"
-    errorcheck && echoerr "error adding docker apt key" && return 1
-
-    [ -f "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list" ] && \
-        rm "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list"
-    echo "deb [arch=amd64] https://download.docker.com/linux/$SERVER_DIST $SERVER_DIST_RELEASE stable" \
-        >  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list"
-
-    eval "$chroot_eval apt-get update -qq "
-    errorcheck && echoerr "error in apt-get update (initialize_docker)" && return 1
-    eval "$chroot_eval apt-get install -qq --no-install-recommends docker-ce"
-    errorcheck && echoerr "error installing docker" && return 1
-
-    usermod -R "$root" -g docker $ADMIN_USERNAME
-    errorcheck && echoerr "error adding $ADMIN_USERNAME to docker group" && return 1
-
-    docker_compose_update
-    errorcheck && return 1
-
-    [ ! -d "$root/etc/docker/compose" ] && mkdir -p "$root/etc/docker/compose"
-    cp -r ${SERVER_INSTALL:-~/server}/docker-compose/* "$root/etc/docker/compose/"
-    errorcheck && echoerr "error copying compose files" && return 1
-
-    return 0
-}
-
-#gets a single /dev/disk/by-
-#link based on the dev provided
-#
-#parameters:
-#   1 - base dev ex: "/dev/sda"
-#   2 - (optional) link type ex: "uuid"
-#       this is anything under /dev/disk/by-
-#       that would show up under DEVLINKS in udevadm
-get_disk_link() {
-    filter="by-"${2:-"id"}
-    udevadm info -q all $1 | grep DEVLINKS | sed 's/ /\n/g' | grep /dev/ | sed 's/DEVLINKS=//' | grep $filter | sort | head -n1
-    errorcheck && return 1
-    return 0
-}
-
-#removes all mounts/swaps/zpools from disk. anything that would prevent repartitioning.
-#
-#variables
-#   1=dev disk ex: "/dev/sda"
-clear_disk() {
-    local disk=$1
-    for swap in $(cat /proc/swaps | awk -v d=$disk '$1 ~ d {print $1}'); do swapoff $swap; done
-    for mountpoint in $(mount | awk -v d=$disk '$1 ~ d {print $1}' | sort | uniq); do umount -lAR $mountpoint; done
-    for pool in $(zpool list -H | awk '{print $1}'); do
-        [ -n "$(zpool status -P $pool | grep $(get_disk_link $disk))" ] && zpool destroy $pool
-    done
-    for pool in $(zpool list -H | awk '{print $1}'); do
-        [ -n "$(zpool status -P $pool | grep $disk)" ] && zpool destroy $pool;
-    done
-    which mdadm >/dev/null && mdadm --zero-superblock --force $disk
-    sgdisk --zap $disk >/dev/null
-    return 0
-}
-
-#filters quotes out of whatever is passed in
-#useful for whiptail values with quotes in them
-filter_quotes() {
-    echo "$1" | sed 's/"//g'
-}
-
-#ex:
-#input: /dev/sda
-#output: sda
-#removes everything to the left of and including the last "/"
-trim_disk_link() {
-    echo ${1##*/}
-}
-
-#this is used to pass to whiptail to print available disks
-#   note: disk with root "/" mounted is filtered automatically (if it is a disk)
-#optional variables:
-#   anything passed will act as a filter for output
-#   ex: whiptail_disks /dev/sda /dev/sdb
-#   this will print all available disks EXCEPT sda and adb.
-whiptail_disks() {
-    whiptail_filter=$@
-    whiptail_output=$(lsblk -npr -o KNAME,MODEL,SIZE,TYPE,RO | \
-    awk '$5 == 0 && $4 == "disk" {print $1 FS "\42"$2" ("$3")\42 OFF"}' | sed 's/\\x20/ /g')
-    for f in $whiptail_filter; do
-        whiptail_output=$(echo "$whiptail_output" | grep -v $f)
-    done
-    root_mount_name=$(mount | awk '/\ \/\ / {print $1}')
-    echo "$(echo "$whiptail_output" | grep -v ${root_mount_name##/dev/})"
 }
 
 #requires variables:
@@ -710,37 +381,12 @@ zfs_storage_setup() {
     return 0
 }
 
-#main entry point for install
-clean_install(){
-    zfs_boot_setup
-    errorcheck && echoerr "error setting up boot disks." && return 1
-    zfs_ssd_setup
-    errorcheck && echoerr "error setting up ssd disks." && return 1
-    zfs_storage_setup
-    errorcheck && echoerr "error setting up storage disks." && return 1
-    long_running_stuff
-    errorcheck && echoerr "error in long_running_stuff." && return 1
-
-    return 0
-}
-
-initialize_nfs_mounts() {
-
-    [ ! -d /mnt/backup ] && mkdir -p /mnt/backup
-
-    mount $BACKUP_ADDRESS:/$BACKUP_FOLDER /mnt/backup
-    errorcheck && return 1
-
-    return 0
-}
-
 long_running_stuff() {
 
     [ $SYNC_DATA -eq 1 ] && set_var "ready_for_mounts" 0
     [ $SYNC_DATA -eq 1 ] && set_var "done_with_mounts" 0
-
-    initialize_nfs_mounts
-    errorcheck && return 1
+    [ $SYNC_DATA -eq 1 ] && [ ! -d /mnt/backup ] && mkdir -p /mnt/backup
+    [ $SYNC_DATA -eq 1 ] && mount $BACKUP_ADDRESS:/$BACKUP_FOLDER /mnt/backup
 
     debootstrap_install &
     debootstrap_pid=$!
@@ -812,15 +458,6 @@ kill_others() {
     return 0
 }
 
-kill_children() {
-    for child in $(ps -o pid,ppid -ax | awk "{ if ( \$2 == $1 ) { print \$1 }}")
-    do
-        kill_children $child
-    done
-    kill -0 $1 >/dev/null 2>&1 && kill $1
-    return 0
-}
-
 copy_configs() {
 
     rsync -aqHXAp /mnt/backup/downloads/* "$root/mnt/downloads/"
@@ -877,6 +514,15 @@ copy_other() {
     return 0
 }
 
+kill_children() {
+    for child in $(ps -o pid,ppid -ax | awk "{ if ( \$2 == $1 ) { print \$1 }}")
+    do
+        kill_children $child
+    done
+    kill -0 $1 >/dev/null 2>&1 && kill $1
+    return 0
+}
+
 set_var() {
     echo "$2" > "/var/$1"
 }
@@ -884,4 +530,138 @@ set_var() {
 check_var() {
     read out < "/var/$1"
     echo $out
+}
+
+echoerr() {
+    cat <<< "$@" 1>&2
+    return 0
+}
+
+errorcheck() {
+    [ $? -ne 0 ] && return 0
+    return 1
+}
+
+#count number of arguments
+howmany() {
+    case $- in
+        *f* )
+            set -- $1
+        ;;
+        * )
+            set -f
+            set -- $1
+            set +f
+        ;;
+    esac
+    echo $#
+}
+
+get_parent_disk() {
+    echo "/dev/$(lsblk -n -o PKNAME $1)"
+}
+
+#returns /dev/ada type links to disks that are part of provided pool
+get_pool_disks() {
+    pool=$1
+    disk_links=$(zpool list -v -P $pool | grep /dev/disk | awk '{print $1}')
+    devlist=
+    for disk in $disk_links
+    do
+        devlist="$devlist $(get_parent_disk $(udevadm info -q all $disk | grep DEVNAME | sed 's/ /\n/g' | grep /dev/ | sed 's/DEVNAME=//'))"
+    done
+    echo $devlist
+}
+
+#gets a single /dev/disk/by-
+#link based on the dev provided
+#
+#parameters:
+#   1 - base dev ex: "/dev/sda"
+#   2 - (optional) link type ex: "uuid"
+#       this is anything under /dev/disk/by-
+#       that would show up under DEVLINKS in udevadm
+get_disk_link() {
+    filter="by-"${2:-"id"}
+    udevadm info -q all $1 | grep DEVLINKS | sed 's/ /\n/g' | grep /dev/ | sed 's/DEVLINKS=//' | grep $filter | sort | head -n1
+    errorcheck && return 1
+    return 0
+}
+
+#removes all mounts/swaps/zpools from disk. anything that would prevent repartitioning.
+#
+#variables
+#   1=dev disk ex: "/dev/sda"
+clear_disk() {
+    local disk=$1
+    for swap in $(cat /proc/swaps | awk -v d=$disk '$1 ~ d {print $1}'); do swapoff $swap; done
+    for mountpoint in $(mount | awk -v d=$disk '$1 ~ d {print $1}' | sort | uniq); do umount -lAR $mountpoint; done
+    for pool in $(zpool list -H | awk '{print $1}'); do
+        [ -n "$(zpool status -P $pool | grep $(get_disk_link $disk))" ] && zpool destroy $pool
+    done
+    for pool in $(zpool list -H | awk '{print $1}'); do
+        [ -n "$(zpool status -P $pool | grep $disk)" ] && zpool destroy $pool;
+    done
+    which mdadm >/dev/null && mdadm --zero-superblock --force $disk
+    sgdisk --zap $disk >/dev/null
+    return 0
+}
+
+#filters quotes out of whatever is passed in
+#useful for whiptail values with quotes in them
+filter_quotes() {
+    echo "$1" | sed 's/"//g'
+}
+
+#ex:
+#input: /dev/sda
+#output: sda
+#removes everything to the left of and including the last "/"
+trim_disk_link() {
+    echo ${1##*/}
+}
+
+#this is used to pass to whiptail to print available disks
+#   note: disk with root "/" mounted is filtered automatically (if it is a disk)
+#optional variables:
+#   anything passed will act as a filter for output
+#   ex: whiptail_disks /dev/sda /dev/sdb
+#   this will print all available disks EXCEPT sda and adb.
+whiptail_disks() {
+    whiptail_filter=$@
+    whiptail_output=$(lsblk -npr -o KNAME,MODEL,SIZE,TYPE,RO | \
+    awk '$5 == 0 && $4 == "disk" {print $1 FS "\42"$2" ("$3")\42 OFF"}' | sed 's/\\x20/ /g')
+    for f in $whiptail_filter; do
+        whiptail_output=$(echo "$whiptail_output" | grep -v $f)
+    done
+    root_mount_name=$(mount | awk '/\ \/\ / {print $1}')
+    echo "$(echo "$whiptail_output" | grep -v ${root_mount_name##/dev/})"
+}
+
+#checks version of patch files
+#   returns 0 if the patch should run
+#   meaning either the version is unknown greater than the last run
+check_version() {
+    script_version=$1
+    script_name=$2
+    [ -f /opt/server/$script_name ] && local_version=$(cat "/opt/patches/$script_name")
+    [ x$local_version = x ] && return 0
+    [ $script_version -gt $local_version ] && return 1 || return 0
+}
+
+set_version() {
+    echo $1 > "/opt/patches/$2"
+    return 0
+}
+
+#checks to make sure a required patch has been run
+#   1=patch name
+#   2=minimum version of patch
+patch_requires() {
+    if check_version $2 $1
+    then
+        /opt/server/patches/$1
+        errorcheck && echoerr "required patch $1 failed" && return 1
+    fi
+    return 0
 }

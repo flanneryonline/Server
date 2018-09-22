@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+. /opt/server/environment
+. /opt/server/include
+version=1
+
+check_version $version $0 && exit 0
+
+groupadd -g $ADMIN_GROUP_ID $ADMIN_USERNAME
+errorcheck && exit 1
+groupadd -g $DOCKER_PGID docker_group
+errorcheck && exit 1
+useradd -m -u $ADMIN_USER_ID -g $ADMIN_USERNAME \
+    -G plugdev,sudo,docker_group -s /bin/bash $ADMIN_USERNAME
+errorcheck && exit 1
+useradd -r -u $DOCKER_PUID -g docker_group -s /sbin/nologin docker_user
+errorcheck && exit 1
+echo "$ADMIN_USERNAME:$(cat /opt/patches/password)" | chpasswd
+errorcheck && exit 1
+
+set_version $version $0
+exit 0
