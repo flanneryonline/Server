@@ -1,0 +1,8 @@
+[Unit]
+Description=Timer for syncing config files to backup host.
+
+[Timer]
+OnUnitInactiveSec=1h
+
+[Install]
+WantedBy=timers.target

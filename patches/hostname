@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+. /opt/server/environment
+. /opt/server/include
+version=1
+
+check_version $version $0 && exit 0
+
+[ -f /etc/hostname ] && rm /etc/hostname
+echo $SERVER_HOSTNAME > /etc/hostname
+
+[ -f /etc/hosts ] && rm /etc/hosts
+echo "127.0.0.1 localhost"
+echo "127.0.0.1 $SERVER_FQDN $SERVER_HOSTNAME"
+
+set_version $version $0
+exit 0

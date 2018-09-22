@@ -199,9 +199,8 @@ debootstrap_install() {
     initialize_mounts
     errorcheck && echoerr "error in initialize_mounts" && return 1
 
-    mkdir -p "$root/opt/patches"
-    echo $admin_password > "$root/opt/patches/password"
-    chmod 600 "$root/opt/patches/password"
+    set_server_setting "password" $admin_password $root
+    set_server_setting "backup-sync-enabled" $SYNC_DATA $root
 
     server_update
     errorcheck && echoerr "error in server_update" && return 1
@@ -209,6 +208,21 @@ debootstrap_install() {
     errorcheck && echoerr "error in deinitialize_mounts" && return 1
 
     return 0
+}
+
+set_server_setting() {
+    [ ! -d "$3/opt/server-settings" ] && mkdir -p "$3/opt/server-settings"
+    echo $2 > "$3/opt/server-settings/$1"
+    chmod 600 "$3/opt/server-settings/$1"
+}
+
+get_server_setting() {
+    if [ -f "$2/opt/server-settings/$1" ]
+        echo "$(cat $2/opt/server-settings/$1)"
+        return 0
+    else
+        echoerr "no server setting matching that name." && return 1
+    fi
 }
 
 #requires variables:

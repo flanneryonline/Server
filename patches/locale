@@ -7,11 +7,11 @@ version=1
 check_version $version $0 && exit 0
 
 locale-gen --purge en_US.UTF-8
-errorcheck && exit 1
+errorcheck && echoerr "Error during locale-gen."  && exit 1
 dpkg-reconfigure --frontend noninteractive locales
-errorcheck && exit 1
+errorcheck && echoerr "Error during dpkg-reconfigure locales."  && exit 1
 update-locale LANG=en_US.UTF-8
-errorcheck && exit 1
+errorcheck && echoerr "Error during update-locale."  && exit 1
 
 set_version $version $0
 exit 0

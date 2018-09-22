@@ -6,7 +6,26 @@ version=1
 
 check_version $version $0 && exit 0
 
+sync_enabled=$(get_server_setting "backup-sync-enabled")
+sync_enabled=${sync_enabled:-0}
+[ $sync_enabled -eq 0 ] && echo "Backup sync disabled. Skipping sync setup." && exit 0
 
+for backup in configs movies shows unsorted shares
+do
+    [ ! -e /etc/systemd/system/backup-$backup.service ] && \
+        ln -s /opt/server/systemd/backup/backup-$backup.service /etc/systemd/system/backup-$backup.service
+    [ ! -h /etc/systemd/system/backup-$backup.service ] && \
+        rm -r /etc/systemd/system/backup-$backup.service && \
+        ln -s /opt/server/systemd/backup/backup-$backup.service /etc/systemd/system/backup-$backup.service
+
+    [ ! -e /etc/systemd/system/backup-$backup.timer ] && \
+        ln -s /opt/server/systemd/backup/backup-$backup.timer /etc/systemd/system/backup-$backup.timer
+    [ ! -h /etc/systemd/system/backup-$backup.timer ] && \
+        rm -r /etc/systemd/system/backup-$backup.timer && \
+        ln -s /opt/server/systemd/backup/backup-$backup.timer /etc/systemd/system/backup-$backup.timer
+
+    [ $SERVER_SERVICES_ENABLED -eq 1 ] && ! systemctl is-enabled backup-$backup.timer && systemctl enabled backup-$backup.timer
+done
 
 set_version $version $0
 exit 0

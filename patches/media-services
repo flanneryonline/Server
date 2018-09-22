@@ -6,18 +6,21 @@ version=1
 
 check_version $version $0 && exit 0
 
-[ ! -e /etc/systemd/system/media-services.service ] && \
-    ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service
-[ ! -h /etc/systemd/system/media-services.service ] && \
-    rm -r /etc/systemd/system/media-services.service && \
-    ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service
-
 [ ! -d /etc/docker/compose ] && mkdir -p /etc/docker/compose
 [ ! -e /etc/docker/compose/media-services ] && \
     ln -s /opt/server/docker-compose/media-services /etc/docker/compose/media-services
 [ ! -h /etc/docker/compose/media-services ] && \
     rm -r /etc/docker/compose/media-services && \
     ln -s /opt/server/docker-compose/media-services /etc/docker/compose/media-services
+
+[ ! -e /etc/systemd/system/media-services.service ] && \
+    ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service
+[ ! -h /etc/systemd/system/media-services.service ] && \
+    rm -r /etc/systemd/system/media-services.service && \
+    ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service
+
+[ $SERVER_SERVICES_ENABLED -eq 1 ] && ! systemctl is-enabled media-services.service && systemctl enabled media-services.service
+[ $SERVER_SERVICES_ENABLED -eq 1 ] && ! ischroot && systemctl start media-services.service
 
 set_version $version $0
 exit 0
