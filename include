@@ -4,12 +4,47 @@
 clean_install(){
     zfs_boot_setup
     errorcheck && echoerr "error setting up boot disks." && return 1
-    zfs_ssd_setup
-    errorcheck && echoerr "error setting up ssd disks." && return 1
-    zfs_storage_setup
-    errorcheck && echoerr "error setting up storage disks." && return 1
-    long_running_stuff
-    errorcheck && echoerr "error in long_running_stuff." && return 1
+
+    debootstrap --components $SERVER_DIST_COMPONENTS \
+        --include $SERVER_DIST_PACKAGES \
+        $SERVER_DIST_RELEASE "$root" $SERVER_DIST_URL
+    errorcheck && echoerr "error in debootstrap" && return 1
+
+    mount --rbind /dev "$root/dev"
+    errorcheck && return 1
+    mount --rbind /dev/pts "$root/dev/pts"
+    errorcheck && return 1
+    mount --rbind /proc "$root/proc"
+    errorcheck && return 1
+    mount --rbind /sys  "$root/sys"
+    errorcheck && return 1
+
+    set_server_setting "password" $admin_password $root
+    set_server_setting "backup-sync-enabled" $SYNC_DATA $root
+    set_server_setting "backup-enabled" $BACKUP_ENABLED $root
+    set_server_setting "fast-storage-enabled" $FAST_STORAGE_ENABLED $root
+    set_server_setting "slow-storage-enabled" $SLOW_STORAGE_ENABLED $root
+    set_server_setting "services-enabled" $SERVICES_ENABLED $root
+    set_server_setting "fast-disks" $fast_disks $root
+    set_server_setting "slow-disks" $slow_disks $root
+    set_server_setting "link-backup" $LINK_BACKUP $root
+
+    server_update
+    errorcheck && echoerr "error in server_update" && return 1
+
+    umount -l "$root/dev/pts"
+    errorcheck && return 1
+    umount -l "$root/dev"
+    errorcheck && return 1
+    umount -l "$root/proc"
+    errorcheck && return 1
+    umount -l "$root/sys"
+    errorcheck && return 1
+
+    umount -lAR "$root"
+    errorcheck && echoerr "error unmounting root pool" && return 1
+    zpool export $ROOT_POOL
+    errorcheck && echoerr "error exporting root pool" && return 1
 
     return 0
 }
@@ -31,9 +66,17 @@ server_update() {
 
     for patch in $(ls "$root/opt/server/patches")
     do
-        echo "Running patch: $patch"
-        eval "$chroot_eval /opt/server/patches/$patch"
-        errorcheck && echoerr "error running $patch patch" && return 1
+        echo "Starting patch: $patch"
+        eval "$chroot_eval /opt/server/patches/$patch" &
+        set_patch_pid $patch $! $root
+    done
+
+    for patch in $(ls "$root/opt/server/patches")
+    do
+        echo "waiting for watch: $patch"
+        wait $(get_patch_pid $patch $! $root) && clear_patch_pid
+        errorcheck && echoerr "error running $patch patch" && cancel_patches
+        echo "patch complete: $patch"
     done
 
     #binary updates
@@ -45,184 +88,6 @@ server_update() {
     errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
 
     return 0
-}
-
-initialize_mounts() {
-
-    mount --rbind /dev "$root/dev"
-    errorcheck && return 1
-    mount --rbind /dev/pts "$root/dev/pts"
-    errorcheck && return 1
-    mount --rbind /proc "$root/proc"
-    errorcheck && return 1
-    mount --rbind /sys  "$root/sys"
-    errorcheck && return 1
-
-    if [ $SSD_ENABLED -eq 1 ]
-    then
-        echo "$SSD_POOL/var /var zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
-        echo "$SSD_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
-
-        eval "$chroot_eval mount -a"
-        errorcheck && echoerr "error mounting directories in chroot" && return 1
-    fi
-
-    return 0
-}
-
-deinitialize_mounts() {
-
-    if [ $SYNC_DATA -eq 1 ]
-    then
-        while [ $(check_var "done_with_mounts") -ne 1 ]
-        do
-            sleep 5s
-        done
-    fi
-
-    echo "$BACKUP_ADDRESS:/$BACKUP_FOLDER /mnt/backup nfs defaults,x-systemd.requires=nfs-client.target 0 0" >> "$root/etc/fstab"
-
-    if [ $SYNC_DATA -eq 0 ]
-    then
-        eval "$chroot_eval ln -s /mnt/backup/media /mnt/media"
-        eval "$chroot_eval ln -s /mnt/backup/downloads /mnt/downloads"
-        eval "$chroot_eval ln -s /mnt/backup/configs /mnt/configs"
-        eval "$chroot_eval ln -s /mnt/backup/files /mnt/shares"
-    fi
-
-    if [ $SSD_ENABLED -eq 1 ]
-    then
-        eval "$chroot_eval umount /var/lib/docker"
-        errorcheck && echoerr "error unmounting" && return 1
-        eval "$chroot_eval umount /var"
-        errorcheck && echoerr "error unmounting" && return 1
-
-        zpool export -f $SSD_POOL
-        errorcheck && echoerr "error exporting ssd pool" && return 1
-
-        eval "$chroot_eval zpool import $SSD_POOL"
-        errorcheck && echoerr "error importing ssd pool to chroot" && return 1
-    fi
-
-    if [ $STORAGE_ENABLED -eq 1 ]
-    then
-        zpool export -f $STORAGE_POOL
-        errorcheck && echoerr "error exporting storage pool" && return 1
-
-        eval "$chroot_eval zpool import $STORAGE_POOL"
-        errorcheck && echoerr "error importing storage pool to chroot" && return 1
-    fi
-
-    umount -l "$root/dev/pts"
-    errorcheck && return 1
-    umount -l "$root/dev"
-    errorcheck && return 1
-    umount -l "$root/proc"
-    errorcheck && return 1
-    umount -l "$root/sys"
-    errorcheck && return 1
-
-    umount -lAR "$root"
-    errorcheck && echoerr "error unmounting root pool" && return 1
-    zpool export $ROOT_POOL
-    errorcheck && echoerr "error exporting root pool" && return 1
-
-    return 0
-}
-
-debootstrap_install() {
-
-    ! zfs list -H -o name | grep "$ROOT_POOL/ROOT" >/dev/null && \
-        zfs create -o canmount=off -o mountpoint=none $ROOT_POOL/ROOT
-    ! zfs list -H -o name | grep "$ROOT_POOL/ROOT/$SERVER_DIST" >/dev/null && \
-        zfs create -o canmount=off -o mountpoint=none $ROOT_POOL/ROOT/$SERVER_DIST
-    zfs list -H -o name | grep "$ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE" >/dev/null &&
-        [ "$(zpool get -H altroot $ROOT_POOL | cut -f 3)" == "-" ] && \
-        echoerr "Can't replace mounted root file system." && return 1
-    if zfs list -H -o name | grep "$ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE" >/dev/null
-    then
-        zfs snap $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@backup
-        zfs clone $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@backup \
-            $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE-$(date --iso-8601=seconds)
-        zfs destroy $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@backup
-        zfs destroy $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
-    fi
-    zfs create -o canmount=noauto -o mountpoint="/" $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
-    errorcheck && echoerr "error creating zfs root pool" && return 1
-
-    zfs mount $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
-    errorcheck && echoerr "error mounting root pool" && return 1
-
-    if [ $SSD_ENABLED -eq 1 ]
-    then
-        mkdir -p "$root/var"
-        mount -t zfs "$SSD_POOL/var" "$root/var"
-        errorcheck && echoerr "error mounting var" && return 1
-        mkdir -p "$root/var/log"
-        mount -t zfs "$SSD_POOL/var/log" "$root/var/log"
-        errorcheck && echoerr "error mounting var log" && return 1
-        mkdir -p "$root/var/tmp"
-        mount -t zfs "$SSD_POOL/var/tmp" "$root/var/tmp"
-        errorcheck && echoerr "error mounting var tmp" && return 1
-        mkdir -p "$root/var/lib/docker"
-    fi
-
-    if [ $STORAGE_ENABLED -eq 1 ]
-    then
-        zfs list -rH -o name $STORAGE_POOL | xargs -L 1 zfs mount
-        errorcheck && echoerr "error mounting storage pool" && return 1
-    fi
-
-    if [ $SSD_ENABLED -eq 1 ]
-    then
-        zfs mount $SSD_POOL/configs
-        errorcheck && echoerr "error mounting configs" && return 1
-    fi
-
-    [ $SYNC_DATA -eq 1 ] && set_var "ready_for_mounts" 1
-
-    debootstrap --components $SERVER_DIST_COMPONENTS \
-        --include $packages \
-        $SERVER_DIST_RELEASE "$root" $SERVER_DIST_URL
-    errorcheck && echoerr "error in debootstrap" && return 1
-
-    if [ $SSD_ENABLED -eq 1 ]
-    then
-        umount -l "$root/var/log"
-        errorcheck && echoerr "error unmounting var log" && return 1
-        umount -l "$root/var/tmp"
-        errorcheck && echoerr "error unmounting var tmp" && return 1
-        umount -l "$root/var"
-        errorcheck && echoerr "error unmounting var" && return 1
-    fi
-
-    initialize_mounts
-    errorcheck && echoerr "error in initialize_mounts" && return 1
-
-    set_server_setting "password" $admin_password $root
-    set_server_setting "backup-sync-enabled" $SYNC_DATA $root
-
-    server_update
-    errorcheck && echoerr "error in server_update" && return 1
-    deinitialize_mounts
-    errorcheck && echoerr "error in deinitialize_mounts" && return 1
-
-    return 0
-}
-
-set_server_setting() {
-    [ ! -d "$3/opt/server-settings" ] && mkdir -p "$3/opt/server-settings"
-    echo $2 > "$3/opt/server-settings/$1"
-    chmod 600 "$3/opt/server-settings/$1"
-}
-
-get_server_setting() {
-    if [ -f "$2/opt/server-settings/$1" ]
-        echo "$(cat $2/opt/server-settings/$1)"
-        return 0
-    else
-        echoerr "no server setting matching that name." && return 1
-    fi
 }
 
 #requires variables:
@@ -274,257 +139,15 @@ zfs_boot_setup() {
     echo "setting up boot datasets"
     zfs create -o canmount=off -o mountpoint=none $ROOT_POOL/ROOT
     errorcheck && echoerr "error creating root pool dataset" && return 1
+    zfs create -o canmount=off -o mountpoint=none $ROOT_POOL/ROOT/$SERVER_DIST
+    errorcheck && echoerr "error creating root pool dataset" && return 1
+    zfs create -o canmount=noauto -o mountpoint="/" $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
+    errorcheck && echoerr "error creating root pool dataset" && return 1
+
+    zfs mount $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE
+    errorcheck && echoerr "error mounting root pool" && return 1
 
     echo "boot disk setup complete"
-    return 0
-}
-
-#requires variables:
-#   ssd_disk
-#       must be set to list of dev disk ex: "/dev/sda"
-#   ssd_pool
-#       zfs pool name for root ex: "zssd"
-zfs_ssd_setup() {
-    if [ $SSD_ENABLED -eq 1 ]
-    then
-        ssd_disk_list=
-        space=
-        echo "clearing all ssd disks"
-        for ssd_disk in $ssd_disks; do
-            echo "clearing disk: $ssd_disk"
-            clear_disk $ssd_disk
-            sleep 1s
-            ssd_disk_list="${ssd_disk_list:-}${space:-}$(get_disk_link $ssd_disk)"
-            space=" "
-        done
-        sleep 1s
-        echo "creating ssd pool"
-
-        raid_type="mirror"
-        [ $(howmany $ssd_disk_list) -eq 1 ] && raid_type=""
-        [ $(howmany $ssd_disk_list) -gt 3 ] && raid_type="raidz"
-
-        eval "zpool create -f \
-            -o ashift=13 \
-            -O atime=off \
-            -O compression=lz4 \
-            -O mountpoint=/mnt \
-            -O canmount=off \
-            -R "$root" \
-            $SSD_POOL $raid_type $ssd_disk_list"
-        errorcheck && echoerr "error creating ssd pool" && return 1
-
-        zfs create -o mountpoint=legacy $SSD_POOL/var
-        errorcheck && echoerr "error creating ssd pool dataset" && return 1
-
-        zfs create -o mountpoint=legacy $SSD_POOL/docker
-        errorcheck && echoerr "error creating ssd pool dataset" && return 1
-
-        zfs create $SSD_POOL/configs
-        errorcheck && echoerr "error creating ssd pool dataset" && return 1
-
-        umount -lAR "$root/mnt/configs"
-        rm -r $root/*
-
-        echo "ssd disk setup complete"
-    else
-        echo "Skipping SSD setup"
-    fi
-
-    return 0
-}
-
-#requires variables:
-#   storage_disks
-#       must be set to list of dev disk ex: "/dev/sda /dev/sdb"
-#   storage_pool
-#       zfs pool name for root ex: "zstorage"
-zfs_storage_setup() {
-    if [ $STORAGE_ENABLED -eq 1 ]
-    then
-
-        storage_disk_list=
-        space=
-        echo "clearing all storage disks"
-        for storage_disk in $storage_disks; do
-            echo "clearing disk: $storage_disk"
-            clear_disk $storage_disk
-            sleep 1s
-            storage_disk_list="${storage_disk_list:-}${space:-}$(get_disk_link $storage_disk)"
-            space=" "
-        done
-        sleep 1s
-        echo "creating storage pool"
-
-        raid_type="raidz"
-        [ $(howmany $storage_disk_list) -eq 1 ] && raid_type=""
-        [ $(howmany $storage_disk_list) -gt 6 ] && raid_type="raidz2"
-
-        eval "zpool create -f \
-            -o ashift=12 \
-            -O atime=off \
-            -O compression=lz4 \
-            -O mountpoint=/mnt \
-            -R "$root" \
-            $STORAGE_POOL $raid_type $storage_disk_list"
-        errorcheck && echoerr "error creating storage pool" && return 1
-
-        zfs create $STORAGE_POOL/media
-        errorcheck && echoerr "error creating storage pool dataset" && return 1
-        zfs create $STORAGE_POOL/media/shows
-        errorcheck && echoerr "error creating storage pool dataset" && return 1
-        zfs create $STORAGE_POOL/media/movies
-        errorcheck && echoerr "error creating storage pool dataset" && return 1
-        zfs create $STORAGE_POOL/media/unsorted
-        errorcheck && echoerr "error creating storage pool dataset" && return 1
-
-        zfs create $STORAGE_POOL/downloads
-        errorcheck && echoerr "error creating storage pool dataset" && return 1
-
-        zfs create $STORAGE_POOL/shares
-        errorcheck && echoerr "error creating storage pool dataset" && return 1
-
-        umount -lAR $STORAGE_POOL
-        rm -r $root/*
-
-        echo "storage disk setup complete"
-    else
-        echo "Skipping Storage pool setup."
-    fi
-
-    return 0
-}
-
-long_running_stuff() {
-
-    [ $SYNC_DATA -eq 1 ] && set_var "ready_for_mounts" 0
-    [ $SYNC_DATA -eq 1 ] && set_var "done_with_mounts" 0
-    [ $SYNC_DATA -eq 1 ] && [ ! -d /mnt/backup ] && mkdir -p /mnt/backup
-    [ $SYNC_DATA -eq 1 ] && mount $BACKUP_ADDRESS:/$BACKUP_FOLDER /mnt/backup
-
-    debootstrap_install &
-    debootstrap_pid=$!
-
-    if [ $SYNC_DATA -eq 1 ]
-    then
-
-        while [ $(check_var "ready_for_mounts") -ne 1 ]
-        do
-            sleep 5s
-        done
-
-        copy_movies &
-        movies_pid=$!
-        copy_shows &
-        shows_pid=$!
-        copy_configs &
-        configs_pid=$!
-        copy_data &
-        data_pid=$!
-        copy_other &
-        other_pid=$!
-
-        wait $configs_pid
-        errorcheck && echoerr "error in copy_configs." && kill_others && return 1
-        echo "copy_configs complete."
-
-        wait $other_pid
-        errorcheck && echoerr "error in copy_other." && kill_others && return 1
-        echo "copy_other complete."
-
-        wait $data_pid
-        errorcheck && echoerr "error in copy_data." && kill_others && return 1
-        echo "copy_data complete."
-
-        wait $shows_pid
-        errorcheck && echoerr "error in copy_shows." && kill_others && return 1
-        echo "copy_shows complete."
-
-        wait $movies_pid
-        errorcheck && echoerr "error in copy_movies." && kill_others && return 1
-        echo "copy_movies complete."
-
-        set_var "done_with_mounts" 1
-
-    fi
-
-    wait $debootstrap_pid
-    errorcheck && echoerr "error in debootstrap_install." && return 1
-
-    return 0
-}
-
-kill_others() {
-
-    kill_children $debootstrap_pid
-    errorcheck && return 1
-    kill_children $configs_pid
-    errorcheck && return 1
-    kill_children $other_pid
-    errorcheck && return 1
-    kill_children $data_pid
-    errorcheck && return 1
-    kill_children $shows_pid
-    errorcheck && return 1
-    kill_children $movies_pid
-    errorcheck && return 1
-
-    return 0
-}
-
-copy_configs() {
-
-    rsync -aqHXAp /mnt/backup/downloads/* "$root/mnt/downloads/"
-    errorcheck && echoerr "error while copying downloads." && return 1
-    rsync -aqHXAp /mnt/backup/configs/* "$root/mnt/configs/"
-    errorcheck && echoerr "error while copying configs." && return 1
-
-    [ ! -d "$root/mnt/configs/plex" ] && mkdir "$root/mnt/configs/plex"
-    [ ! -d "$root/mnt/configs/tautulli" ] && mkdir "$root/mnt/configs/tautulli"
-    [ ! -d "$root/mnt/configs/ombi" ] && mkdir "$root/mnt/configs/ombi"
-    [ ! -d "$root/mnt/configs/pia" ] && mkdir "$root/mnt/configs/pia"
-    [ ! -d "$root/mnt/configs/nzbget" ] && mkdir "$root/mnt/configs/nzbget"
-    [ ! -d "$root/mnt/configs/deluge" ] && mkdir "$root/mnt/configs/deluge"
-    [ ! -d "$root/mnt/configs/hydra" ] && mkdir "$root/mnt/configs/hydra"
-    [ ! -d "$root/mnt/configs/jackett" ] && mkdir "$root/mnt/configs/jackett"
-    [ ! -d "$root/mnt/configs/sonarr" ] && mkdir "$root/mnt/configs/sonarr"
-    [ ! -d "$root/mnt/configs/radarr" ] && mkdir "$root/mnt/configs/radarr"
-    [ ! -d "$root/mnt/configs/portainer" ] && mkdir "$root/mnt/configs/portainer"
-
-    return 0
-}
-
-copy_shows() {
-
-    rsync -aqHXAp /mnt/backup/media/shows/* "$root/mnt/media/shows/"
-    errorcheck && echoerr "error while copying shows." && return 1
-
-    return 0
-}
-
-copy_data() {
-
-    rsync -aqHXAp /mnt/backup/files/* "$root/mnt/shares/"
-    errorcheck && echoerr "error while copying shares." && return 1
-    rsync -aqHXAp /mnt/backup/backup/* "$root/mnt/shares/media_backup/"
-    errorcheck && echoerr "error while copying shares." && return 1
-
-    return 0
-}
-
-copy_movies() {
-
-    rsync -aqHXAp /mnt/backup/media/movies/* "$root/mnt/media/movies/"
-    errorcheck && echoerr "error while copying movies." && return 1
-
-    return 0
-}
-
-copy_other() {
-
-    rsync -aqHXAp /mnt/backup/media/other/* "$root/mnt/media/unsorted/"
-    errorcheck && echoerr "error while copying unsorted media." && return 1
-
     return 0
 }
 
@@ -652,6 +275,52 @@ whiptail_disks() {
     echo "$(echo "$whiptail_output" | grep -v ${root_mount_name##/dev/})"
 }
 
+vercomp() {
+    if [[ $1 == $2 ]]
+    then
+        return 0
+    fi
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # fill empty fields in ver1 with zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+    do
+        ver1[i]=0
+    done
+    for ((i=0; i<${#ver1[@]}; i++))
+    do
+        if [[ -z ${ver2[i]} ]]
+        then
+            # fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+        if ((10#${ver1[i]} > 10#${ver2[i]}))
+        then
+            return 1
+        fi
+        if ((10#${ver1[i]} < 10#${ver2[i]}))
+        then
+            return 2
+        fi
+    done
+    return 0
+}
+
+vers_test() {
+    vercomp $1 $3
+    case $? in
+        0) op='-eq';;
+        1) op='-gt';;
+        2) op='-lt';;
+    esac
+    if [[ $op != $2 ]]
+    then
+        return 1
+    else
+        return 0
+    fi
+}
+
 #checks version of patch files
 #   returns 0 if the patch should run
 #   meaning either the version is unknown greater than the last run
@@ -660,12 +329,25 @@ check_version() {
     script_name=$2
     [ -f /opt/server/$script_name ] && local_version=$(cat "/opt/patches/$script_name")
     [ x$local_version = x ] && return 0
-    [ $script_version -gt $local_version ] && return 1 || return 0
+    vers_test $script_version -gt $local_version && return 1 || return 0
 }
 
 set_version() {
+    [ ! -d  /opt/patches ] && mkdir -p /opt/patches
     echo $1 > "/opt/patches/$2"
     return 0
+}
+
+set_server_setting() {
+    [ ! -d "$3/opt/server-settings" ] && mkdir -p "$3/opt/server-settings"
+    echo $2 > "$3/opt/server-settings/$1"
+    chmod 600 "$3/opt/server-settings/$1"
+    return 0
+}
+
+get_server_setting() {
+    [ -f "$2/opt/server-settings/$1" ] && echo "$(cat $2/opt/server-settings/$1)" && return 0
+    echoerr "no server setting for $1." && return 1
 }
 
 #checks to make sure a required patch has been run
@@ -674,8 +356,38 @@ set_version() {
 patch_requires() {
     if check_version $2 $1
     then
+        get_patch_pid $1
         /opt/server/patches/$1
         errorcheck && echoerr "required patch $1 failed" && return 1
     fi
     return 0
+}
+
+get_patch_pid() {
+    [ -f "$3/var/run/server/patches/$1" ] && echo $(cat "$3/var/run/server/patches/$1") && return 0
+    echoerr "no pid for $1 patch." && return 1
+}
+
+set_patch_pid() {
+    [ ! -d "$3/var/run/server/patches" ] && mkdir -p "$3/var/run/server/patches"
+    echo "$2" > "$3/var/run/server/patches/$1"
+    return 0
+}
+
+clear_patch_pid() {
+    [ -f "$3/var/run/server/patches/$1" ] && rm "$3/var/run/server/patches/$1" && return 0
+    echoerr "no pid for $1 patch." && return 1
+}
+
+check_pid() {
+    ppid=$(get_patch_pid $1 $3)
+    ppid=${ppid:-0}
+
+    if [ $ppid -ne $2 ]
+    then
+        echo "$1 patch already running on pid $ppid - exiting"
+        return 0
+    fi
+
+    return 1
 }

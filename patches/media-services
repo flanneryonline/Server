@@ -2,9 +2,120 @@
 
 . /opt/server/environment
 . /opt/server/include
+
 version=1
 
+echo "Starting $0 patch on pid $$."
+check_pid $0 $$ && exit 0
 check_version $version $0 && exit 0
+
+patch_requires "users" 1
+errorcheck && exit 1
+patch_requires "storage" 1
+errorcheck && exit 1
+patch_requires "docker-compose" 1
+errorcheck && exit 1
+
+fast_storage_enabled=$(get_server_setting "fast-storage-enabled")
+fast_storage_enabled=${fast_storage_enabled:-0}
+slow_storage_enabled=$(get_server_setting "slow-storage-enabled")
+slow_storage_enabled=${slow_storage_enabled:-0}
+link_backup=$(get_server_setting "link-backup")
+link_backup=${link_backup:-0}
+
+if [ $link_backup -eq 0 ]
+    if [ $fast_storage_enabled -eq 1 ]
+    then
+        if ! zfs list $FAST_STORAGE_POOL/configs >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_CONFIG_DIR $FAST_STORAGE_POOL/configs
+            errorcheck && echoerr "error creating config dataset" && return 1
+        fi
+    else
+        if ! zfs list $ROOT_POOL/configs >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_CONFIG_DIR $ROOT_POOL/configs
+            errorcheck && echoerr "error creating config dataset" && return 1
+        fi
+    fi
+
+    [ ! -d "$STORAGE_CONFIG_DIR/plex" ] && mkdir "$STORAGE_CONFIG_DIR/plex"
+    [ ! -d "$STORAGE_CONFIG_DIR/tautulli" ] && mkdir "$STORAGE_CONFIG_DIR/tautulli"
+    [ ! -d "$STORAGE_CONFIG_DIR/ombi" ] && mkdir "$STORAGE_CONFIG_DIR/ombi"
+    [ ! -d "$STORAGE_CONFIG_DIR/pia" ] && mkdir "$STORAGE_CONFIG_DIR/pia"
+    [ ! -d "$STORAGE_CONFIG_DIR/nzbget" ] && mkdir "$STORAGE_CONFIG_DIR/nzbget"
+    [ ! -d "$STORAGE_CONFIG_DIR/deluge" ] && mkdir "$STORAGE_CONFIG_DIR/deluge"
+    [ ! -d "$STORAGE_CONFIG_DIR/hydra" ] && mkdir "$STORAGE_CONFIG_DIR/hydra"
+    [ ! -d "$STORAGE_CONFIG_DIR/jackett" ] && mkdir "$STORAGE_CONFIG_DIR/jackett"
+    [ ! -d "$STORAGE_CONFIG_DIR/sonarr" ] && mkdir "$STORAGE_CONFIG_DIR/sonarr"
+    [ ! -d "$STORAGE_CONFIG_DIR/radarr" ] && mkdir "$STORAGE_CONFIG_DIR/radarr"
+    [ ! -d "$STORAGE_CONFIG_DIR/portainer" ] && mkdir "$STORAGE_CONFIG_DIR/portainer"
+
+    if [ $slow_storage_enabled -eq 1 ]
+    then
+        if ! zfs list $SLOW_STORAGE_POOL/media >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_MEDIA_DIR $SLOW_STORAGE_POOL/media
+            errorcheck && echoerr "error creating media" && return 1
+        fi
+        if ! zfs list $SLOW_STORAGE_POOL/media/shows >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_MEDIA_DIR/shows $SLOW_STORAGE_POOL/media/shows
+            errorcheck && echoerr "error creating shows" && return 1
+        fi
+        if ! zfs list $SLOW_STORAGE_POOL/media/movies >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_MEDIA_DIR/movies $SLOW_STORAGE_POOL/media/movies
+            errorcheck && echoerr "error creating movies" && return 1
+        fi
+        if ! zfs list $SLOW_STORAGE_POOL/media/unsorted >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_MEDIA_DIR/unsorted $SLOW_STORAGE_POOL/media/unsorted
+            errorcheck && echoerr "error creating unsorted" && return 1
+        fi
+        if ! zfs list $SLOW_STORAGE_POOL/downloads >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_DOWNLOAD_DIR $SLOW_STORAGE_POOL/downloads
+            errorcheck && echoerr "error creating downloads" && return 1
+        fi
+        if ! zfs list $SLOW_STORAGE_POOL/shares >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_SHARE_DIR $SLOW_STORAGE_POOL/shares
+            errorcheck && echoerr "error creating shares" && return 1
+        fi
+    else
+        if ! zfs list $ROOT_POOL/media >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_MEDIA_DIR $ROOT_POOL/media
+            errorcheck && echoerr "error creating media" && return 1
+        fi
+        if ! zfs list $ROOT_POOL/media/shows >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_MEDIA_DIR/shows $ROOT_POOL/media/shows
+            errorcheck && echoerr "error creating shows" && return 1
+        fi
+        if ! zfs list $ROOT_POOL/media/movies >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_MEDIA_DIR/movies $ROOT_POOL/media/movies
+            errorcheck && echoerr "error creating movies" && return 1
+        fi
+        if ! zfs list $ROOT_POOL/media/unsorted >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_MEDIA_DIR/unsorted $ROOT_POOL/media/unsorted
+            errorcheck && echoerr "error creating unsorted" && return 1
+        fi
+        if ! zfs list $ROOT_POOL/downloads >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_DOWNLOAD_DIR $ROOT_POOL/downloads
+            errorcheck && echoerr "error creating downloads" && return 1
+        fi
+        if ! zfs list $ROOT_POOL/shares >/dev/null 2>&1
+        then
+            zfs create -o mountpoint=$STORAGE_SHARE_DIR $ROOT_POOL/shares
+            errorcheck && echoerr "error creating shares" && return 1
+        fi
+    fi
+fi
 
 [ ! -d /etc/docker/compose ] && mkdir -p /etc/docker/compose
 [ ! -e /etc/docker/compose/media-services ] && \
@@ -19,8 +130,13 @@ check_version $version $0 && exit 0
     rm -r /etc/systemd/system/media-services.service && \
     ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service
 
+systemctl daemon-reload
+
 [ $SERVER_SERVICES_ENABLED -eq 1 ] && ! systemctl is-enabled media-services.service && systemctl enabled media-services.service
 [ $SERVER_SERVICES_ENABLED -eq 1 ] && ! ischroot && systemctl start media-services.service
+[ $SERVER_SERVICES_ENABLED -eq 0 ] && ! ischroot && systemctl stop media-services.service
+[ $SERVER_SERVICES_ENABLED -eq 0 ] && systemctl is-enabled media-services.service && systemctl disable media-services.service
 
 set_version $version $0
+echo "Completed $0 patch on pid $$."
 exit 0

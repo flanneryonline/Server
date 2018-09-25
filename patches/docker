@@ -2,16 +2,46 @@
 
 . /opt/server/environment
 . /opt/server/include
+
 version=1
 
+echo "Starting $0 patch on pid $$."
+check_pid $0 $$ && exit 0
 check_version $version $0 && exit 0
 
 patch_requires "apt" 1
 errorcheck && exit 1
-patch_requires "locale" 1
-errorcheck && exit 1
 patch_requires "users" 1
 errorcheck && exit 1
+patch_requires "storage" 1
+errorcheck && exit 1
+
+apt-get install -qq --no-install-recommends apt-transport-https
+errorcheck && echoerr "error installing apt-transport-https" && exit 1
+apt-get install -qq --no-install-recommends gnupg
+errorcheck && echoerr "error installing gnupg" && exit 1
+
+fast_storage_enabled=$(get_server_setting "fast-storage-enabled")
+fast_storage_enabled=${fast_storage_enabled:-0}
+
+if [ $fast_storage_enabled -eq 1 ]
+then
+    if ! zfs list $FAST_STORAGE_POOL/docker >/dev/null 2>&1
+    then
+        zfs create -o mountpoint=legacy $FAST_STORAGE_POOL/docker
+        errorcheck && echoerr "error creating docker dataset" && return 1
+    fi
+else
+    if ! zfs list $ROOT_POOL/docker >/dev/null 2>&1
+    then
+        zfs create -o mountpoint=legacy $ROOT_POOL/docker
+        errorcheck && echoerr "error creating docker dataset" && return 1
+    fi
+fi
+
+echo "$FAST_STORAGE_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+mount /var/lib/docker
+errorcheck && echoerr "error mounting /var/lib/docker" && exit 1
 
 curl -fsSL https://download.docker.com/linux/$SERVER_DIST/gpg | apt-key add -
 errorcheck && echoerr "error adding docker apt key" && exit 1
@@ -21,10 +51,9 @@ errorcheck && echoerr "error adding docker apt key" && exit 1
 echo "deb [arch=amd64] https://download.docker.com/linux/$SERVER_DIST $SERVER_DIST_RELEASE stable" \
     >  /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list
 
-apt-get update -qq
-errorcheck && echoerr "error in apt-get update" && exit 1
 apt-get install -qq --no-install-recommends docker-ce
 errorcheck && echoerr "error installing docker" && exit 1
+
 usermod -g docker $ADMIN_USERNAME
 errorcheck && echoerr "error adding $ADMIN_USERNAME to docker group" && exit 1
 
@@ -40,7 +69,11 @@ errorcheck && echoerr "error adding $ADMIN_USERNAME to docker group" && exit 1
     rm -r /etc/systemd/system/docker-cleanup.timer && \
     ln -s /opt/server/systemd/docker/docker-cleanup.timer /etc/systemd/system/docker-cleanup.timer
 
+systemctl daemon-reload
+
 [ $SERVER_SERVICES_ENABLED -eq 1 ] && ! systemctl is-enabled docker-cleanup.timer && systemctl enabled docker-cleanup.timer
+[ $SERVER_SERVICES_ENABLED -eq 0 ] && systemctl is-enabled docker-cleanup.timer && systemctl disable docker-cleanup.timer
 
 set_version $version $0
+echo "Completed $0 patch on pid $$."
 exit 0

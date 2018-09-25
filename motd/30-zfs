@@ -1,33 +1,16 @@
 #!/usr/bin/env bash
 
 echo -e "\nPool status"
-dehumanise() {
-  for v in "${@:-$(</dev/stdin)}"
-  do
-    echo $v | awk \
-      'BEGIN{IGNORECASE = 1}
-       function printpower(n,b,p) {printf "%u\n", n*b^p}
-       /[0-9]$/{print $1;next};
-       /K(iB)?$/{printpower($1,  2, 10); next};
-       /M(iB)?$/{printpower($1,  2, 20); next};
-       /G(iB)?$/{printpower($1,  2, 30); next};
-       /T(iB)?$/{printpower($1,  2, 40); next};
-       /KB$/{    printpower($1, 10,  3); next};
-       /MB$/{    printpower($1, 10,  6); next};
-       /GB$/{    printpower($1, 10,  9); next};
-       /TB$/{    printpower($1, 10, 12); next}'
-  done
-}
 
 for pool in $(zpool list -H -o name)
 do
     used=$(zfs list -H -o used $pool)
-    used_bites=$(echo $used | dehumanise)
+    used_bites=$(df | grep $pool | awk '{print $3}')
     available=$(zfs list -H -o avail $pool)
-    available_bites=$(echo $available | dehumanise)
+    available_bites=$(df | grep $pool | awk '{print $4}')
     percent=$((70*used_bites/available_bites))
     line="[\e[42m" #green
-    [ $percent -gt 60 ] && line="[\e[43m" #yellow
+    [ $percent -gt 50 ] && line="[\e[43m" #yellow
     [ $percent -gt 68 ] && line="[\e[41m" #red
     i=0
     while [ $i -lt $percent ]

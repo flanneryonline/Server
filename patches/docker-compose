@@ -2,32 +2,39 @@
 
 . /opt/server/environment
 . /opt/server/include
-version=1
+
+#version is pulled from docker-compose
+
+echo "Starting $0 patch on pid $$."
+check_pid $0 $$ && exit 0
+
+patch_requires "server" 1
+errorcheck && exit 1
+
+version=$(curl -ILsS -w "%{url_effective}" "https://github.com/docker/compose/releases/latest" -o /dev/null)
+version=${version##*/}
 
 check_version $version $0 && exit 0
 
 patch_requires "docker" 1
 errorcheck && exit 1
+patch_requires "server" 1
+errorcheck && exit 1
 
-current_version=$(which docker-compose >/dev/null && docker-compose --version)
-current_version=$(echo $current_version | awk '"{print $3}"')
-current_version=${current_version%%,}
-version=$(curl -ILsS -w "%{url_effective}" "https://github.com/docker/compose/releases/latest" -o /dev/null)
-version=${version##*/}
+[ -f "/usr/bin/docker-compose" ] && rm "/usr/bin/docker-compose"
+curl -fsSL "https://github.com/docker/compose/releases/download/$version/docker-compose-Linux-x86_64" \
+    -o "/usr/bin/docker-compose"
+errorcheck && echoerr "error downloading docker compose" && exit 1
+chmod +x "/usr/bin/docker-compose"
 
-if [ x$version != x$current_version ]; then
-    [ -f "/usr/bin/docker-compose" ] && rm "/usr/bin/docker-compose"
-    curl -fsSL "https://github.com/docker/compose/releases/download/$version/docker-compose-Linux-x86_64" \
-        -o "/usr/bin/docker-compose"
-    errorcheck && echoerr "error downloading docker compose" && exit 1
-    chmod +x "/usr/bin/docker-compose"
+if [ ! -f "/etc/bash_completion.d/docker-compose" ]
+then
+    [ ! -d "/etc/bash_completion.d" ] && mkdir -p "/etc/bash_completion.d"
+    curl -fsSL "https://raw.githubusercontent.com/docker/compose/master/contrib/completion/bash/docker-compose" \
+        -o "/etc/bash_completion.d/docker-compose"
+    errorcheck && echoerr "error downloading docker compose bash completion" && exit 1
 fi
 
-[ -f "/etc/bash_completion.d/docker-compose" ] && rm "/etc/bash_completion.d/docker-compose"
-[ ! -d "/etc/bash_completion.d" ] && mkdir -p "/etc/bash_completion.d"
-curl -fsSL "https://raw.githubusercontent.com/docker/compose/master/contrib/completion/bash/docker-compose" \
-    -o "/etc/bash_completion.d/docker-compose"
-errorcheck && echoerr "error downloading docker compose bash completion" && exit 1
-
 set_version $version $0
+echo "Completed $0 patch on pid $$."
 exit 0

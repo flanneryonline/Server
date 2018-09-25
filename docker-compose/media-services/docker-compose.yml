@@ -2,6 +2,7 @@ version: '3'
 services:
   plex:
     image: linuxserver/plex
+    restart: always
     domainname: ${SERVER_DOMAIN}
     network_mode: host
     tmpfs: /transcode
@@ -15,6 +16,7 @@ services:
       - VERSION=latest
   tautulli:
     image: linuxserver/tautulli
+    restart: always
     domainname: ${SERVER_DOMAIN}
     volumes:
       - ${STORAGE_CONFIG_DIR}/tautulli:/config
@@ -27,6 +29,7 @@ services:
       - TZ=${SERVER_TIMEZONE}
   ombi:
     image: linuxserver/ombi
+    restart: always
     domainname: ${SERVER_DOMAIN}
     volumes:
       - ${STORAGE_CONFIG_DIR}/ombi:/config
@@ -38,7 +41,10 @@ services:
       - TZ=${SERVER_TIMEZONE}
   pia:
     image: dperson/openvpn-client
+    restart: always
     command: -r 10.0.0.0/8 -f "" -d
+    stdin_open: true
+    tty: true
     cap_add:
       - NET_ADMIN
     devices:
@@ -59,10 +65,10 @@ services:
     volumes:
       - ${STORAGE_CONFIG_DIR}/pia:/vpn
     environment:
-      - REGION=US Midwest
       - TZ=${SERVER_TIMEZONE}
   nzbget:
     image: linuxserver/nzbget
+    restart: always
     depends_on:
       - pia
     network_mode: service:pia
@@ -76,6 +82,7 @@ services:
       - TZ=${SERVER_TIMEZONE}
   deluge:
     image: linuxserver/deluge
+    restart: always
     depends_on:
       - pia
     network_mode: service:pia
@@ -89,6 +96,7 @@ services:
       - TZ=${SERVER_TIMEZONE}
   hydra:
     image: linuxserver/hydra
+    restart: always
     depends_on:
       - pia
     network_mode: service:pia
@@ -101,6 +109,7 @@ services:
       - TZ=${SERVER_TIMEZONE}
   jackett:
     image: linuxserver/jackett
+    restart: always
     depends_on:
       - pia
     network_mode: service:pia
@@ -113,6 +122,7 @@ services:
       - TZ=${SERVER_TIMEZONE}
   sonarr:
     image: linuxserver/sonarr
+    restart: always
     domainname: ${SERVER_DOMAIN}
     ports:
       - 8989:8989
@@ -126,6 +136,7 @@ services:
       - TZ=${SERVER_TIMEZONE}
   radarr:
     image: linuxserver/radarr
+    restart: always
     domainname: ${SERVER_DOMAIN}
     ports:
       - 7878:7878
@@ -139,6 +150,7 @@ services:
       - TZ=${SERVER_TIMEZONE}
   portainer:
     image: portainer/portainer
+    restart: always
     command: -H unix:///var/run/docker.sock
     domainname: ${SERVER_DOMAIN}
     ports:
@@ -148,6 +160,7 @@ services:
       - ${STORAGE_CONFIG_DIR}/portainer:/data
   watchtower:
     image: v2tec/watchtower
+    restart: always
     command: --cleanup
     domainname: ${SERVER_DOMAIN}
     volumes:
