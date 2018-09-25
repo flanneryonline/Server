@@ -381,7 +381,7 @@ clear_patch_pid() {
 
 check_pid() {
     ppid=$(get_patch_pid $1 $3)
-    ppid=${ppid:-0}
+    ppid=${ppid:-$1}
 
     if [ $ppid -ne $2 ]
     then

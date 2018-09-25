@@ -5,9 +5,9 @@
 
 version=1
 
-echo "Starting $0 patch on pid $$."
-check_pid $0 $$ && exit 0
-check_version $version $0 && exit 0
+echo "Starting ${0##*/} patch on pid $$."
+check_pid ${0##*/} $$ && exit 0
+check_version $version ${0##*/} && exit 0
 
 [ -f /etc/hostname ] && rm /etc/hostname
 echo $SERVER_HOSTNAME > /etc/hostname
@@ -16,6 +16,6 @@ echo $SERVER_HOSTNAME > /etc/hostname
 echo "127.0.0.1 localhost" > /etc/hosts
 echo "127.0.0.1 $SERVER_FQDN $SERVER_HOSTNAME" >> /etc/hosts
 
-set_version $version $0
-echo "Completed $0 patch on pid $$."
+set_version $version ${0##*/}
+echo "Completed ${0##*/} patch on pid $$."
 exit 0
