@@ -53,25 +53,25 @@ server_update() {
     [ x$root = x ] && local chroot_eval=
 
     #get latest server code
-    [ ! -d "$root/opt/server" ] && git clone $SERVER_GIT_LOCALTION "$root/opt/server"
-    pushd "$root/opt/server"
+    [ ! -d "$root$SERVER_INSTALL/server" ] && git clone $SERVER_GIT_LOCALTION "$root$SERVER_INSTALL/server"
+    pushd "$root$SERVER_INSTALL/server"
     git remote update
     local_rev=$(git rev-parse master)
     server_rev=$(git rev-parse origin/master)
     [ $local_rev != $server_rev ] && git reset --hard origin/master
     popd
 
-    chmod +x "$root/opt/server/bin/"*
-    chmod +x "$root/opt/server/patches/"*
+    chmod +x "$root$SERVER_INSTALL/server/bin/"*
+    chmod +x "$root$SERVER_INSTALL/server/patches/"*
 
-    for patch in $(ls "$root/opt/server/patches")
+    for patch in $(ls "$root$SERVER_INSTALL/server/patches")
     do
         echo "Starting patch: $patch"
-        eval "$chroot_eval /opt/server/patches/$patch" &
+        execute_patch $patch $chroot_eval
         set_patch_pid $patch $! $root
     done
 
-    for patch in $(ls "$root/opt/server/patches")
+    for patch in $(ls "$root$SERVER_INSTALL/server/patches")
     do
         echo "waiting for watch: $patch"
         wait $(get_patch_pid $patch $! $root) && clear_patch_pid
@@ -88,6 +88,129 @@ server_update() {
     errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
 
     return 0
+}
+
+execute_patch() {
+    chroot_eval=$2
+    patch=$1
+    eval "$chroot_eval $(cat $SERVER_INSTALL/environment) $SERVER_INSTALL/server/patches/$patch > /var/server/logs/patches/$patch.log" &
+}
+
+#checks version of patch files
+#   returns 0 if the patch should run
+#   meaning either the version is unknown greater than the last run
+check_version() {
+    script_version=$1
+    script_name=$2
+    [ -f "$SERVER_INSTALL/server/$script_name" ] && local_version=$(cat "$SERVER_INSTALL/patches/$script_name")
+    [ x$local_version = x ] && return 1
+    vers_test $script_version -gt $local_version && return 1 || return 0
+}
+
+set_version() {
+    [ ! -d "$SERVER_INSTALL/patches" ] && mkdir -p "$SERVER_INSTALL/patches"
+    echo $1 > "$SERVER_INSTALL/patches/$2"
+    return 0
+}
+
+set_server_setting() {
+    [ ! -d "$3$SERVER_INSTALL/server-settings" ] && mkdir -p "$3$SERVER_INSTALL/server-settings"
+    echo $2 > "$3$SERVER_INSTALL/server-settings/$1"
+    chmod 600 "$3$SERVER_INSTALL/server-settings/$1"
+    return 0
+}
+
+get_server_setting() {
+    [ -f "$2$SERVER_INSTALL/server-settings/$1" ] && echo "$(cat $2$SERVER_INSTALL/server-settings/$1)" && return 0
+    echoerr "no server setting for $1." && return 1
+}
+
+#checks to make sure a required patch has been run
+#   1=patch name
+#   2=minimum version of patch
+patch_requires() {
+    if check_version $2 $1
+    then
+        get_patch_pid $1
+        execute_patch $1
+        errorcheck && echoerr "required patch $1 failed" && return 1
+    fi
+    return 0
+}
+
+get_patch_pid() {
+    [ -f "$3/var/run/server/patches/$1" ] && echo $(cat "$3/var/run/server/patches/$1") && return 0
+    echoerr "no pid for $1 patch." && return 1
+}
+
+set_patch_pid() {
+    [ ! -d "$3/var/run/server/patches" ] && mkdir -p "$3/var/run/server/patches"
+    echo "$2" > "$3/var/run/server/patches/$1"
+    return 0
+}
+
+clear_patch_pid() {
+    [ -f "$3/var/run/server/patches/$1" ] && rm "$3/var/run/server/patches/$1" && return 0
+    echoerr "no pid for $1 patch." && return 1
+}
+
+check_pid() {
+    ppid=$(get_patch_pid $1 $3)
+    ppid=${ppid:-$2}
+
+    if [ $ppid -ne $2 ]
+    then
+        echo "$1 patch already running on pid $ppid - exiting"
+        return 0
+    fi
+
+    return 1
+}
+
+vercomp() {
+    if [[ $1 == $2 ]]
+    then
+        return 0
+    fi
+    local IFS=.
+    local i ver1=($1) ver2=($2)
+    # fill empty fields in ver1 with zeros
+    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
+    do
+        ver1[i]=0
+    done
+    for ((i=0; i<${#ver1[@]}; i++))
+    do
+        if [[ -z ${ver2[i]} ]]
+        then
+            # fill empty fields in ver2 with zeros
+            ver2[i]=0
+        fi
+        if ((10#${ver1[i]} > 10#${ver2[i]}))
+        then
+            return 1
+        fi
+        if ((10#${ver1[i]} < 10#${ver2[i]}))
+        then
+            return 2
+        fi
+    done
+    return 0
+}
+
+vers_test() {
+    vercomp $1 $3
+    case $? in
+        0) op='-eq';;
+        1) op='-gt';;
+        2) op='-lt';;
+    esac
+    if [[ $op != $2 ]]
+    then
+        return 1
+    else
+        return 0
+    fi
 }
 
 #requires variables:
@@ -158,15 +281,6 @@ kill_children() {
     done
     kill -0 $1 >/dev/null 2>&1 && kill $1
     return 0
-}
-
-set_var() {
-    echo "$2" > "/var/$1"
-}
-
-check_var() {
-    read out < "/var/$1"
-    echo $out
 }
 
 echoerr() {
@@ -273,121 +387,4 @@ whiptail_disks() {
     done
     root_mount_name=$(mount | awk '/\ \/\ / {print $1}')
     echo "$(echo "$whiptail_output" | grep -v ${root_mount_name##/dev/})"
-}
-
-vercomp() {
-    if [[ $1 == $2 ]]
-    then
-        return 0
-    fi
-    local IFS=.
-    local i ver1=($1) ver2=($2)
-    # fill empty fields in ver1 with zeros
-    for ((i=${#ver1[@]}; i<${#ver2[@]}; i++))
-    do
-        ver1[i]=0
-    done
-    for ((i=0; i<${#ver1[@]}; i++))
-    do
-        if [[ -z ${ver2[i]} ]]
-        then
-            # fill empty fields in ver2 with zeros
-            ver2[i]=0
-        fi
-        if ((10#${ver1[i]} > 10#${ver2[i]}))
-        then
-            return 1
-        fi
-        if ((10#${ver1[i]} < 10#${ver2[i]}))
-        then
-            return 2
-        fi
-    done
-    return 0
-}
-
-vers_test() {
-    vercomp $1 $3
-    case $? in
-        0) op='-eq';;
-        1) op='-gt';;
-        2) op='-lt';;
-    esac
-    if [[ $op != $2 ]]
-    then
-        return 1
-    else
-        return 0
-    fi
-}
-
-#checks version of patch files
-#   returns 0 if the patch should run
-#   meaning either the version is unknown greater than the last run
-check_version() {
-    script_version=$1
-    script_name=$2
-    [ -f /opt/server/$script_name ] && local_version=$(cat "/opt/patches/$script_name")
-    [ x$local_version = x ] && return 0
-    vers_test $script_version -gt $local_version && return 1 || return 0
-}
-
-set_version() {
-    [ ! -d  /opt/patches ] && mkdir -p /opt/patches
-    echo $1 > "/opt/patches/$2"
-    return 0
-}
-
-set_server_setting() {
-    [ ! -d "$3/opt/server-settings" ] && mkdir -p "$3/opt/server-settings"
-    echo $2 > "$3/opt/server-settings/$1"
-    chmod 600 "$3/opt/server-settings/$1"
-    return 0
-}
-
-get_server_setting() {
-    [ -f "$2/opt/server-settings/$1" ] && echo "$(cat $2/opt/server-settings/$1)" && return 0
-    echoerr "no server setting for $1." && return 1
-}
-
-#checks to make sure a required patch has been run
-#   1=patch name
-#   2=minimum version of patch
-patch_requires() {
-    if check_version $2 $1
-    then
-        get_patch_pid $1
-        /opt/server/patches/$1
-        errorcheck && echoerr "required patch $1 failed" && return 1
-    fi
-    return 0
-}
-
-get_patch_pid() {
-    [ -f "$3/var/run/server/patches/$1" ] && echo $(cat "$3/var/run/server/patches/$1") && return 0
-    echoerr "no pid for $1 patch." && return 1
-}
-
-set_patch_pid() {
-    [ ! -d "$3/var/run/server/patches" ] && mkdir -p "$3/var/run/server/patches"
-    echo "$2" > "$3/var/run/server/patches/$1"
-    return 0
-}
-
-clear_patch_pid() {
-    [ -f "$3/var/run/server/patches/$1" ] && rm "$3/var/run/server/patches/$1" && return 0
-    echoerr "no pid for $1 patch." && return 1
-}
-
-check_pid() {
-    ppid=$(get_patch_pid $1 $3)
-    ppid=${ppid:-$1}
-
-    if [ $ppid -ne $2 ]
-    then
-        echo "$1 patch already running on pid $ppid - exiting"
-        return 0
-    fi
-
-    return 1
 }

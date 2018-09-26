@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-. /opt/server/environment
-. /opt/server/include
+. ${SERVER_INSTALL:-/opt}/server/include
 
 #version is pulled from docker-compose
 

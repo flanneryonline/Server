@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
-# chmod +x install.sh && ./install.sh |& tee /var/log/debootstrap.log
+
+# [ -d /opt/server ] && rm -r /opt/server
+# git clone https://github/flanneryonline/server.git /opt/server
+# chmod +x install.sh && eval $(cat ./environmnet) ./install.sh |& tee /var/log/debootstrap.log
 
 export DEBIAN_FRONTEND=noninteractive
 
-. ${SERVER_INSTALL:-~/server}/include
-. ${SERVER_INSTALL:-~/server}/environment
+. ${SERVER_INSTALL:-/opt}/server/include
 
-apt-get install -qq \
+. ${SERVER_INSTALL:-/opt}/server/patches/apt
+
+apt-get update
+apt-get upgrade -y
+apt-get install -y \
     --no-install-recommends \
     zfs-initramfs \
     gdisk \
