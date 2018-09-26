@@ -2,13 +2,13 @@
 
 # [ -d /opt/server ] && rm -r /opt/server
 # git clone https://github/flanneryonline/server.git /opt/server
-# chmod +x install.sh && eval $(cat ./environmnet) ./install.sh |& tee /var/log/debootstrap.log
+# chmod +x install.sh && eval $(cat environmnet) ./install.sh |& tee /var/log/debootstrap.log
 
 export DEBIAN_FRONTEND=noninteractive
 
-. ${SERVER_INSTALL:-/opt}/server/include
+. $SERVER_INSTALL/server/include
 
-. ${SERVER_INSTALL:-/opt}/server/patches/apt
+execute_patch $SERVER_INSTALL/server/patches/apt
 
 apt-get update
 apt-get upgrade -y
