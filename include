@@ -2,14 +2,17 @@
 
 #main entry point for install
 clean_install(){
+    echo "starting zfs boot setup"
     zfs_boot_setup
     errorcheck && echoerr "error setting up boot disks." && return 1
 
+    echo "starting debootstrap"
     debootstrap --components $SERVER_DIST_COMPONENTS \
         --include $SERVER_DIST_PACKAGES \
         $SERVER_DIST_RELEASE "$root" $SERVER_DIST_URL
     errorcheck && echoerr "error in debootstrap" && return 1
 
+    "bind mounting install location"
     mount --rbind /dev "$root/dev"
     errorcheck && return 1
     mount --rbind /dev/pts "$root/dev/pts"
@@ -19,6 +22,7 @@ clean_install(){
     mount --rbind /sys  "$root/sys"
     errorcheck && return 1
 
+    "saving system settings to install location"
     set_server_setting "password" $admin_password $root
     set_server_setting "backup-sync-enabled" $SYNC_DATA $root
     set_server_setting "backup-enabled" $BACKUP_ENABLED $root
@@ -27,11 +31,14 @@ clean_install(){
     set_server_setting "services-enabled" $SERVICES_ENABLED $root
     set_server_setting "fast-disks" $fast_disks $root
     set_server_setting "slow-disks" $slow_disks $root
+    set_server_setting "boot-disks" $boot_disks $root
     set_server_setting "link-backup" $LINK_BACKUP $root
 
+    "running patches in install location"
     server_update
     errorcheck && echoerr "error in server_update" && return 1
 
+    "unmounting bind in install location"
     umount -l "$root/dev/pts"
     errorcheck && return 1
     umount -l "$root/dev"
@@ -41,6 +48,7 @@ clean_install(){
     umount -l "$root/sys"
     errorcheck && return 1
 
+    "removing $ROOT_POOL to prep for first boot"
     umount -lAR "$root"
     errorcheck && echoerr "error unmounting root pool" && return 1
     zpool export $ROOT_POOL
@@ -52,33 +60,37 @@ clean_install(){
 server_update() {
     [ x$root = x ] && local chroot_eval=
 
+    echo "getting latest server code from git to $root$SERVER_INSTALL/server"
     #get latest server code
     [ ! -d "$root$SERVER_INSTALL/server" ] && git clone $SERVER_GIT_LOCALTION "$root$SERVER_INSTALL/server"
     pushd "$root$SERVER_INSTALL/server"
     git remote update
-    local_rev=$(git rev-parse master)
-    server_rev=$(git rev-parse origin/master)
+    local local_rev=$(git rev-parse master)
+    local server_rev=$(git rev-parse origin/master)
     [ $local_rev != $server_rev ] && git reset --hard origin/master
     popd
 
+    echo "marking bin/patches executable"
     chmod +x "$root$SERVER_INSTALL/server/bin/"*
     chmod +x "$root$SERVER_INSTALL/server/patches/"*
 
+    echo "kicking off patches"
     for patch in $(ls "$root$SERVER_INSTALL/server/patches")
     do
         echo "Starting patch: $patch"
-        execute_patch $patch $chroot_eval
-        set_patch_pid $patch $! $root
+        execute_patch $patch $chroot_eval $root
     done
 
+    echo "waiting for patches to complete"
     for patch in $(ls "$root$SERVER_INSTALL/server/patches")
     do
         echo "waiting for watch: $patch"
-        wait $(get_patch_pid $patch $! $root) && clear_patch_pid
-        errorcheck && echoerr "error running $patch patch" && cancel_patches
+        wait $(get_patch_pid $patch $root) && clear_patch_pid $patch $root
+        errorcheck && echoerr "error running $patch patch"
         echo "patch complete: $patch"
     done
 
+    echo "running binary updates (apt)"
     #binary updates
     eval "$chroot_eval apt-get update -qq"
     errorcheck && echoerr "error during apt-get update" && return 1
@@ -87,24 +99,27 @@ server_update() {
     eval "$chroot_eval apt-get dist-upgrade -qq --no-install-recommends"
     errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
 
+    echo "server updates complete"
     return 0
 }
 
+# 1=patch
+# 2=chroot_eval (optional)
+# 3=root (optional)
 execute_patch() {
-    chroot_eval=$2
-    patch=$1
-    eval "$chroot_eval $(cat $SERVER_INSTALL/environment) $SERVER_INSTALL/server/patches/$patch > /var/server/logs/patches/$patch.log" &
+    [ x$2 != x ] && echo "running $1 patch in chroot $3"
+    [ ! -d /var/logs/server/patches ] && mkdir -p /var/logs/server/patches
+    eval "$2 $(cat $SERVER_INSTALL/environment) $SERVER_INSTALL/server/patches/$1 > /var/logs/server/patches/$1.log"
+    set_patch_pid $1 $! $3
 }
 
 #checks version of patch files
 #   returns 0 if the patch should run
 #   meaning either the version is unknown greater than the last run
 check_version() {
-    script_version=$1
-    script_name=$2
-    [ -f "$SERVER_INSTALL/server/$script_name" ] && local_version=$(cat "$SERVER_INSTALL/patches/$script_name")
+    [ -f "$SERVER_INSTALL/server/$2" ] && local local_version=$(cat "$SERVER_INSTALL/patches/$2")
     [ x$local_version = x ] && return 1
-    vers_test $script_version -gt $local_version && return 1 || return 0
+    vers_test $1 -gt $local_version && return 1 || return 0
 }
 
 set_version() {
@@ -138,25 +153,35 @@ patch_requires() {
     return 0
 }
 
+# 1=patch
+# 2=root (optional)
 get_patch_pid() {
-    [ -f "$3/var/run/server/patches/$1" ] && echo $(cat "$3/var/run/server/patches/$1") && return 0
+    [ -f "$2/var/run/server/patches/$1" ] && echo $(cat "$2/var/run/server/patches/$1") && return 0
     echoerr "no pid for $1 patch." && return 1
 }
 
+# 1=patch
+# 2=value
+# 3=root (optional)
 set_patch_pid() {
     [ ! -d "$3/var/run/server/patches" ] && mkdir -p "$3/var/run/server/patches"
     echo "$2" > "$3/var/run/server/patches/$1"
     return 0
 }
 
+# 1=patch
+# 2=root (optional)
 clear_patch_pid() {
-    [ -f "$3/var/run/server/patches/$1" ] && rm "$3/var/run/server/patches/$1" && return 0
+    [ -f "$2/var/run/server/patches/$1" ] && rm "$2/var/run/server/patches/$1" && return 0
     echoerr "no pid for $1 patch." && return 1
 }
 
+# 1=patch
+# 2=current pid
+# 3=root (optional)
 check_pid() {
-    ppid=$(get_patch_pid $1 $3)
-    ppid=${ppid:-$2}
+    local ppid=$(get_patch_pid $1 $3)
+    local ppid=${ppid:-$2}
 
     if [ $ppid -ne $2 ]
     then
@@ -217,8 +242,7 @@ vers_test() {
 #   boot_disks
 #       must be set to dev disk ex: "/dev/sda"
 zfs_boot_setup() {
-    boot_disk_list=
-    space=
+    local boot_disk_list=
     echo "clearing all boot disks"
     for boot_disk in $boot_disks
     do
@@ -241,8 +265,7 @@ zfs_boot_setup() {
         parted -s $boot_disk "set 2 bios_grub on"
         errorcheck && return 1
         sleep 1s
-        boot_disk_list="${boot_disk_list:-}${space:-}$(get_disk_link ${boot_disk}2)"
-        space=" "
+        local boot_disk_list="${boot_disk_list:-}$(get_disk_link ${boot_disk}2)"
     done
     echo "creating zfs boot pool"
     sleep 1s
@@ -308,22 +331,6 @@ howmany() {
     echo $#
 }
 
-get_parent_disk() {
-    echo "/dev/$(lsblk -n -o PKNAME $1)"
-}
-
-#returns /dev/ada type links to disks that are part of provided pool
-get_pool_disks() {
-    pool=$1
-    disk_links=$(zpool list -v -P $pool | grep /dev/disk | awk '{print $1}')
-    devlist=
-    for disk in $disk_links
-    do
-        devlist="$devlist $(get_parent_disk $(udevadm info -q all $disk | grep DEVNAME | sed 's/ /\n/g' | grep /dev/ | sed 's/DEVNAME=//'))"
-    done
-    echo $devlist
-}
-
 #gets a single /dev/disk/by-
 #link based on the dev provided
 #
@@ -333,7 +340,7 @@ get_pool_disks() {
 #       this is anything under /dev/disk/by-
 #       that would show up under DEVLINKS in udevadm
 get_disk_link() {
-    filter="by-"${2:-"id"}
+    local filter="by-"${2:-"id"}
     udevadm info -q all $1 | grep DEVLINKS | sed 's/ /\n/g' | grep /dev/ | sed 's/DEVLINKS=//' | grep $filter | sort | head -n1
     errorcheck && return 1
     return 0
@@ -379,12 +386,12 @@ trim_disk_link() {
 #   ex: whiptail_disks /dev/sda /dev/sdb
 #   this will print all available disks EXCEPT sda and adb.
 whiptail_disks() {
-    whiptail_filter=$@
-    whiptail_output=$(lsblk -npr -o KNAME,MODEL,SIZE,TYPE,RO | \
+    local whiptail_filter=$@
+    local whiptail_output=$(lsblk -npr -o KNAME,MODEL,SIZE,TYPE,RO | \
     awk '$5 == 0 && $4 == "disk" {print $1 FS "\42"$2" ("$3")\42 OFF"}' | sed 's/\\x20/ /g')
     for f in $whiptail_filter; do
-        whiptail_output=$(echo "$whiptail_output" | grep -v $f)
+        local whiptail_output=$(echo "$whiptail_output" | grep -v $f)
     done
-    root_mount_name=$(mount | awk '/\ \/\ / {print $1}')
+    local root_mount_name=$(mount | awk '/\ \/\ / {print $1}')
     echo "$(echo "$whiptail_output" | grep -v ${root_mount_name##/dev/})"
 }

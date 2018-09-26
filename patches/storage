@@ -17,11 +17,11 @@ errorcheck && echoerr "error installing zfs-initramfs" && exit 1
 fast_storage_enabled=$(get_server_setting "fast-storage-enabled")
 fast_storage_enabled=${fast_storage_enabled:-0}
 fast_disks=$(get_server_setting "fast-disks")
-fast_disks=${fast_disks:-0}
+fast_disks=${fast_disks:-}
 slow_storage_enabled=$(get_server_setting "slow-storage-enabled")
 slow_storage_enabled=${slow_storage_enabled:-0}
 slow_disks=$(get_server_setting "slow-disks")
-slow_disks=${slow_disks:-0}
+slow_disks=${slow_disks:-}
 
 if ! zpool status $FAST_STORAGE_POOL >/dev/null 2>&1 && \
     [ $fast_storage_enabled -eq 1 ] && \

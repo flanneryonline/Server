@@ -38,7 +38,7 @@ else
     fi
 fi
 
-echo "$FAST_STORAGE_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> "$root/etc/fstab"
+echo "$FAST_STORAGE_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> /etc/fstab
 mount /var/lib/docker
 errorcheck && echoerr "error mounting /var/lib/docker" && exit 1
 

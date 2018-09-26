@@ -11,21 +11,22 @@ check_version $version ${0##*/} && exit 0
 patch_requires "apt" 1
 errorcheck && exit 1
 
+boot_disks=$(get_server_setting "boot-disks")
+boot_disks=${boot_disks:-}
+
 apt-get install -qq --no-install-recommends grub-efi-amd64
 errorcheck && echoerr "error installing grub-efi-amd64" && exit 1
-#apt-get remove -qq os-prober
-#errorcheck && echoerr "error removing os prober" && exit 1
 
 sed -i 's/GRUB_HIDDEN_TIMEOUT=0/#GRUB_HIDDEN_TIMEOUT=0/' "/etc/default/grub"
 sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/GRUB_CMDLINE_LINUX_DEFAULT=""/' "/etc/default/grub"
 
 disk_num=1
-for boot_disk in $(get_pool_disks $ROOT_POOL)
+for boot_disk in $boot_disks
 do
     mkfs.fat -n EFI -F32 ${boot_disk}1
     errorcheck && echoerr "error foratting efi on $boot_disk" && exit 1
     sleep 1s
-    [ ! -d "/boot/efi" ] && mkdir -p "$root/boot/efi"
+    [ ! -d "/boot/efi" ] && mkdir -p /boot/efi
     mount $(get_disk_link ${boot_disk}1 partuuid) /boot/efi
     errorcheck && echoerr "error mounting efi on $boot_disk" && exit 1
 
