@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # [ -d /opt/server ] && rm -r /opt/server
-# git clone https://github.com/flanneryonline/server.git /opt/server
+# git clone https://github.com/flanneryonline/server.git /opt/server && cd /opt/server
 # chmod +x install.sh && ./install.sh |& tee /var/log/debootstrap.log
 
 export DEBIAN_FRONTEND=noninteractive
@@ -12,6 +12,8 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 
 chmod +x "$SERVER_INSTALL/patches/apt"
 execute_patch "$SERVER_INSTALL/patches/apt"
+wait $(get_patch_pid "apt")
+clear_patch_pid "apt"
 
 apt-get update
 apt-get upgrade -y
