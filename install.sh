@@ -47,9 +47,9 @@ boot_disks=$(filter_quotes "$(eval $wt_boot $(whiptail_disks) 2>&1 >/dev/tty)")
 [ $FAST_STORAGE_ENABLED -eq 1 ] && fast_disks=$(filter_quotes "$(eval $wt_fast_storage $(whiptail_disks $boot_disks) 2>&1 >/dev/tty)")
 [ $SLOW_STORAGE_ENABLED -eq 1 ] && slow_disks=$(filter_quotes "$(eval $wt_slow_storage $(whiptail_disks $boot_disks $fast_storage_disks) 2>&1 >/dev/tty)")
 
-[ x$boot_disks = x ] && echoerr "Must select a boot disk" && exit 1
-[ x$fast_disks = x ] && FAST_STORAGE_ENABLED=0
-[ x$slow_disks = x ] && SLOW_STORAGE_ENABLED=0
+[ "x$boot_disks" = "x" ] && echoerr "Must select a boot disk" && exit 1
+[ "x$fast_disks" = "x" ] && FAST_STORAGE_ENABLED=0
+[ "x$slow_disks" = "x" ] && SLOW_STORAGE_ENABLED=0
 
 clear
 

@@ -82,11 +82,12 @@ server_update() {
     done
 
     echo "waiting for patches to complete"
-    for patch in $(ls "$root$SERVER_INSTALL/patches")
+    for patch in $(ls "$root/var/run/server/patches")
     do
-        echo "waiting for watch: $patch"
-        wait $(get_patch_pid "$patch" "$root") && clear_patch_pid "$patch" "$root"
-        errorcheck && echoerr "error running $patch patch"
+        echo "waiting for patch: $patch"
+        wait $(get_patch_pid "$patch" "$root")
+        errorcheck && echoerr "failure: check log for $patch patch"
+        clear_patch_pid "$patch" "$root"
         echo "patch complete: $patch"
     done
 
@@ -109,7 +110,7 @@ server_update() {
 execute_patch() {
     echo "running ${1##*/} patch in chroot '$3'"
     [ ! -d "$3/var/log/server/patches" ] && mkdir -p "$3/var/log/server/patches"
-    eval $2 "$SERVER_INSTALL/patches/${1##*/}" > "$3/var/log/server/patches/${1##*/}.log"
+    eval $2 "$SERVER_INSTALL/patches/${1##*/}" > "$3/var/log/server/patches/${1##*/}.log" &
     set_patch_pid "${1##*/}" "$!" "$3"
 }
 
@@ -147,11 +148,20 @@ get_server_setting() {
 #   1=patch name
 #   2=minimum version of patch
 patch_requires() {
-    if check_version "$2" "$1"
+    if ! check_version "$2" "$1"
     then
-        get_patch_pid "$1"
-        execute_patch "$1"
-        errorcheck && echoerr "required patch $1 failed" && return 1
+        echo "required patch $1 does not meet version $2"
+        ppid=$(get_patch_pid "$1")
+        if [ "x$ppid" == "x" ]
+        then
+            echo "executing required patch: $1"
+            execute_patch "$1"
+            errorcheck && echoerr "required patch $1 failed" && return 1
+        else
+            echo "required patch $1 already running on pid $ppid - waiting for it to complete"
+            wait $ppid && clear_patch_pid "$1"
+            errorcheck && echoerr "required patch $1 failed" && return 1
+        fi
     fi
     return 0
 }
