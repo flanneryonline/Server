@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-. ${SERVER_INSTALL:-/opt}/server/include
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+. "$SERVER_INSTALL/environment"
+. "$SERVER_INSTALL/include"
 
 #version is pulled from docker-compose
 

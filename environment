@@ -28,4 +28,3 @@ SERVER_DIST_URL=http://archive.ubuntu.com/ubuntu
 SERVER_DIST_COMPONENTS=main,universe
 SERVER_DIST_PACKAGES=ubuntu-minimal,ubuntu-standard,linux-image-generic
 SERVER_SERVICES_ENABLED=0
-SERVER_INSTALL=/opt

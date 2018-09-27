@@ -60,10 +60,10 @@ clean_install(){
 server_update() {
     [ x$root = x ] && local chroot_eval=
 
-    echo "getting latest server code from git to $root$SERVER_INSTALL/server"
+    echo "getting latest server code from git to $root$SERVER_INSTALL"
     #get latest server code
-    [ ! -d "$root$SERVER_INSTALL/server" ] && git clone $SERVER_GIT_LOCALTION "$root$SERVER_INSTALL/server"
-    pushd "$root$SERVER_INSTALL/server"
+    [ ! -d "$root$SERVER_INSTALL" ] && git clone "$SERVER_GIT_LOCATION" "$root$SERVER_INSTALL"
+    pushd "$root$SERVER_INSTALL"
     git remote update
     local local_rev=$(git rev-parse master)
     local server_rev=$(git rev-parse origin/master)
@@ -71,21 +71,21 @@ server_update() {
     popd
 
     echo "marking bin/patches executable"
-    chmod +x "$root$SERVER_INSTALL/server/bin/"*
-    chmod +x "$root$SERVER_INSTALL/server/patches/"*
+    chmod +x "$root$SERVER_INSTALL/bin/"*
+    chmod +x "$root$SERVER_INSTALL/patches/"*
 
     echo "kicking off patches"
-    for patch in $(ls "$root$SERVER_INSTALL/server/patches")
+    for patch in $(ls "$root$SERVER_INSTALL/patches")
     do
         echo "Starting patch: $patch"
-        execute_patch $patch $chroot_eval $root
+        execute_patch "$patch" "$chroot_eval" "$root"
     done
 
     echo "waiting for patches to complete"
-    for patch in $(ls "$root$SERVER_INSTALL/server/patches")
+    for patch in $(ls "$root$SERVER_INSTALL/patches")
     do
         echo "waiting for watch: $patch"
-        wait $(get_patch_pid $patch $root) && clear_patch_pid $patch $root
+        wait $(get_patch_pid "$patch" "$root") && clear_patch_pid "$patch" "$root"
         errorcheck && echoerr "error running $patch patch"
         echo "patch complete: $patch"
     done
@@ -108,18 +108,18 @@ server_update() {
 # 3=root (optional)
 execute_patch() {
     echo "running ${1##*/} patch in chroot '$3'"
-    [ ! -d "$3/var/logs/server/patches" ] && mkdir -p "$3/var/logs/server/patches"
-    eval $2 $(cat $SERVER_INSTALL/server/environment) $SERVER_INSTALL/server/patches/${1##*/} > /var/logs/server/patches/${1##*/}.log
-    set_patch_pid ${1##*/} $! $3
+    [ ! -d "$3/var/log/server/patches" ] && mkdir -p "$3/var/log/server/patches"
+    eval $2 "$SERVER_INSTALL/patches/${1##*/}" > "$3/var/log/server/patches/${1##*/}.log"
+    set_patch_pid "${1##*/}" "$!" "$3"
 }
 
 #checks version of patch files
 #   returns 0 if the patch should run
 #   meaning either the version is unknown greater than the last run
 check_version() {
-    [ -f "$SERVER_INSTALL/server/$2" ] && local local_version=$(cat "$SERVER_INSTALL/patches/$2")
+    [ -f "$SERVER_INSTALL/$2" ] && local local_version=$(cat "$SERVER_INSTALL/patches/$2")
     [ x$local_version = x ] && return 1
-    vers_test $1 -gt $local_version && return 1 || return 0
+    vers_test "$1" "-gt" "$local_version" && return 1 || return 0
 }
 
 set_version() {
@@ -132,14 +132,14 @@ set_version() {
 # 2=setting value
 # 3=alt root (optional)
 set_server_setting() {
-    [ ! -d "$3$SERVER_INSTALL/server-settings" ] && mkdir -p "$3$SERVER_INSTALL/server-settings"
-    echo "$2" > "$3$SERVER_INSTALL/server-settings/$1"
-    chmod 600 "$3$SERVER_INSTALL/server-settings/$1"
+    [ ! -d "$3/etc/server" ] && mkdir -p "$3/etc/server"
+    echo "$2" > "$3/etc/server/$1"
+    chmod 600 "$3/etc/server/$1"
     return 0
 }
 
 get_server_setting() {
-    [ -f "$2$SERVER_INSTALL/server-settings/$1" ] && echo "$(cat $2$SERVER_INSTALL/server-settings/$1)" && return 0
+    [ -f "$2/etc/server/$1" ] && echo "$(cat $2/etc/server/$1)" && return 0
     echoerr "no server setting for $1." && return 1
 }
 
@@ -147,10 +147,10 @@ get_server_setting() {
 #   1=patch name
 #   2=minimum version of patch
 patch_requires() {
-    if check_version $2 $1
+    if check_version "$2" "$1"
     then
-        get_patch_pid $1
-        execute_patch $1
+        get_patch_pid "$1"
+        execute_patch "$1"
         errorcheck && echoerr "required patch $1 failed" && return 1
     fi
     return 0
@@ -183,7 +183,7 @@ clear_patch_pid() {
 # 2=current pid
 # 3=root (optional)
 check_pid() {
-    local ppid=$(get_patch_pid $1 $3)
+    local ppid=$(get_patch_pid "$1" "$3")
     local ppid=${ppid:-$2}
 
     if [ $ppid -ne $2 ]
@@ -303,7 +303,7 @@ zfs_boot_setup() {
 kill_children() {
     for child in $(ps -o pid,ppid -ax | awk "{ if ( \$2 == $1 ) { print \$1 }}")
     do
-        kill_children $child
+        kill_children "$child"
     done
     kill -0 $1 >/dev/null 2>&1 && kill $1
     return 0

@@ -2,13 +2,16 @@
 
 # [ -d /opt/server ] && rm -r /opt/server
 # git clone https://github.com/flanneryonline/server.git /opt/server
-# chmod +x install.sh && eval $(cat environment) ./install.sh |& tee /var/log/debootstrap.log
+# chmod +x install.sh && ./install.sh |& tee /var/log/debootstrap.log
 
 export DEBIAN_FRONTEND=noninteractive
 
-. $SERVER_INSTALL/server/include
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+. "$SERVER_INSTALL/environment"
+. "$SERVER_INSTALL/include"
 
-execute_patch $SERVER_INSTALL/server/patches/apt
+chmod +x "$SERVER_INSTALL/patches/apt"
+execute_patch "$SERVER_INSTALL/patches/apt"
 
 apt-get update
 apt-get upgrade -y
@@ -50,7 +53,7 @@ boot_disks=$(filter_quotes "$(eval $wt_boot $(whiptail_disks) 2>&1 >/dev/tty)")
 
 clear
 
-clean_install
+eval $(cat "$SERVER_INSTALL/environment") clean_install
 errorcheck && exit 1
 
 echo "COMPLETE!"
