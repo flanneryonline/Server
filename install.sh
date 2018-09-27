@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # [ -d /opt/server ] && rm -r /opt/server
-# git clone https://github/flanneryonline/server.git /opt/server
-# chmod +x install.sh && eval $(cat environmnet) ./install.sh |& tee /var/log/debootstrap.log
+# git clone https://github.com/flanneryonline/server.git /opt/server
+# chmod +x install.sh && eval $(cat environment) ./install.sh |& tee /var/log/debootstrap.log
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -18,7 +18,6 @@ apt-get install -y \
     gdisk \
     debootstrap \
     curl \
-    nfs-common \
     apt-transport-https
 errorcheck && exit 1
 
@@ -26,12 +25,12 @@ clear
 
 root=/mnt/install
 chroot_eval="chroot "$root" /usr/bin/env PATH=/usr/sbin:/usr/bin/:/bin:/sbin DEBIAN_FRONTEND=noninteractive"
-SYNC_DATA=${SYNC_DATA:-1}
+SYNC_DATA=${SYNC_DATA:-0}
 FAST_STORAGE_ENABLED=${FAST_STORAGE_ENABLED:-1}
 SLOW_STORAGE_ENABLED=${SLOW_STORAGE_ENABLED:-1}
 SERVICES_ENABLED=${SERVICES_ENABLED:-1}
 BACKUP_ENABLED=${BACKUP_ENABLED:-1}
-LINK_BACKUP=${LINK_BACKUP:-0}
+LINK_BACKUP=${LINK_BACKUP:-1}
 
 [ $BACKUP_ENABLED -eq 0 ] && SYNC_DATA=0
 [ $BACKUP_ENABLED -eq 0 ] && SERVICES_ENABLED=0
