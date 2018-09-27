@@ -58,7 +58,7 @@ clean_install(){
 }
 
 server_update() {
-    [ x$root = x ] && local chroot_eval=
+    [ "x$root" == "x" ] && local chroot_eval=
 
     echo "getting latest server code from git to $root$SERVER_INSTALL"
     #get latest server code
@@ -110,7 +110,7 @@ server_update() {
 execute_patch() {
     echo "running ${1##*/} patch in chroot '$3'"
     [ ! -d "$3/var/log/server/patches" ] && mkdir -p "$3/var/log/server/patches"
-    eval $2 "$SERVER_INSTALL/patches/${1##*/}" >"$3/var/log/server/patches/${1##*/}.log" 2>&1 &
+    eval "$2 \"$SERVER_INSTALL/patches/${1##*/}\" >\"$3/var/log/server/patches/${1##*/}.log\" 2>&1 &"
     set_patch_pid "${1##*/}" "$!" "$3"
 }
 
@@ -119,7 +119,7 @@ execute_patch() {
 #   meaning either the version is unknown greater than the last run
 check_version() {
     [ -f "$SERVER_INSTALL/$2" ] && local local_version=$(cat "$SERVER_INSTALL/patches/$2")
-    [ x$local_version = x ] && return 1
+    [ "x$local_version" == "x" ] && return 1
     vers_test "$1" "-gt" "$local_version" && return 1 || return 0
 }
 
@@ -292,7 +292,7 @@ zfs_boot_setup() {
         -O compression=lz4 \
         -O canmount=off \
         -m none \
-        -R "$root" \
+        -R \"$root\" \
         $ROOT_POOL $raid_type $boot_disk_list"
     errorcheck && echoerr "error creating root pool" && return 1
     echo "setting up boot datasets"
@@ -382,14 +382,6 @@ clear_disk() {
 #useful for whiptail values with quotes in them
 filter_quotes() {
     echo "$1" | sed 's/"//g'
-}
-
-#ex:
-#input: /dev/sda
-#output: sda
-#removes everything to the left of and including the last "/"
-trim_disk_link() {
-    echo ${1##*/}
 }
 
 #this is used to pass to whiptail to print available disks
