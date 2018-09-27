@@ -12,7 +12,7 @@ clean_install(){
         $SERVER_DIST_RELEASE "$root" $SERVER_DIST_URL
     errorcheck && echoerr "error in debootstrap" && return 1
 
-    "bind mounting install location"
+    echo "bind mounting install location"
     mount --rbind /dev "$root/dev"
     errorcheck && return 1
     mount --rbind /dev/pts "$root/dev/pts"
@@ -22,23 +22,23 @@ clean_install(){
     mount --rbind /sys  "$root/sys"
     errorcheck && return 1
 
-    "saving system settings to install location"
-    set_server_setting "password" $admin_password $root
-    set_server_setting "backup-sync-enabled" $SYNC_DATA $root
-    set_server_setting "backup-enabled" $BACKUP_ENABLED $root
-    set_server_setting "fast-storage-enabled" $FAST_STORAGE_ENABLED $root
-    set_server_setting "slow-storage-enabled" $SLOW_STORAGE_ENABLED $root
-    set_server_setting "services-enabled" $SERVICES_ENABLED $root
-    set_server_setting "fast-disks" $fast_disks $root
-    set_server_setting "slow-disks" $slow_disks $root
-    set_server_setting "boot-disks" $boot_disks $root
-    set_server_setting "link-backup" $LINK_BACKUP $root
+    echo "saving system settings to install location"
+    set_server_setting "password" "$admin_password" "$root"
+    set_server_setting "backup-sync-enabled" "$SYNC_DATA" "$root"
+    set_server_setting "backup-enabled" "$BACKUP_ENABLED" "$root"
+    set_server_setting "fast-storage-enabled" "$FAST_STORAGE_ENABLED" "$root"
+    set_server_setting "slow-storage-enabled" "$SLOW_STORAGE_ENABLED" "$root"
+    set_server_setting "services-enabled" "$SERVICES_ENABLED" "$root"
+    set_server_setting "fast-disks" "$fast_disks" "$root"
+    set_server_setting "slow-disks" "$slow_disks" "$root"
+    set_server_setting "boot-disks" "$boot_disks" "$root"
+    set_server_setting "link-backup" "$LINK_BACKUP" "$root"
 
-    "running patches in install location"
+    echo "running patches in install location"
     server_update
     errorcheck && echoerr "error in server_update" && return 1
 
-    "unmounting bind in install location"
+    echo "unmounting bind in install location"
     umount -l "$root/dev/pts"
     errorcheck && return 1
     umount -l "$root/dev"
@@ -48,7 +48,7 @@ clean_install(){
     umount -l "$root/sys"
     errorcheck && return 1
 
-    "removing $ROOT_POOL to prep for first boot"
+    echo "removing $ROOT_POOL to prep for first boot"
     umount -lAR "$root"
     errorcheck && echoerr "error unmounting root pool" && return 1
     zpool export $ROOT_POOL
@@ -107,10 +107,10 @@ server_update() {
 # 2=chroot_eval (optional)
 # 3=root (optional)
 execute_patch() {
-    [ x$2 != x ] && echo "running $1 patch in chroot $3"
-    [ ! -d /var/logs/server/patches ] && mkdir -p /var/logs/server/patches
-    eval "$2 $(cat $SERVER_INSTALL/environment) $SERVER_INSTALL/server/patches/$1 > /var/logs/server/patches/$1.log"
-    set_patch_pid $1 $! $3
+    echo "running ${1##*/} patch in chroot '$3'"
+    [ ! -d "$3/var/logs/server/patches" ] && mkdir -p "$3/var/logs/server/patches"
+    eval $2 $(cat $SERVER_INSTALL/server/environment) $SERVER_INSTALL/server/patches/${1##*/} > /var/logs/server/patches/${1##*/}.log
+    set_patch_pid ${1##*/} $! $3
 }
 
 #checks version of patch files
@@ -128,9 +128,12 @@ set_version() {
     return 0
 }
 
+# 1=setting name
+# 2=setting value
+# 3=alt root (optional)
 set_server_setting() {
     [ ! -d "$3$SERVER_INSTALL/server-settings" ] && mkdir -p "$3$SERVER_INSTALL/server-settings"
-    echo $2 > "$3$SERVER_INSTALL/server-settings/$1"
+    echo "$2" > "$3$SERVER_INSTALL/server-settings/$1"
     chmod 600 "$3$SERVER_INSTALL/server-settings/$1"
     return 0
 }
@@ -265,7 +268,7 @@ zfs_boot_setup() {
         parted -s $boot_disk "set 2 bios_grub on"
         errorcheck && return 1
         sleep 1s
-        local boot_disk_list="${boot_disk_list:-}$(get_disk_link ${boot_disk}2)"
+        local boot_disk_list="${boot_disk_list:-} $(get_disk_link ${boot_disk}2)"
     done
     echo "creating zfs boot pool"
     sleep 1s

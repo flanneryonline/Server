@@ -14,7 +14,7 @@ errorcheck && exit 1
 [ -f /etc/apt/sources.list ] && rm /etc/apt/sources.list
 touch /etc/apt/sources.list
 [ ! -d /etc/apt/sources.list.d ] && mkdir -p /etc/apt/sources.list.d
-[ $(ls -A /etc/apt/sources.list.d) ] && rm /etc/apt/sources.list.d/*
+[ "$(ls -A /etc/apt/sources.list.d)" ] && rm /etc/apt/sources.list.d/*
 
 echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE main universe" \
     >  /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.list
