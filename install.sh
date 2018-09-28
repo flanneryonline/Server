@@ -12,8 +12,9 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 
 chmod +x "$SERVER_INSTALL/patches/apt"
 execute_patch "$SERVER_INSTALL/patches/apt"
-tail --pid=$(get_patch_pid "apt") -f "/var/log/server/patches/apt.log"
-wait $(get_patch_pid "apt") >/dev/nul 2>&1
+pid=$(get_patch_pid "apt")
+tail --pid=$pid -f "/var/log/server/patches/apt.log"
+wait $pid >/dev/nul 2>&1
 errorcheck && echoerr "failure: check log for $patch patch" && exit 0
 clear_patch_pid "apt"
 
