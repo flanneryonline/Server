@@ -2,7 +2,7 @@
 
 # [ -d /opt/server ] && rm -r /opt/server
 # git clone https://github.com/flanneryonline/server.git /opt/server && cd /opt/server
-# chmod +x install.sh && ./install.sh |& tee /var/log/debootstrap.log
+# chmod +x install.sh && SYNC_DATA=0 LINK_BACKUP=1 ./install.sh |& tee /var/log/debootstrap.log
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -53,9 +53,12 @@ boot_disks=$(filter_quotes "$(eval $wt_boot $(whiptail_disks) 2>&1 >/dev/tty)")
 [ "x$fast_disks" = "x" ] && FAST_STORAGE_ENABLED=0
 [ "x$slow_disks" = "x" ] && SLOW_STORAGE_ENABLED=0
 
+#whiptail --yes-button "Confirm" --no-button "Cancel" --title "Confirm Info" --yesno "$(wt_confirm)" 0 10
+#errorcheck && exit 1
+
 clear
 
-eval $(cat "$SERVER_INSTALL/environment") clean_install
+clean_install
 errorcheck && exit 1
 
 echo "COMPLETE!"

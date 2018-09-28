@@ -85,7 +85,9 @@ server_update() {
     for patch in $(ls "$root/var/run/server/patches")
     do
         echo "waiting for patch: $patch"
-        wait $(get_patch_pid "$patch" "$root")
+        local pid=$(get_patch_pid "$1")
+        tail --pid=$pid -f "$root/var/log/server/patches/$patch.log"
+        wait $pid >/dev/null 2>&1
         errorcheck && echoerr "failure: check log for $patch patch"
         clear_patch_pid "$patch" "$root"
         echo "patch complete: $patch"
@@ -109,8 +111,10 @@ server_update() {
 # 3=root (optional)
 execute_patch() {
     echo "running ${1##*/} patch in chroot '$3'"
+    local chroot_eval=$2
+    [ "x$3" == "x" ] && local chroot_eval=
     [ ! -d "$3/var/log/server/patches" ] && mkdir -p "$3/var/log/server/patches"
-    eval "$2 \"$SERVER_INSTALL/patches/${1##*/}\" >\"$3/var/log/server/patches/${1##*/}.log\" 2>&1 &"
+    eval "$chroot_eval \"$SERVER_INSTALL/patches/${1##*/}\" >\"$3/var/log/server/patches/${1##*/}.log\" 2>&1 &" >/dev/null 2>&1
     set_patch_pid "${1##*/}" "$!" "$3"
 }
 
@@ -118,14 +122,14 @@ execute_patch() {
 #   returns 0 if the patch should run
 #   meaning either the version is unknown greater than the last run
 check_version() {
-    [ -f "$SERVER_INSTALL/$2" ] && local local_version=$(cat "$SERVER_INSTALL/patches/$2")
+    [ -f "/etc/server/patches/$2" ] && local local_version=$(cat "/etc/server/patches/$2")
     [ "x$local_version" == "x" ] && return 1
     vers_test "$1" "-gt" "$local_version" && return 1 || return 0
 }
 
 set_version() {
-    [ ! -d "$SERVER_INSTALL/patches" ] && mkdir -p "$SERVER_INSTALL/patches"
-    echo $1 > "$SERVER_INSTALL/patches/$2"
+    [ ! -d "/etc/server/patches" ] && mkdir -p "/etc/server/patches"
+    echo $1 > "/etc/server/patches/$2"
     return 0
 }
 
@@ -133,14 +137,14 @@ set_version() {
 # 2=setting value
 # 3=alt root (optional)
 set_server_setting() {
-    [ ! -d "$3/etc/server" ] && mkdir -p "$3/etc/server"
-    echo "$2" > "$3/etc/server/$1"
-    chmod 600 "$3/etc/server/$1"
+    [ ! -d "$3/etc/server/settings" ] && mkdir -p "$3/etc/server/settings"
+    echo "$2" > "$3/etc/server/settings/$1"
+    chmod 600 "$3/etc/server/settings/$1"
     return 0
 }
 
 get_server_setting() {
-    [ -f "$2/etc/server/$1" ] && echo "$(cat $2/etc/server/$1)" && return 0
+    [ -f "$2/etc/server/settings/$1" ] && echo "$(cat $2/etc/server/settings/$1)" && return 0
     echoerr "no server setting for $1." && return 1
 }
 
@@ -148,22 +152,23 @@ get_server_setting() {
 #   1=patch name
 #   2=minimum version of patch
 patch_requires() {
-    if ! check_version "$2" "$1"
+    ! check_version "$2" "$1" || return 0
+
+    echo "required patch $1 does not meet version $2"
+    local ppid=$(get_patch_pid "$1")
+    if [ "x$ppid" == "x" ]
     then
-        echo "required patch $1 does not meet version $2"
-        ppid=$(get_patch_pid "$1")
-        if [ "x$ppid" == "x" ]
-        then
-            echo "executing required patch: $1"
-            execute_patch "$1"
-            errorcheck && echoerr "required patch $1 failed" && return 1
-        else
-            echo "required patch $1 already running on pid $ppid - waiting for it to complete"
-            wait $ppid && clear_patch_pid "$1"
-            errorcheck && echoerr "required patch $1 failed" && return 1
-        fi
+        echo "executing required patch: $1"
+        execute_patch $1
+        local ppid=$(get_patch_pid "$1")
     fi
-    return 0
+    echo "required patch $1 running on pid $ppid - waiting for it to complete"
+    tail --pid=$ppid -f "/var/log/server/patches/$1.log"
+    while kill -0 $ppid >/dev/nul 2>&1
+    do
+        sleep 0.5s
+    done
+    ! check_version "$2" "$1" && echo "required patch $1 failed" && return 1 || return 0
 }
 
 # 1=patch
