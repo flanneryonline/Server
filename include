@@ -112,8 +112,8 @@ server_update() {
 
 wait_for_patch() {
     local patch=${1##*/}
-    echo "waiting for patch: $patch"
     local pid=$(get_patch_pid "$patch")
+    echo "waiting for patch $patch on pid $pid"
     tail --pid=$pid -f "$3/var/log/server/patches/$patch.log"
     while kill -0 $ppid >/dev/nul 2>&1
     do
@@ -149,7 +149,7 @@ execute_patch() {
 
 #checks version of patch files
 #   returns 0 if the patch should run
-#   meaning either the version is unknown greater than the last run
+#   meaning either the version is unknown or less than or equal to the last run
 check_version() {
     local patch=${2##*/}
     [ -f "/etc/server/patches/$patch" ] && local local_version=$(cat "/etc/server/patches/$patch")
@@ -192,12 +192,13 @@ get_server_setting() {
 #   2=minimum version of patch
 patch_requires() {
     local patch=${1##*/}
-    ! check_version "$2" "$patch" || return 0
-    echo "required patch $patch does not meet version $2"
     local ppid=$(get_patch_pid "$patch")
-    if [ "x$ppid" == "x" ]
+    if [ "x$ppid" = "x" ]
     then
-        echo "required patch $patch is not currently running"
+        echo "required patch $patch current running on pid $ppid - waiting"
+    else
+        ! check_version "$2" "$patch" || return 0
+        echo "required patch $patch does not meet version $2 - executing"
         execute_patch "$patch"
     fi
     wait_for_patch "$patch" $(get_version "$patch")

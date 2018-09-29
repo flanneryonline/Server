@@ -38,8 +38,6 @@ boot_disks=$(filter_quotes "$(eval $wt_boot $(whiptail_disks) 2>&1 >/dev/tty)")
 #whiptail --yes-button "Confirm" --no-button "Cancel" --title "Confirm Info" --yesno "$(wt_confirm)" 0 10
 #errorcheck && exit 1
 
-clear
-
 chmod +x "$SERVER_INSTALL/patches/apt"
 execute_patch "$SERVER_INSTALL/patches/apt"
 wait_for_patch "apt" $(get_version "apt")
@@ -55,8 +53,6 @@ apt-get install -y \
     curl \
     apt-transport-https
 errorcheck && exit 1
-
-clear
 
 clean_install
 errorcheck && exit 1
