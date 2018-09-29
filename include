@@ -94,7 +94,8 @@ server_update() {
     echo "waiting for patches to complete"
     for patch in $(ls "$root/var/run/server/patches")
     do
-        wait_for_patch "$patch" "$(get_version "$patch" "$root")" "$root"
+        [ -f "$root/var/run/server/patches/$patch" ] && \
+            wait_for_patch "$patch" "$(get_version "$patch" "$root")" "$root"
     done
 
     echo "running binary updates (apt)"
@@ -193,7 +194,7 @@ get_server_setting() {
 patch_requires() {
     local patch=${1##*/}
     local ppid=$(get_patch_pid "$patch")
-    if [ "x$ppid" = "x" ]
+    if [ "x$ppid" != "x" ]
     then
         echo "required patch $patch current running on pid $ppid - waiting"
     else

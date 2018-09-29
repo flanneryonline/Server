@@ -44,7 +44,6 @@ wait_for_patch "apt" $(get_version "apt")
 errorcheck && echoerr "apt patch failed" && exit 1
 
 apt-get update
-apt-get upgrade -y
 apt-get install -y \
     --no-install-recommends \
     zfs-initramfs \
