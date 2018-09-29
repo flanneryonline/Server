@@ -122,6 +122,7 @@ wait_for_patch() {
 execute_patch() {
     local ppid=$(get_patch_pid "$1")
     if [ "x$ppid" == "x" ]
+    then
         local chroot_eval=$2
         if [ "x$3" == "x" ]
         then
