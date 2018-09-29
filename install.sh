@@ -10,24 +10,6 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-chmod +x "$SERVER_INSTALL/patches/apt"
-execute_patch "$SERVER_INSTALL/patches/apt"
-wait_for_patch "apt" $(get_version "apt")
-errorcheck && echoerr "apt patch failed" && exit 1
-
-apt-get update
-apt-get upgrade -y
-apt-get install -y \
-    --no-install-recommends \
-    zfs-initramfs \
-    gdisk \
-    debootstrap \
-    curl \
-    apt-transport-https
-errorcheck && exit 1
-
-clear
-
 root=/mnt/install
 chroot_eval="chroot "$root" /usr/bin/env PATH=/usr/sbin:/usr/bin/:/bin:/sbin DEBIAN_FRONTEND=noninteractive"
 SYNC_DATA=${SYNC_DATA:-1}
@@ -55,6 +37,24 @@ boot_disks=$(filter_quotes "$(eval $wt_boot $(whiptail_disks) 2>&1 >/dev/tty)")
 
 #whiptail --yes-button "Confirm" --no-button "Cancel" --title "Confirm Info" --yesno "$(wt_confirm)" 0 10
 #errorcheck && exit 1
+
+clear
+
+chmod +x "$SERVER_INSTALL/patches/apt"
+execute_patch "$SERVER_INSTALL/patches/apt"
+wait_for_patch "apt" $(get_version "apt")
+errorcheck && echoerr "apt patch failed" && exit 1
+
+apt-get update
+apt-get upgrade -y
+apt-get install -y \
+    --no-install-recommends \
+    zfs-initramfs \
+    gdisk \
+    debootstrap \
+    curl \
+    apt-transport-https
+errorcheck && exit 1
 
 clear
 
