@@ -7,8 +7,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 version=1
 
 echo "Starting ${0##*/} patch on pid $$."
-check_pid ${0##*/} $$ && exit 0
-check_version $version ${0##*/} && exit 0
+check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 [ -f /etc/hostname ] && rm /etc/hostname
 echo $SERVER_HOSTNAME > /etc/hostname
