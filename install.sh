@@ -12,8 +12,8 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 
 chmod +x "$SERVER_INSTALL/patches/apt"
 execute_patch "$SERVER_INSTALL/patches/apt"
-wait_for_patch "$patch" $(get_version "$patch")
-errorcheck && echoerr "failure: check log for $patch patch" && exit 0
+wait_for_patch "apt" $(get_version "apt")
+errorcheck && echoerr "apt patch failed" && exit 1
 
 apt-get update
 apt-get upgrade -y
