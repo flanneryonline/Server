@@ -150,16 +150,16 @@ clear_waiting() {
 
 get_log_name() {
     local patch=${1##*/}
-    [ ! -d "/var/log/server/patches" ] && mkdir -p "/var/log/server/patches"
-    [ ! -f "/var/log/server/patches/$patch.log" ] && \
-        echo "/var/log/server/patches/$patch.log" && return 0
+    [ ! -d "$2/var/log/server/patches" ] && mkdir -p "$2/var/log/server/patches"
+    [ ! -f "$2/var/log/server/patches/$patch.log" ] && \
+        echo "$2/var/log/server/patches/$patch.log" && return 0
     local ln=1
-    while [ -f "/var/log/server/patches/$patch.$ln.log" ]
+    while [ -f "$2/var/log/server/patches/$patch.$ln.log" ]
     do
         ln=$((ln+1))
     done
-    mv "/var/log/server/patches/$patch.log" "/var/log/server/patches/$patch.$ln.log"
-    echo "/var/log/server/patches/$patch.log"
+    mv "$2/var/log/server/patches/$patch.log" "$2/var/log/server/patches/$patch.$ln.log"
+    echo "$2/var/log/server/patches/$patch.log"
     return 0
 }
 
@@ -172,7 +172,7 @@ execute_patch() {
     [ "x$ppid" != "x" ] && \
         echo "patch $patch already running on pid $ppid - skipping" && \
         return 0
-    eval "$chroot_eval async_patch \"$patch\""
+    async_patch "$patch" "$2" "$3"
     echo "started $patch patch on pid $(get_patch_pid "$patch" "$3")"
     return 0
 }
@@ -190,9 +190,8 @@ get_status() {
 
 async_patch() {
     local patch=${1##*/}
-    local log=$(get_log_name "$patch")
     {
-        "$SERVER_INSTALL/patches/$patch" >"$log" 2>&1
+        eval "$2 \"$SERVER_INSTALL/patches/$patch\"" >"$(get_log_name "$patch" "$3")" 2>&1
         local status=$?
         [ $status -ne 0 ] && patch_failure "$patch" "$status"
     } & >/dev/null 2>&1
