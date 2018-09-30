@@ -150,15 +150,16 @@ clear_waiting() {
 
 get_log_name() {
     local patch=${1##*/}
-    [ ! -d "$2/var/log/server/patches" ] && mkdir -p "$2/var/log/server/patches"
-    [ ! -f "$3/var/log/server/patches/$patch.log" ] && \
-        echo "$3/var/log/server/patches/$patch.log" && return 0
+    [ ! -d "/var/log/server/patches" ] && mkdir -p "/var/log/server/patches"
+    [ ! -f "/var/log/server/patches/$patch.log" ] && \
+        echo "/var/log/server/patches/$patch.log" && return 0
     local ln=1
-    while [ -f "$3/var/log/server/patches/$patch.$ln.log" ]
+    while [ -f "/var/log/server/patches/$patch.$ln.log" ]
     do
         ln=$((ln+1))
     done
-    echo "$3/var/log/server/patches/$patch.$ln.log"
+    mv "/var/log/server/patches/$patch.log" "/var/log/server/patches/$patch.$ln.log"
+    echo "/var/log/server/patches/$patch.log"
     return 0
 }
 
