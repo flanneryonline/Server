@@ -197,6 +197,7 @@ async_patch() {
 
 patch_requires() {
     local patch=${1##*/}
+    local version=$2
     local ppid=$(get_patch_pid "$patch")
     if [ "x$ppid" != "x" ]
     then
@@ -204,8 +205,8 @@ patch_requires() {
     else
         get_status "$patch"
         errorcheck && echoerr "required patch $patch failed" && return 1
-        ! check_version "$2" "$patch" || return 0
-        echo "required patch $patch does not meet version $2 - executing"
+        check_version "$version" "$patch" || return 0
+        echo "required patch $patch does not meet version $version - executing"
         execute_patch "$patch"
     fi
     wait_for_patch "$patch"
