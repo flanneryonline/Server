@@ -6,7 +6,6 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 
 version=1
 
-echo "Starting ${0##*/} patch on pid $$."
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 locale-gen --purge en_US.UTF-8
@@ -17,5 +16,4 @@ update-locale LANG=en_US.UTF-8
 errorcheck && echoerr "Error during update-locale."  && exit 1
 
 set_version $version ${0##*/}
-echo "Completed ${0##*/} patch on pid $$."
 exit 0

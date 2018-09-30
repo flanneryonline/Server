@@ -6,7 +6,6 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 
 version=1
 
-echo "Starting ${0##*/} patch on pid $$."
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 [ -f /etc/hostname ] && rm /etc/hostname
@@ -17,5 +16,4 @@ echo "127.0.0.1 localhost" > /etc/hosts
 echo "127.0.0.1 $SERVER_FQDN $SERVER_HOSTNAME" >> /etc/hosts
 
 set_version $version ${0##*/}
-echo "Completed ${0##*/} patch on pid $$."
 exit 0

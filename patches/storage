@@ -6,7 +6,6 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 
 version=1
 
-echo "Starting ${0##*/} patch on pid $$."
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "apt" 1
@@ -50,12 +49,13 @@ then
         $FAST_STORAGE_POOL $raid_type $fast_disk_list"
     errorcheck && echoerr "error creating fast storage pool" && return 1
 
-    ! zfs list | grep "$FAST_STORAGE_POOL/var" && \
+    cp /var /var-tmp
+    ! zfs list "$FAST_STORAGE_POOL/var" && \
         zfs create -o mountpoint=legacy $FAST_STORAGE_POOL/var
-
     ! cat /etc/fstab | grep " /var " && \
         echo "$FAST_STORAGE_POOL/var /var zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> /etc/fstab
-    ! mount | grep " /var " && mount /var
+    ! mount | grep " /var " && rm /var && mount /var && cp /var-tmp /var
+    rm /var-tmp
 fi
 
 if ! zpool status $SLOW_STORAGE_POOL >/dev/null 2>&1 && \
@@ -87,8 +87,4 @@ then
 fi
 
 set_version $version ${0##*/}
-echo "Completed ${0##*/} patch on pid $$."
 exit 0
-! cat /etc/fstab | grep " /var " && \
-    echo "$FAST_STORAGE_POOL/var /var zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> /etc/fstab
-! mount | grep " /var " && mount /var
