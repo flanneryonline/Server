@@ -6,11 +6,10 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 
 version=1
 
-if ischroot
-then
-    patch_requires "locale" 1
-    errorcheck && exit 1
-fi
+check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
+
+patch_requires "locale" 1
+errorcheck && exit 1
 
 [ -f /etc/apt/sources.list ] && rm /etc/apt/sources.list
 touch /etc/apt/sources.list

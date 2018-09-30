@@ -10,8 +10,6 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-root=/mnt/install
-chroot_eval="chroot "$root" /usr/bin/env PATH=/usr/sbin:/usr/bin/:/bin:/sbin DEBIAN_FRONTEND=noninteractive"
 SYNC_DATA=${SYNC_DATA:-1}
 FAST_STORAGE_ENABLED=${FAST_STORAGE_ENABLED:-1}
 SLOW_STORAGE_ENABLED=${SLOW_STORAGE_ENABLED:-1}
@@ -39,6 +37,7 @@ boot_disks=$(filter_quotes "$(eval $wt_boot $(whiptail_disks) 2>&1 >/dev/tty)")
 #errorcheck && exit 1
 
 chmod +x "$SERVER_INSTALL/patches/apt"
+chmod +x "$SERVER_INSTALL/patches/locale"
 execute_patch "$SERVER_INSTALL/patches/apt"
 wait_for_patch "apt" $(get_version "apt")
 errorcheck && echoerr "apt patch failed" && exit 1
@@ -52,6 +51,9 @@ apt-get install -y \
     curl \
     apt-transport-https
 errorcheck && exit 1
+
+root=/mnt/install
+chroot_eval="chroot "$root" /usr/bin/env PATH=/usr/sbin:/usr/bin/:/bin:/sbin DEBIAN_FRONTEND=noninteractive"
 
 clean_install
 errorcheck && exit 1
