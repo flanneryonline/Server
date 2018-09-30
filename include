@@ -92,7 +92,7 @@ server_update() {
     echo "waiting for patches to complete"
     for patch in $(ls "$root$SERVER_INSTALL/patches")
     do
-        wait_for_patch "$patch" "$root"
+        wait_for_patch "$patch"
     done
 
     echo "running binary updates (apt)"
@@ -121,8 +121,8 @@ wait_for_patch() {
     done
     clear_patch_pid "$patch"
     clear_waiting "$patch"
-    get_status "$patch" && \
-        errorcheck && \
+    get_status "$patch"
+    errorcheck && \
         echoerr "patch failure: check log for $patch patch" && \
         return 1
     echo "patch complete: $patch"
@@ -189,8 +189,8 @@ async_patch() {
     [ "x$root" == "x" ] && local chroot_eval=
     {
         eval "$chroot_eval \"$SERVER_INSTALL/patches/$patch\"" >"$(get_log_name "$patch")" 2>&1
-        local status=$?
-        [ $status -ne 0 ] && patch_failure "$patch" "$status"
+        errorcheck && patch_failure "$patch" "$status"
+        return 0
     } & >/dev/null 2>&1
     set_patch_pid "$patch" "$!"
 }
