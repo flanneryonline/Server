@@ -58,8 +58,6 @@ clean_install(){
 }
 
 server_update() {
-    [ "x$root" == "x" ] && local chroot_eval=
-
     echo "getting latest server code from git to $root$SERVER_INSTALL"
     #get latest server code
     if [ ! -d "$root$SERVER_INSTALL" ]
@@ -88,7 +86,7 @@ server_update() {
     echo "kicking off patches"
     for patch in $(ls "$root$SERVER_INSTALL/patches")
     do
-        execute_patch "$patch" "$chroot_eval" "$root"
+        execute_patch "$patch"
     done
 
     echo "waiting for patches to complete"
@@ -112,18 +110,18 @@ server_update() {
 
 wait_for_patch() {
     local patch=${1##*/}
-    check_waiting && return 0
-    set_waiting "$patch" "$2"
+    check_waiting "$patch" && return 0
+    set_waiting "$patch"
     local pid=$(get_patch_pid "$patch")
     echo "waiting for patch $patch on pid $pid"
-    tail --pid=$pid -f "$2/var/log/server/patches/$patch.log"
+    tail --pid=$pid -f "/var/log/server/patches/$patch.log"
     while kill -0 $ppid >/dev/nul 2>&1
     do
         sleep 0.5s
     done
-    clear_patch_pid "$patch" "$2"
-    clear_waiting "$patch" "$2"
-    get_status "$patch" "$2" && \
+    clear_patch_pid "$patch"
+    clear_waiting "$patch"
+    get_status "$patch" && \
         errorcheck && \
         echoerr "patch failure: check log for $patch patch" && \
         return 1
@@ -133,47 +131,45 @@ wait_for_patch() {
 
 set_waiting() {
     local patch=${1##*/}
-    [ ! -d "$2/var/run/server/waiting" ] && mkdir -p "$2/var/run/server/waiting"
-    touch "$2/var/run/server/waiting/$patch"
+    [ ! -d "/var/run/server/waiting" ] && mkdir -p "/var/run/server/waiting"
+    touch "/var/run/server/waiting/$patch"
     return 0
 }
 
 check_waiting() {
     local patch=${1##*/}
-    [ -f "$2/var/run/server/waiting/$patch" ] && return 0 || return 1
+    [ -f "/var/run/server/waiting/$patch" ] && return 0 || return 1
 }
 
 clear_waiting() {
-    [ -f "$2/var/run/server/waiting/$patch" ] && rm "$2/var/run/server/waiting/$patch"
+    local patch=${1##*/}
+    [ -f "/var/run/server/waiting/$patch" ] && rm "/var/run/server/waiting/$patch"
     return 0
 }
 
 get_log_name() {
     local patch=${1##*/}
-    [ ! -d "$2/var/log/server/patches" ] && mkdir -p "$2/var/log/server/patches"
-    [ ! -f "$2/var/log/server/patches/$patch.log" ] && \
-        echo "$2/var/log/server/patches/$patch.log" && return 0
+    [ ! -d "/var/log/server/patches" ] && mkdir -p "/var/log/server/patches"
+    [ ! -f "/var/log/server/patches/$patch.log" ] && \
+        echo "/var/log/server/patches/$patch.log" && return 0
     local ln=1
-    while [ -f "$2/var/log/server/patches/$patch.$ln.log" ]
+    while [ -f "/var/log/server/patches/$patch.$ln.log" ]
     do
         ln=$((ln+1))
     done
-    mv "$2/var/log/server/patches/$patch.log" "$2/var/log/server/patches/$patch.$ln.log"
-    echo "$2/var/log/server/patches/$patch.log"
+    mv "/var/log/server/patches/$patch.log" "/var/log/server/patches/$patch.$ln.log"
+    echo "/var/log/server/patches/$patch.log"
     return 0
 }
 
-# 1=patch
-# 2=chroot_eval (optional)
-# 3=root (optional)
 execute_patch() {
     local patch=${1##*/}
-    local ppid=$(get_patch_pid "$patch" "$3")
+    local ppid=$(get_patch_pid "$patch")
     [ "x$ppid" != "x" ] && \
         echo "patch $patch already running on pid $ppid - skipping" && \
         return 0
-    async_patch "$patch" "$2" "$3"
-    echo "started $patch patch on pid $(get_patch_pid "$patch" "$3")"
+    async_patch "$patch" >/dev/null 2>&1
+    echo "started $patch patch on pid $(get_patch_pid "$patch")"
     return 0
 }
 
@@ -190,17 +186,15 @@ get_status() {
 
 async_patch() {
     local patch=${1##*/}
+    [ "x$root" == "x" ] && local chroot_eval=
     {
-        eval "$2 \"$SERVER_INSTALL/patches/$patch\"" >"$(get_log_name "$patch" "$3")" 2>&1
+        eval "$chroot_eval \"$SERVER_INSTALL/patches/$patch\"" >"$(get_log_name "$patch")" 2>&1
         local status=$?
         [ $status -ne 0 ] && patch_failure "$patch" "$status"
     } & >/dev/null 2>&1
     set_patch_pid "$patch" "$!"
 }
 
-#checks to make sure a required patch has been run
-#   1=patch name
-#   2=minimum version of patch
 patch_requires() {
     local patch=${1##*/}
     local ppid=$(get_patch_pid "$patch")
@@ -216,6 +210,26 @@ patch_requires() {
     fi
     wait_for_patch "$patch"
     errorcheck && echo "required patch $patch failed" && return 1 || return 0
+}
+
+get_patch_pid() {
+    local patch=${1##*/}
+    [ -f "/var/run/server/patches/$patch" ] && \
+        echo $(cat "/var/run/server/patches/$patch") && \
+        return 0 || return 1
+}
+
+set_patch_pid() {
+    local patch=${1##*/}
+    [ ! -d "/var/run/server/patches" ] && mkdir -p "/var/run/server/patches"
+    echo "$2" > "/var/run/server/patches/$patch"
+    return 0
+}
+
+clear_patch_pid() {
+    local patch=${1##*/}
+    [ -f "/var/run/server/patches/$patch" ] && rm "/var/run/server/patches/$patch" && return 0
+    echoerr "no pid for $patch patch." && return 1
 }
 
 #checks version of patch files
@@ -236,53 +250,18 @@ set_version() {
     return 0
 }
 
-get_version() {
-    local patch=${1##*/}
-    [ -f "$2/etc/server/patches/$patch" ] && echo $(cat "$2/etc/server/patches/$patch") && return 0
-    echo "0" && return 0
-}
-
-# 1=setting name
-# 2=setting value
-# 3=alt root (optional)
 set_server_setting() {
-    local patch=${1##*/}
-    [ ! -d "$3/etc/server/settings" ] && mkdir -p "$3/etc/server/settings"
-    echo "$2" > "$3/etc/server/settings/$patch"
-    chmod 600 "$3/etc/server/settings/$patch"
+    local setting=$1
+    [ ! -d "$root/etc/server/settings" ] && mkdir -p "$root/etc/server/settings"
+    echo "$2" > "$root/etc/server/settings/$setting"
+    chmod 600 "$root/etc/server/settings/$setting"
     return 0
 }
 
 get_server_setting() {
-    local patch=${1##*/}
-    [ -f "$2/etc/server/settings/$patch" ] && echo "$(cat $2/etc/server/settings/$patch)" && return 0
-    echoerr "no server setting for $patch" && return 1
-}
-
-# 1=patch
-# 2=root (optional)
-get_patch_pid() {
-    local patch=${1##*/}
-    [ -f "$2/var/run/server/patches/$patch" ] && \
-        echo $(cat "$2/var/run/server/patches/$patch") && \
-        return 0 || return 1
-}
-
-# 1=patch
-# 2=value
-set_patch_pid() {
-    local patch=${1##*/}
-    [ ! -d "/var/run/server/patches" ] && mkdir -p "/var/run/server/patches"
-    echo "$2" > "/var/run/server/patches/$patch"
-    return 0
-}
-
-# 1=patch
-# 2=root (optional)
-clear_patch_pid() {
-    local patch=${1##*/}
-    [ -f "$2/var/run/server/patches/$patch" ] && rm "$2/var/run/server/patches/$patch" && return 0
-    echoerr "no pid for $patch patch." && return 1
+    local setting=$1
+    [ -f "/etc/server/settings/$setting" ] && echo "$(cat /etc/server/settings/$setting)" && return 0
+    echoerr "no server setting named $setting" && return 1
 }
 
 vercomp() {
