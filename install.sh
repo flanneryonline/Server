@@ -39,7 +39,7 @@ boot_disks=$(filter_quotes "$(eval $wt_boot $(whiptail_disks) 2>&1 >/dev/tty)")
 chmod +x "$SERVER_INSTALL/patches/apt"
 chmod +x "$SERVER_INSTALL/patches/locale"
 execute_patch "$SERVER_INSTALL/patches/apt"
-wait_for_patch "apt" $(get_version "apt")
+wait_for_patch "apt"
 errorcheck && echoerr "apt patch failed" && exit 1
 
 apt-get update
