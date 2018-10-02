@@ -15,12 +15,18 @@ errorcheck && exit 1
 patch_requires "docker-compose" 1
 errorcheck && exit 1
 
+echo "getting system settings"
+
 fast_storage_enabled=$(get_server_setting "fast-storage-enabled")
 fast_storage_enabled=${fast_storage_enabled:-0}
 slow_storage_enabled=$(get_server_setting "slow-storage-enabled")
 slow_storage_enabled=${slow_storage_enabled:-0}
 link_backup=$(get_server_setting "link-backup")
 link_backup=${link_backup:-0}
+
+echo "  fast_storage_enabled=$fast_storage_enabled"
+echo "  slow_storage_enabled=$slow_storage_enabled"
+echo "  link_backup=$link_backup"
 
 if [ $link_backup -eq 0 ]
     if [ $fast_storage_enabled -eq 1 ]

@@ -8,10 +8,13 @@ version=1
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
+echo "getting list of network adapters"
 nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
+echo "  nets=$nets"
 [ "$(ls -A "/etc/systemd/network")" ] && \
     rm -r "/etc/systemd/network/"*
 if [ $(howmany $nets) -eq 1 ]; then
+    echo "creating single network at $nets.network"
     echo "[Match]" > "/etc/systemd/network/$nets.network"
     echo "Name=$nets" >> "/etc/systemd/network/$nets.network"
     echo "[Network]" >> "/etc/systemd/network/$nets.network"
@@ -20,12 +23,7 @@ if [ $(howmany $nets) -eq 1 ]; then
     echo "LinkLocalAddressing=ipv4" >> "/etc/systemd/network/$nets.network"
 fi
 if [ $(howmany $nets) -gt 1 ]; then
-    for net in $nets; do
-        echo "[Match]" > "/etc/systemd/network/$net.network"
-        echo "Name=$net" >> "/etc/systemd/network/$net.network"
-        echo "[Network]" >> "/etc/systemd/network/$net.network"
-        echo "Bond=lacp0" >> "/etc/systemd/network/$net.network"
-    done
+    echo "creating lacp network at lacp0.network"
 
     echo "[Match]" > "/etc/systemd/network/lacp0.network"
     echo "Name=lacp0" >> "/etc/systemd/network/lacp0.network"
@@ -44,14 +42,24 @@ if [ $(howmany $nets) -gt 1 ]; then
     echo "MIIMonitorSec=1s" >> "/etc/systemd/network/lacp0.netdev"
     echo "UpDelaySec=2s" >> "/etc/systemd/network/lacp0.netdev"
     echo "DownDelaySec=8s" >> "/etc/systemd/network/lacp0.netdev"
+
+    for net in $nets; do
+        echo "adding $nets.network to lacp0.network"
+        echo "[Match]" > "/etc/systemd/network/$net.network"
+        echo "Name=$net" >> "/etc/systemd/network/$net.network"
+        echo "[Network]" >> "/etc/systemd/network/$net.network"
+        echo "Bond=lacp0" >> "/etc/systemd/network/$net.network"
+    done
 fi
 
+echo "disabling ipv6"
 echo "net.ipv6.conf.all.disable_ipv6 = 1" > "/etc/sysctl.d/10-disable-ipv6.conf"
 echo "net.ipv6.conf.default.disable_ipv6 = 1" >> "/etc/sysctl.d/10-disable-ipv6.conf"
 echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> "/etc/sysctl.d/10-disable-ipv6.conf"
 
 if ! ischroot
 then
+    echo "restarting networking services"
     systemctl restart systemd-sysctl
     errorcheck && echoerr "error restarting system services" && exit 1
     systemctl restart systemd-networkd

@@ -13,21 +13,25 @@ errorcheck && exit 1
 patch_requires "storage" 1
 errorcheck && exit 1
 
-apt-get install -qq --no-install-recommends nfs-common
-errorcheck && echoerr "error installing nfs-common" && exit 1
+echo "getting system settings"
 
 link_backup=$(get_server_setting "link-backup")
 link_backup=${link_backup:-0}
 backup_enabled=$(get_server_setting "backup-enabled")
 backup_enabled=${backup_enabled:-0}
-services_enabled=$(get_server_setting "services-enabled")
-services_enabled=${services_enabled:-0}
 
-[ $backup_enabled -eq 1 ] && \
+echo "  link_backup=$link_backup"
+echo "  backup_enabled=$backup_enabled"
+
+if [ $backup_enabled -eq 1 ]
+then
+    echo "creating fstab entry for backup"
     echo "$BACKUP_ADDRESS:/$BACKUP_FOLDER $BACKUP_MOUNT_LOCATION nfs defaults,x-systemd.requires=nfs-client.target 0 0" >> "/etc/fstab"
+fi
 
 if [ $link_backup -eq 1 ]
 then
+    echo "creating backup links"
     ln -s $BACKUP_MOUNT_LOCATION/media $STORAGE_MEDIA_DIR
     ln -s $BACKUP_MOUNT_LOCATION/downloads $STORAGE_DOWNLOAD_DIR
     ln -s $BACKUP_MOUNT_LOCATION/configs $STORAGE_CONFIG_DIR
@@ -36,6 +40,8 @@ fi
 
 for backup in configs movies shows unsorted shares
 do
+    echo "creating backup service is systemd for $backup"
+
     [ ! -e /etc/systemd/system/backup-$backup.service ] && \
         ln -s /opt/server/systemd/backup/backup-$backup.service /etc/systemd/system/backup-$backup.service
     [ ! -h /etc/systemd/system/backup-$backup.service ] && \
@@ -48,10 +54,19 @@ do
         rm -r /etc/systemd/system/backup-$backup.timer && \
         ln -s /opt/server/systemd/backup/backup-$backup.timer /etc/systemd/system/backup-$backup.timer
 
-    systemctl daemon-reload
+    ! ischroot && systemctl daemon-reload
 
-    [ $services_enabled -eq 1 ] && ! systemctl is-enabled backup-$backup.timer && systemctl enabled backup-$backup.timer
-    [ $services_enabled -eq 0 ] && systemctl is-enabled backup-$backup.timer && systemctl disable backup-$backup.timer
+    if [ $SERVER_SERVICES_ENABLED -eq 1 ] && ! systemctl is-enabled backup-$backup.timer
+    then
+        echo "enabling $backup backup service"
+        systemctl enabled backup-$backup.timer
+    fi
+
+    if [ $SERVER_SERVICES_ENABLED -eq 0 ] && systemctl is-enabled backup-$backup.timer
+    then
+        echo "disabling $backup backup service"
+        systemctl disable backup-$backup.timer
+    fi
 done
 
 set_version $version ${0##*/}

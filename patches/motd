@@ -11,15 +11,15 @@ check_version $version ${0##*/} && echo "patch ${0##*/} already on latest versio
 patch_requires "apt" 1
 errorcheck && exit 1
 
-apt-get install -qq --no-install-recommends figlet
-errorcheck && echoerr "error installing figlet" && exit 1
-apt-get install -qq --no-install-recommends smartmontools
-errorcheck && echoerr "error installing smartmontools" && exit 1
-
+echo "marking motd files executable"
 chmod +x /opt/server/motd/*
+errorcheck && exit 1
 
+echo "removing system motd files"
 rm /etc/update-motd.d/*
+errorcheck && exit 1
 
+echo "linking files to system motd directory"
 [ ! -e /etc/update-motd.d/00-header ] && \
     ln -s /opt/server/motd/00-header /etc/update-motd.d/00-header
 [ ! -h /etc/update-motd.d/00-header ] && \

@@ -11,19 +11,25 @@ check_version $version ${0##*/} && echo "patch ${0##*/} already on latest versio
 patch_requires "backup" 1
 errorcheck && exit 1
 
+echo "getting system settings"
+
 sync_enabled=$(get_server_setting "backup-sync-enabled")
 sync_enabled=${sync_enabled:-0}
 backup_enabled=$(get_server_setting "backup-enabled")
 backup_enabled=${backup_enabled:-0}
 
+echo "  sync_enabled=$sync_enabled"
+echo "  backup_enabled=$backup_enabled"
+
 if [ $backup_sync_enabled -eq 1 ] && [ $backup_enabled -eq 1 ]
 then
+    echo "syncing download data"
     rsync -aqHXAp $BACKUP_MOUNT_LOCATION/downloads/* "$STORAGE_DOWNLOAD_DIR/"
     errorcheck && echoerr "error while copying downloads." && return 1
+    echo "syncing config data"
     rsync -aqHXAp $BACKUP_MOUNT_LOCATION/configs/* "$STORAGE_CONFIG_DIR/"
     errorcheck && echoerr "error while copying configs." && return 1
 fi
 
 set_version $version ${0##*/}
-echo "Completed ${0##*/} patch on pid $$."
 exit 0

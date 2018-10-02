@@ -8,9 +8,11 @@ version=1
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
+echo "setting hostname fie"
 [ -f /etc/hostname ] && rm /etc/hostname
 echo $SERVER_HOSTNAME > /etc/hostname
 
+echo "setting hosts fie"
 [ -f /etc/hosts ] && rm /etc/hosts
 echo "127.0.0.1 localhost" > /etc/hosts
 echo "127.0.0.1 $SERVER_FQDN $SERVER_HOSTNAME" >> /etc/hosts

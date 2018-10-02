@@ -8,6 +8,10 @@ version=1
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
+password=$(get_server_setting "password")
+[ -z $password ] && echoerr "password not set" && exit 1
+
+echo "creating admin user/group"
 groupadd -g $ADMIN_GROUP_ID $ADMIN_USERNAME
 errorcheck && exit 1
 groupadd -g $DOCKER_PGID docker_group
@@ -17,7 +21,8 @@ useradd -m -u $ADMIN_USER_ID -g $ADMIN_USERNAME \
 errorcheck && exit 1
 useradd -r -u $DOCKER_PUID -g docker_group -s /sbin/nologin docker_user
 errorcheck && exit 1
-echo "$ADMIN_USERNAME:$(get_server_setting password)" | chpasswd
+echo "setting password"
+echo "$ADMIN_USERNAME:$passwrd" | chpasswd
 errorcheck && exit 1
 
 set_version $version ${0##*/}

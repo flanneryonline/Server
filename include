@@ -252,7 +252,7 @@ set_server_setting() {
 get_server_setting() {
     local setting=$1
     [ ! -d "$root" ] && local root=
-    [ -f "/etc/server/settings/$setting" ] && echo "$(cat /etc/server/settings/$setting)" && return 0
+    [ -f "$root/etc/server/settings/$setting" ] && echo "$(cat $root/etc/server/settings/$setting)" && return 0
     echoerr "no server setting named $setting" && return 1
 }
 

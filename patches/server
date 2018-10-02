@@ -11,8 +11,7 @@ check_version $version ${0##*/} && echo "patch ${0##*/} already on latest versio
 patch_requires "apt" 1
 errorcheck && exit 1
 
-apt-get install -qq --no-install-recommends bash-completion curl git
-errorcheck && echoerr "error installing bash-completion, curl, git" && exit 1
+echo "setting up update service in systemd"
 
 [ ! -e /etc/systemd/system/server-update.service ] && \
     ln -s /opt/server/systemd/system/server-update.service /etc/systemd/system/server-update.service
@@ -26,10 +25,19 @@ errorcheck && echoerr "error installing bash-completion, curl, git" && exit 1
     rm -r /etc/systemd/system/server-update.timer && \
     ln -s /opt/server/systemd/system/server-update.timer /etc/systemd/system/server-update.timer
 
-systemctl daemon-reload
+! ischroot && systemctl daemon-reload
 
-[ $SERVER_SERVICES_ENABLED -eq 1 ] && ! systemctl is-enabled server-update.timer && systemctl enabled server-update.timer
-[ $SERVER_SERVICES_ENABLED -eq 0 ] && systemctl is-enabled server-update.timer && systemctl disable server-update.timer
+if [ $SERVER_SERVICES_ENABLED -eq 1 ] && ! systemctl is-enabled server-update.timer
+then
+    echo "enabling server update service"
+    systemctl enabled server-update.timer
+fi
+
+if [ $SERVER_SERVICES_ENABLED -eq 0 ] && systemctl is-enabled server-update.timer
+then
+    echo "disabling server update service"
+    systemctl disable server-update.timer
+fi
 
 set_version $version ${0##*/}
 exit 0

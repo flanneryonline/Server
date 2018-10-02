@@ -11,9 +11,7 @@ check_version $version ${0##*/} && echo "patch ${0##*/} already on latest versio
 patch_requires "apt" 1
 errorcheck && exit 1
 
-apt-get install -qq --no-install-recommends openssh-server
-errorcheck && echoerr "error installing openssh-server" && exit 1
-
+echo "nothing to do for ssh yet"
 #setup ssh
 
 set_version $version ${0##*/}

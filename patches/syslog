@@ -8,6 +8,7 @@ version=1
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
+echo "setting syslog to remote host $SYSLOG_ADDRESS:$SYSLOG_PORT"
 rm "/etc/rsyslog.d/"*
 echo "*.* @$SYSLOG_ADDRESS:$SYSLOG_PORT" > "/etc/rsyslog.d/50-default.conf"
 

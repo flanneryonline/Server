@@ -11,13 +11,19 @@ check_version $version ${0##*/} && echo "patch ${0##*/} already on latest versio
 patch_requires "backup" 1
 errorcheck && exit 1
 
+echo "getting system settings"
+
 sync_enabled=$(get_server_setting "backup-sync-enabled")
 sync_enabled=${sync_enabled:-0}
 backup_enabled=$(get_server_setting "backup-enabled")
 backup_enabled=${backup_enabled:-0}
 
+echo "  sync_enabled=$sync_enabled"
+echo "  backup_enabled=$backup_enabled"
+
 if [ $backup_sync_enabled -eq 1 ] && [ $backup_enabled -eq 1 ]
 then
+    echo "syncing show data"
     rsync -aqHXAp $BACKUP_MOUNT_LOCATION/media/shows/* "$STORAGE_MEDIA_DIR/shows/"
     errorcheck && echoerr "error while copying shows." && return 1
 fi

@@ -11,6 +11,8 @@ check_version $version ${0##*/} && echo "patch ${0##*/} already on latest versio
 patch_requires "locale" 1
 errorcheck && exit 1
 
+echo "updating sources"
+
 [ -f /etc/apt/sources.list ] && rm /etc/apt/sources.list
 touch /etc/apt/sources.list
 [ ! -d /etc/apt/sources.list.d ] && mkdir -p /etc/apt/sources.list.d
@@ -25,8 +27,27 @@ echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-updates main univer
 echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-security main universe" \
     >  /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.security.list
 
+echo "running apt-get update"
+
 apt-get update -qq
 errorcheck && exit 1
+
+echo "installing required packages"
+
+apt-get install -qq --no-install-recommends \
+    postfix \
+    nfs-common \
+    apt-transport-https \
+    gnupg \
+    grub-efi-amd64 \
+    figlet \
+    smartmontools \
+    bash-completion \
+    curl \
+    git \
+    openssh-server \
+    zfs-initramfs
+errorcheck && echoerr "error installing packages" && exit 1
 
 set_version $version ${0##*/}
 exit 0

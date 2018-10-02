@@ -4,23 +4,20 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-#version is pulled from docker-compose
-
-check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
-
-patch_requires "server" 1
+patch_requires "apt" 1
 errorcheck && exit 1
+
+echo "getting latest version of docker compose"
 
 version=$(curl -ILsS -w "%{url_effective}" "https://github.com/docker/compose/releases/latest" -o /dev/null)
 version=${version##*/}
 
-check_version $version ${0##*/} && exit 0
+check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "docker" 1
 errorcheck && exit 1
-patch_requires "server" 1
-errorcheck && exit 1
 
+echo "downloading latest version of docker compose"
 [ -f "/usr/bin/docker-compose" ] && rm "/usr/bin/docker-compose"
 curl -fsSL "https://github.com/docker/compose/releases/download/$version/docker-compose-Linux-x86_64" \
     -o "/usr/bin/docker-compose"
@@ -29,6 +26,7 @@ chmod +x "/usr/bin/docker-compose"
 
 if [ ! -f "/etc/bash_completion.d/docker-compose" ]
 then
+    echo "getting docker compose bash completion script"
     [ ! -d "/etc/bash_completion.d" ] && mkdir -p "/etc/bash_completion.d"
     curl -fsSL "https://raw.githubusercontent.com/docker/compose/master/contrib/completion/bash/docker-compose" \
         -o "/etc/bash_completion.d/docker-compose"

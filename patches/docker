@@ -15,47 +15,59 @@ errorcheck && exit 1
 patch_requires "storage" 1
 errorcheck && exit 1
 
-apt-get install -qq --no-install-recommends apt-transport-https
-errorcheck && echoerr "error installing apt-transport-https" && exit 1
-apt-get install -qq --no-install-recommends gnupg
-errorcheck && echoerr "error installing gnupg" && exit 1
+echo "getting system settings"
 
 fast_storage_enabled=$(get_server_setting "fast-storage-enabled")
 fast_storage_enabled=${fast_storage_enabled:-0}
+
+echo "  fast_storage_enabled=$fast_storage_enabled"
 
 if [ $fast_storage_enabled -eq 1 ]
 then
     if ! zfs list $FAST_STORAGE_POOL/docker >/dev/null 2>&1
     then
+        echo "creating docker zfs mount on $FAST_STORAGE_POOL/docker"
         zfs create -o mountpoint=legacy $FAST_STORAGE_POOL/docker
         errorcheck && echoerr "error creating docker dataset" && return 1
+
+        echo "creating fstab entry for docker mount"
+        echo "$FAST_STORAGE_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> /etc/fstab
+        mount /var/lib/docker
+        errorcheck && echoerr "error mounting /var/lib/docker" && exit 1
     fi
 else
     if ! zfs list $ROOT_POOL/docker >/dev/null 2>&1
     then
+        echo "creating docker zfs mount on $ROOT_POOL/docker"
         zfs create -o mountpoint=legacy $ROOT_POOL/docker
         errorcheck && echoerr "error creating docker dataset" && return 1
+
+        echo "creating fstab entry for docker mount"
+        echo "$ROOT_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> /etc/fstab
+        mount /var/lib/docker
+        errorcheck && echoerr "error mounting /var/lib/docker" && exit 1
     fi
 fi
 
-echo "$FAST_STORAGE_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> /etc/fstab
-mount /var/lib/docker
-errorcheck && echoerr "error mounting /var/lib/docker" && exit 1
-
+echo "adding docker apt key"
 curl -fsSL https://download.docker.com/linux/$SERVER_DIST/gpg | apt-key add -
 errorcheck && echoerr "error adding docker apt key" && exit 1
 
+echo "adding docker apt repo"
 [ -f /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list ] && \
     rm /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list
 echo "deb [arch=amd64] https://download.docker.com/linux/$SERVER_DIST $SERVER_DIST_RELEASE stable" \
     >  /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list
 
+echo "installing docker"
 apt-get install -qq --no-install-recommends docker-ce
 errorcheck && echoerr "error installing docker" && exit 1
 
+echo "adding admin user to docker group"
 usermod -g docker $ADMIN_USERNAME
 errorcheck && echoerr "error adding $ADMIN_USERNAME to docker group" && exit 1
 
+echo "adding docker cleanup scripts to systemd"
 [ ! -e /etc/systemd/system/docker-cleanup.service ] && \
     ln -s /opt/server/systemd/docker/docker-cleanup.service /etc/systemd/system/docker-cleanup.service
 [ ! -h /etc/systemd/system/docker-cleanup.service ] && \
@@ -68,10 +80,19 @@ errorcheck && echoerr "error adding $ADMIN_USERNAME to docker group" && exit 1
     rm -r /etc/systemd/system/docker-cleanup.timer && \
     ln -s /opt/server/systemd/docker/docker-cleanup.timer /etc/systemd/system/docker-cleanup.timer
 
-systemctl daemon-reload
+! ischroot && systemctl daemon-reload
 
-[ $SERVER_SERVICES_ENABLED -eq 1 ] && ! systemctl is-enabled docker-cleanup.timer && systemctl enabled docker-cleanup.timer
-[ $SERVER_SERVICES_ENABLED -eq 0 ] && systemctl is-enabled docker-cleanup.timer && systemctl disable docker-cleanup.timer
+if [ $SERVER_SERVICES_ENABLED -eq 1 ] && ! systemctl is-enabled docker-cleanup.timer
+then
+    echo "enabling docker cleanup service"
+    systemctl enabled docker-cleanup.timer
+fi
+
+if [ $SERVER_SERVICES_ENABLED -eq 0 ] && systemctl is-enabled docker-cleanup.timer
+then
+    echo "disabling docker cleanup service"
+    systemctl disable docker-cleanup.timer
+fi
 
 set_version $version ${0##*/}
 exit 0

@@ -8,8 +8,10 @@ version=1
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
+echo "running locale-gen"
 locale-gen --purge en_US.UTF-8
 errorcheck && echoerr "Error during locale-gen." && exit 1
+echo "running update-locale"
 update-locale LANG=en_US.UTF-8
 errorcheck && echoerr "Error during update-locale." && exit 1
 

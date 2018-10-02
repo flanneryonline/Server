@@ -14,8 +14,7 @@ errorcheck && exit 1
 boot_disks=$(get_server_setting "boot-disks")
 boot_disks=${boot_disks:-}
 
-apt-get install -qq --no-install-recommends grub-efi-amd64
-errorcheck && echoerr "error installing grub-efi-amd64" && exit 1
+echo "  boot_disks=$boot_disks"
 
 sed -i 's/GRUB_HIDDEN_TIMEOUT=0/#GRUB_HIDDEN_TIMEOUT=0/' "/etc/default/grub"
 sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/GRUB_CMDLINE_LINUX_DEFAULT=""/' "/etc/default/grub"
