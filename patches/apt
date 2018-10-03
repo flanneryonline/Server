@@ -32,22 +32,5 @@ echo "running apt-get update"
 apt-get update -qq
 errorcheck && exit 1
 
-echo "installing required packages"
-
-apt-get install -qq --no-install-recommends \
-    postfix \
-    nfs-common \
-    apt-transport-https \
-    gnupg \
-    grub-efi-amd64 \
-    figlet \
-    smartmontools \
-    bash-completion \
-    curl \
-    git \
-    openssh-server \
-    zfs-initramfs
-errorcheck && echoerr "error installing packages" && exit 1
-
 set_version $version ${0##*/}
 exit 0

@@ -4,7 +4,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-patch_requires "apt" 1
+patch_requires "apt_install" 1
 errorcheck && exit 1
 
 echo "getting latest version of docker compose"
