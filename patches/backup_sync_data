@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"

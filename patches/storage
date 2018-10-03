@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -e
+
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
@@ -29,7 +31,7 @@ echo "  slow_disks=$slow_disks"
 
 if ! zpool status $FAST_STORAGE_POOL >/dev/null 2>&1 && \
     [ $fast_storage_enabled -eq 1 ] && \
-    [ ! -z $fast_disks ]
+    [ ! -z "$fast_disks" ]
 then
     echo "creating fast storage pool"
     fast_disk_list=
@@ -66,7 +68,7 @@ fi
 
 if ! zpool status $SLOW_STORAGE_POOL >/dev/null 2>&1 && \
     [ $slow_storage_enabled -eq 1 ] && \
-    [ ! -z $slow_disks ]
+    [ ! -z "$slow_disks" ]
 then
     echo "creating slow storage pool"
     slow_disk_list=

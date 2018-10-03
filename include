@@ -89,11 +89,14 @@ server_update() {
         execute_patch "$patch"
     done
 
+    local patch_return=0
     echo "waiting for patches to complete"
     for patch in $(ls "$root$SERVER_INSTALL/patches")
     do
         wait_for_patch "$patch"
+        patch_return=$((patch_return+$?))
     done
+    [ $patch_return -gt 0 ] && return 1
 
     echo "running binary updates (apt)"
     #binary updates
