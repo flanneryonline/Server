@@ -26,8 +26,7 @@ apt-get install -qq --no-install-recommends \
     bash-completion \
     curl \
     git \
-    openssh-server \
-    zfs-initramfs
+    openssh-server
 errorcheck && echoerr "error installing packages" && exit 1
 
 set_version $version ${0##*/}

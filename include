@@ -7,9 +7,7 @@ clean_install(){
     errorcheck && echoerr "error setting up boot disks." && return 1
 
     echo "starting debootstrap"
-    debootstrap --components $SERVER_DIST_COMPONENTS \
-        --include $SERVER_DIST_PACKAGES \
-        $SERVER_DIST_RELEASE "$root" $SERVER_DIST_URL
+    debootstrap $SERVER_DIST_RELEASE "$root" $SERVER_DIST_URL
     errorcheck && echoerr "error in debootstrap" && return 1
 
     echo "bind mounting install location"
@@ -23,20 +21,19 @@ clean_install(){
     errorcheck && return 1
 
     echo "saving system settings to install location"
-    set_server_setting "password" "$admin_password" "$root"
-    set_server_setting "backup-sync-enabled" "$SYNC_DATA" "$root"
-    set_server_setting "backup-enabled" "$BACKUP_ENABLED" "$root"
-    set_server_setting "fast-storage-enabled" "$FAST_STORAGE_ENABLED" "$root"
-    set_server_setting "slow-storage-enabled" "$SLOW_STORAGE_ENABLED" "$root"
-    set_server_setting "services-enabled" "$SERVICES_ENABLED" "$root"
-    set_server_setting "fast-disks" "$fast_disks" "$root"
-    set_server_setting "slow-disks" "$slow_disks" "$root"
-    set_server_setting "boot-disks" "$boot_disks" "$root"
-    set_server_setting "link-backup" "$LINK_BACKUP" "$root"
+    set_server_setting "password" "$admin_password"
+    set_server_setting "backup-sync-enabled" "$SYNC_DATA"
+    set_server_setting "backup-enabled" "$BACKUP_ENABLED"
+    set_server_setting "fast-storage-enabled" "$FAST_STORAGE_ENABLED"
+    set_server_setting "slow-storage-enabled" "$SLOW_STORAGE_ENABLED"
+    set_server_setting "services-enabled" "$SERVICES_ENABLED"
+    set_server_setting "fast-disks" "$fast_disks"
+    set_server_setting "slow-disks" "$slow_disks"
+    set_server_setting "boot-disks" "$boot_disks"
+    set_server_setting "link-backup" "$LINK_BACKUP"
 
-    echo "running patches in install location"
-    server_update
-    errorcheck && echoerr "error in server_update" && return 1
+    server_install
+    errorcheck && echoerr "error in server_install" && return 1
 
     echo "unmounting bind in install location"
     umount -l "$root/dev/pts"
@@ -57,9 +54,202 @@ clean_install(){
     return 0
 }
 
+server_install() {
+    #server code
+    get_server_code
+
+    #locale
+    eval "$chroot_eval locale-gen --purge en_US.UTF-8"
+    errorcheck && return 1
+    eval "$chroot_eval update-locale LANG=en_US.UTF-8"
+    errorcheck && return 1
+
+    #timezone
+    echo "linking timezone info to /etc/localtime"
+    eval "$chroot_eval ln -s /usr/share/zoneinfo/$SERVER_TIMEZONE /etc/localtime"
+    errorcheck && exit 1
+    echo "creating /etc/timezone"
+    echo $SERVER_TIMEZONE > $root/etc/timezone
+    errorcheck && exit 1
+
+    #hostname
+    echo "setting hostname file"
+    [ -e /etc/hostname ] && rm /etc/hostname
+    echo $SERVER_HOSTNAME > /etc/hostname
+    echo "setting hosts file"
+    [ -e /etc/hosts ] && rm /etc/hosts
+    echo "127.0.0.1 localhost" > /etc/hosts
+    echo "127.0.0.1 $SERVER_FQDN $SERVER_HOSTNAME" >> /etc/hosts
+
+    #networking
+    echo "setting up networking"
+    nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
+    [ "$(ls -A "$root/etc/systemd/network")" ] && \
+        rm -r "$root/etc/systemd/network/"*
+    if [ $(howmany $nets) -eq 1 ]; then
+        echo "[Match]" > "$root/etc/systemd/network/$nets.network"
+        echo "Name=$nets" >> "$root/etc/systemd/network/$nets.network"
+        echo "[Network]" >> "$root/etc/systemd/network/$nets.network"
+        echo "DHCP=yes" >> "$root/etc/systemd/network/$nets.network"
+        echo "IPv6AcceptRA=no" >> "$root/etc/systemd/network/$nets.network"
+        echo "LinkLocalAddressing=ipv4" >> "$root/etc/systemd/network/$nets.network"
+    fi
+    if [ $(howmany $nets) -gt 1 ]; then
+        for net in $nets; do
+            echo "[Match]" > "$root/etc/systemd/network/$net.network"
+            echo "Name=$net" >> "$root/etc/systemd/network/$net.network"
+            echo "[Network]" >> "$root/etc/systemd/network/$net.network"
+            echo "Bond=lacp0" >> "$root/etc/systemd/network/$net.network"
+        done
+
+        echo "[Match]" > "$root/etc/systemd/network/lacp0.network"
+        echo "Name=lacp0" >> "$root/etc/systemd/network/lacp0.network"
+        echo "[Network]" >> "$root/etc/systemd/network/lacp0.network"
+        echo "DHCP=yes" >> "$root/etc/systemd/network/lacp0.network"
+        echo "IPv6AcceptRA=no" >> "$root/etc/systemd/network/lacp0.network"
+        echo "LinkLocalAddressing=ipv4" >> "$root/etc/systemd/network/lacp0.network"
+        echo "BindCarrier=$(echo $nets | sed 's/\n/ /')" >> "$root/etc/systemd/network/lacp0.network"
+
+        echo "[NetDev]" > "$root/etc/systemd/network/lacp0.netdev"
+        echo "Name=lacp0" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "Kind=bond" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "[Bond]" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "Mode=802.3ad" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "LACPTransmitRate=fast" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "MIIMonitorSec=1s" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "UpDelaySec=2s" >> "$root/etc/systemd/network/lacp0.netdev"
+        echo "DownDelaySec=8s" >> "$root/etc/systemd/network/lacp0.netdev"
+    fi
+
+    echo "net.ipv6.conf.all.disable_ipv6 = 1" > "$root/etc/sysctl.d/10-disable-ipv6.conf"
+    echo "net.ipv6.conf.default.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
+    echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
+
+    #apt
+    echo "setting up system package management"
+    [ -f "$root/etc/apt/sources.list" ] && rm "$root/etc/apt/sources.list"
+    touch "$root/etc/apt/sources.list"
+    [ "$(ls -A "$root/etc/apt/sources.list.d")" ] && \
+        rm "$root/etc/apt/sources.list.d/"*
+
+    echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE main universe" \
+        >>  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.list"
+
+    echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-updates main universe" \
+        >>  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.updates.list"
+
+    echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-security main universe" \
+        >>  "$root/etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.security.list"
+
+    eval "$chroot_eval apt-get update -qq"
+    errorcheck && echoerr "error during apt-get update" && return 1
+    eval "$chroot_eval apt-get upgrade -qq --no-install-recommends"
+    errorcheck && echoerr "error during apt-get upgrade" && return 1
+    eval "$chroot_eval apt-get dist-upgrade -qq --no-install-recommends"
+    errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
+
+    eval "$chroot_eval apt-get install -qq --no-install-recommends \
+        ubuntu-minimal \
+        ubuntu-standard \
+        linux-image-generic \
+        zfs-initramfs \
+        grub-efi-amd64 \
+    "
+    errorcheck && echoerr "error during apt-get install" && return 1
+
+    #syslog
+    echo "setting syslog to remote host $SYSLOG_ADDRESS:$SYSLOG_PORT"
+    rm "$root/etc/rsyslog.d/"*
+    echo "*.* @$SYSLOG_ADDRESS:$SYSLOG_PORT" > "$root/etc/rsyslog.d/50-default.conf"
+
+    #efi
+    echo "formating efi partition"
+    eval "$chroot_eval apt-get remove -qq os-prober"
+
+    sed -i 's/GRUB_HIDDEN_TIMEOUT=0/#GRUB_HIDDEN_TIMEOUT=0/' "$root/etc/default/grub"
+    sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/GRUB_CMDLINE_LINUX_DEFAULT=""/' "$root/etc/default/grub"
+
+    disk_num=1
+    for boot_disk in $boot_disks
+    do
+        mkfs.fat -n EFI -F32 ${boot_disk}1
+        errorcheck && echoerr "error foratting efi on $boot_disk" && return 1
+        sleep 1s
+        echo "setting up system for efi"
+        [ ! -d "$root/boot/efi" ] && mkdir -p "$root/boot/efi"
+        eval "$chroot_eval mount $(get_disk_link ${boot_disk}1 partuuid) /boot/efi"
+        errorcheck && echoerr "error mounting efi on $boot_disk" && return 1
+
+        echo "updating initramfs"
+        eval "$chroot_eval update-initramfs -u -k all"
+        errorcheck && echoerr "error updating initramfs on $boot_disk" && return 1
+        echo "updating grub config"
+        eval "$chroot_eval update-grub"
+        errorcheck && echoerr "error updating grub on $boot_disk" && return 1
+        echo "installing efi grub"
+        eval "$chroot_eval grub-install \
+            --target=x86_64-efi \
+            --efi-directory=/boot/efi \
+            --bootloader-id=$SERVER_DIST-$SERVER_DIST_RELEASE-$disk_num \
+            --recheck \
+            --no-floppy"
+        errorcheck && echoerr "error installing grub on $boot_disk" && return 1
+        sleep 1s
+        eval "$chroot_eval umount /boot/efi"
+        disk_num=$((disk_num+1))
+    done
+    echo "efi grub setup complete"
+
+    #server update service
+    [ ! -e "$root/etc/systemd/system/server-update.service" ] && \
+        eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.service /etc/systemd/system/server-update.service"
+    [ ! -h "$root/etc/systemd/system/server-update.service" ] && \
+        rm -r "$root/etc/systemd/system/server-update.service" && \
+        eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.service /etc/systemd/system/server-update.service"
+
+    [ ! -e "$root/etc/systemd/system/server-update.timer" ] && \
+        eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.timer /etc/systemd/system/server-update.timer"
+    [ ! -h "$root/etc/systemd/system/server-update.timer" ] && \
+        rm -r "$root/etc/systemd/system/server-update.timer" && \
+        eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.timer /etc/systemd/system/server-update.timer"
+
+    eval "$chroot_eval systemctl enabled server-update.timer"
+}
+
 server_update() {
-    echo "getting latest server code from git to $root$SERVER_INSTALL"
-    #get latest server code
+    get_server_code
+
+    echo "kicking off patches"
+    for patch in $(ls "$SERVER_INSTALL/patches")
+    do
+        execute_patch "$patch"
+        patch_return=$((patch_return+$?))
+    done
+
+    local patch_return=0
+    echo "waiting for patches to complete"
+    for patch in $(ls "$SERVER_INSTALL/patches")
+    do
+        wait_for_patch "$patch"
+        patch_return=$((patch_return+$?))
+    done
+    [ $patch_return -gt 0 ] && return 1
+
+    echo "running binary updates (apt)"
+    #binary updates
+    eval apt-get update -qq
+    errorcheck && echoerr "error during apt-get update" && return 1
+    eval apt-get upgrade -qq --no-install-recommends
+    errorcheck && echoerr "error during apt-get upgrade" && return 1
+    eval apt-get dist-upgrade -qq --no-install-recommends
+    errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
+
+    echo "server updates complete"
+    return 0
+}
+
+get_server_code() {
+    echo "getting latest server code from git to $SERVER_INSTALL"
     if [ ! -d "$root$SERVER_INSTALL" ]
     then
         git clone "$SERVER_GIT_LOCATION" "$root$SERVER_INSTALL"
@@ -82,46 +272,20 @@ server_update() {
     echo "marking bin/patches executable"
     chmod +x "$root$SERVER_INSTALL/bin/"*
     chmod +x "$root$SERVER_INSTALL/patches/"*
-
-    echo "kicking off patches"
-    for patch in $(ls "$root$SERVER_INSTALL/patches")
-    do
-        execute_patch "$patch"
-    done
-
-    local patch_return=0
-    echo "waiting for patches to complete"
-    for patch in $(ls "$root$SERVER_INSTALL/patches")
-    do
-        wait_for_patch "$patch"
-        patch_return=$((patch_return+$?))
-    done
-    [ $patch_return -gt 0 ] && return 1
-
-    echo "running binary updates (apt)"
-    #binary updates
-    eval "$chroot_eval apt-get update -qq"
-    errorcheck && echoerr "error during apt-get update" && return 1
-    eval "$chroot_eval apt-get upgrade -qq --no-install-recommends"
-    errorcheck && echoerr "error during apt-get upgrade" && return 1
-    eval "$chroot_eval apt-get dist-upgrade -qq --no-install-recommends"
-    errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
-
-    echo "server updates complete"
-    return 0
 }
 
 wait_for_patch() {
     local patch=${1##*/}
-    [ ! -d "$root" ] && local root=
     local pid=$(get_patch_pid "$patch")
+    errorcheck && echoerr "pid not found for patch $patch" && return 1
     echo "waiting for patch $patch on pid $pid"
-    tail --pid=$pid -f "$root/var/log/server/patches/$patch.log"
+    tail --pid=$pid -f "/var/log/server/patches/$patch.log"
     while kill -0 $ppid >/dev/nul 2>&1
     do
         sleep 0.5s
     done
     clear_patch_pid "$patch"
+    errorcheck && echoerr "failed to clear pid $pid for patch $patch" && return 1
     get_status "$patch"
     errorcheck && \
         echoerr "patch failure: check log for $patch patch" && \
@@ -132,69 +296,67 @@ wait_for_patch() {
 
 get_log_name() {
     local patch=${1##*/}
-    [ ! -d "$root" ] && local root=
-    [ ! -d "$root/var/log/server/patches" ] && mkdir -p "$root/var/log/server/patches"
-    [ ! -f "$root/var/log/server/patches/$patch.log" ] && \
-        echo "$root/var/log/server/patches/$patch.log" && return 0
+    [ ! -d "/var/log/server/patches" ] && mkdir -p "/var/log/server/patches"
+    [ ! -f "/var/log/server/patches/$patch.log" ] && \
+        echo "/var/log/server/patches/$patch.log" && return 0
     local ln=1
-    while [ -f "$root/var/log/server/patches/$patch.$ln.log" ]
+    while [ -f "/var/log/server/patches/$patch.$ln.log" ]
     do
         ln=$((ln+1))
     done
-    mv "$root/var/log/server/patches/$patch.log" "$root/var/log/server/patches/$patch.$ln.log"
-    echo "$root/var/log/server/patches/$patch.log"
+    mv "/var/log/server/patches/$patch.log" "/var/log/server/patches/$patch.$ln.log"
+    echo "/var/log/server/patches/$patch.log"
     return 0
 }
 
 execute_patch() {
     local patch=${1##*/}
-    local ppid=$(get_patch_pid "$patch")
-    [ "x$ppid" != "x" ] && \
-        echo "patch $patch already running on pid $ppid - skipping" && \
+    local pid=$(get_patch_pid "$patch")
+    [ "x$pid" != "x" ] && \
+        echo "patch $patch already running on pid $pid - skipping" && \
         return 0
     async_patch "$patch" >/dev/null 2>&1
+    errorcheck && echoerr "failed to start patch $patch" && return 1
     echo "started $patch patch on pid $(get_patch_pid "$patch")"
     return 0
 }
 
 set_status() {
     local patch=${1##*/}
-    [ ! -d "$root" ] && local root=
-    [ ! -d "$root/etc/server/patches" ] && mkdir -p "$root/etc/server/patches"
-    echo "$2" > "$root/etc/server/patches/$patch.status"
+    [ ! -d "/etc/server/patches" ] && mkdir -p "/etc/server/patches"
+    echo "$2" > "/etc/server/patches/$patch.status"
 }
 
 get_status() {
     local patch=${1##*/}
-    [ ! -d "$root" ] && local root=
-    [ ! -f "$root/etc/server/patches/$patch.status" ] && return 0
-    return $(cat "$root/etc/server/patches/$patch.status")
+    [ ! -f "/etc/server/patches/$patch.status" ] && return 0
+    return $(cat "/etc/server/patches/$patch.status")
 }
 
 async_patch() {
     local patch=${1##*/}
-    [ "x$root" == "x" ] && local chroot_eval=
     {
-        eval "$chroot_eval \"$SERVER_INSTALL/patches/$patch\"" >"$(get_log_name "$patch")" 2>&1
+        "$SERVER_INSTALL/patches/$patch" >"$(get_log_name "$patch")" 2>&1
         set_status "$patch" "$?"
-        return 0
     } & >/dev/null 2>&1
     set_patch_pid "$patch" "$!"
+    errorcheck && echoerr "failed to set pid for patch $patch" && return 1
 }
 
 patch_requires() {
     local patch=${1##*/}
     local version=$2
-    local ppid=$(get_patch_pid "$patch")
-    if [ "x$ppid" != "x" ]
+    local pid=$(get_patch_pid "$patch")
+    if [ "x$pid" != "x" ]
     then
-        echo "required patch $patch current running on pid $ppid - waiting"
+        echo "required patch $patch current running on pid $pid - waiting"
     else
         get_status "$patch"
         errorcheck && echoerr "required patch $patch failed" && return 1
         check_version "$version" "$patch" && echo "required patch $patch already on latest version." && return 0
         echo "required patch $patch does not meet version $version - executing"
         execute_patch "$patch"
+        errorcheck && echoerr "starting patch $patch might have failed"
     fi
     wait_for_patch "$patch"
     errorcheck && echo "required patch $patch failed" && return 1 || return 0
@@ -202,24 +364,21 @@ patch_requires() {
 
 get_patch_pid() {
     local patch=${1##*/}
-    [ ! -d "$root" ] && local root=
-    [ -f "$root/var/run/server/patches/$patch" ] && \
-        echo $(cat "$root/var/run/server/patches/$patch") && \
+    [ -f "/var/run/server/patches/$patch" ] && \
+        echo $(cat "/var/run/server/patches/$patch") && \
         return 0 || return 1
 }
 
 set_patch_pid() {
     local patch=${1##*/}
-    [ ! -d "$root" ] && local root=
-    [ ! -d "$root/var/run/server/patches" ] && mkdir -p "$root/var/run/server/patches"
+    [ ! -d "/var/run/server/patches" ] && mkdir -p "/var/run/server/patches"
     echo "$2" > "/var/run/server/patches/$patch"
     return 0
 }
 
 clear_patch_pid() {
     local patch=${1##*/}
-    [ ! -d "$root" ] && local root=
-    [ -f "$root/var/run/server/patches/$patch" ] && rm "$root/var/run/server/patches/$patch" && return 0
+    [ -f "/var/run/server/patches/$patch" ] && rm "/var/run/server/patches/$patch" && return 0
     echoerr "no pid for $patch patch." && return 1
 }
 
@@ -228,17 +387,16 @@ clear_patch_pid() {
 #   meaning either the version is unknown or less than or equal to the last run
 check_version() {
     local patch=${2##*/}
-    [ ! -d "$root" ] && local root=
-    [ -f "$root/etc/server/patches/$patch" ] && \
-        local local_version=$(cat "$root/etc/server/patches/$patch")
+    [ -f "/etc/server/patches/$patch" ] && \
+        local local_version=$(cat "/etc/server/patches/$patch")
     [ "x$local_version" == "x" ] && return 1
+    [ "x$local_version" == "x0" ] && return 0
     vers_test "$1" "-gt" "$local_version" && return 1 || return 0
 }
 
 set_version() {
     local patch=${2##*/}
-    [ ! -d "$root" ] && local root=
-    [ ! -d "$root/etc/server/patches" ] && mkdir -p "$root/etc/server/patches"
+    [ ! -d "/etc/server/patches" ] && mkdir -p "/etc/server/patches"
     echo "$1" > "/etc/server/patches/$patch"
     return 0
 }
@@ -254,8 +412,7 @@ set_server_setting() {
 
 get_server_setting() {
     local setting=$1
-    [ ! -d "$root" ] && local root=
-    [ -f "$root/etc/server/settings/$setting" ] && echo "$(cat $root/etc/server/settings/$setting)" && return 0
+    [ -f "/etc/server/settings/$setting" ] && echo "$(cat /etc/server/settings/$setting)" && return 0
     echoerr "no server setting named $setting" && return 1
 }
 

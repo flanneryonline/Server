@@ -40,36 +40,33 @@ then
     ln -s $BACKUP_MOUNT_LOCATION/files $STORAGE_SHARE_DIR
 fi
 
-for backup in configs movies shows unsorted shares
-do
-    echo "creating backup service is systemd for $backup"
+if [ $backup_enabled -eq 1 ]
+then
+    for backup in configs movies shows unsorted shares
+    do
+        echo "creating backup service in systemd for $backup"
 
-    [ ! -e /etc/systemd/system/backup-$backup.service ] && \
-        ln -s /opt/server/systemd/backup/backup-$backup.service /etc/systemd/system/backup-$backup.service
-    [ ! -h /etc/systemd/system/backup-$backup.service ] && \
-        rm -r /etc/systemd/system/backup-$backup.service && \
-        ln -s /opt/server/systemd/backup/backup-$backup.service /etc/systemd/system/backup-$backup.service
+        [ ! -e /etc/systemd/system/backup-$backup.service ] && \
+            ln -s /opt/server/systemd/backup/backup-$backup.service /etc/systemd/system/backup-$backup.service
+        [ ! -h /etc/systemd/system/backup-$backup.service ] && \
+            rm -r /etc/systemd/system/backup-$backup.service && \
+            ln -s /opt/server/systemd/backup/backup-$backup.service /etc/systemd/system/backup-$backup.service
 
-    [ ! -e /etc/systemd/system/backup-$backup.timer ] && \
-        ln -s /opt/server/systemd/backup/backup-$backup.timer /etc/systemd/system/backup-$backup.timer
-    [ ! -h /etc/systemd/system/backup-$backup.timer ] && \
-        rm -r /etc/systemd/system/backup-$backup.timer && \
-        ln -s /opt/server/systemd/backup/backup-$backup.timer /etc/systemd/system/backup-$backup.timer
+        [ ! -e /etc/systemd/system/backup-$backup.timer ] && \
+            ln -s /opt/server/systemd/backup/backup-$backup.timer /etc/systemd/system/backup-$backup.timer
+        [ ! -h /etc/systemd/system/backup-$backup.timer ] && \
+            rm -r /etc/systemd/system/backup-$backup.timer && \
+            ln -s /opt/server/systemd/backup/backup-$backup.timer /etc/systemd/system/backup-$backup.timer
 
-    ! ischroot && systemctl daemon-reload
+        ! ischroot && systemctl daemon-reload
 
-    if [ $SERVER_SERVICES_ENABLED -eq 1 ] && ! systemctl is-enabled backup-$backup.timer
-    then
-        echo "enabling $backup backup service"
-        systemctl enabled backup-$backup.timer
-    fi
-
-    if [ $SERVER_SERVICES_ENABLED -eq 0 ] && systemctl is-enabled backup-$backup.timer
-    then
-        echo "disabling $backup backup service"
-        systemctl disable backup-$backup.timer
-    fi
-done
+        if ! systemctl is-enabled backup-$backup.timer
+        then
+            echo "enabling $backup backup service"
+            systemctl enabled backup-$backup.timer
+        fi
+    done
+fi
 
 set_version $version ${0##*/}
 exit 0

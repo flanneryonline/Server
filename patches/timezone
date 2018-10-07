@@ -6,7 +6,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=1
+version=0
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 

@@ -10,6 +10,9 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
+root=/mnt/install
+chroot_eval="chroot "$root" /usr/bin/env PATH=/usr/sbin:/usr/bin/:/bin:/sbin DEBIAN_FRONTEND=noninteractive"
+
 SYNC_DATA=${SYNC_DATA:-1}
 FAST_STORAGE_ENABLED=${FAST_STORAGE_ENABLED:-1}
 SLOW_STORAGE_ENABLED=${SLOW_STORAGE_ENABLED:-1}
@@ -36,11 +39,19 @@ boot_disks=$(filter_quotes "$(eval $wt_boot $(whiptail_disks) 2>&1 >/dev/tty)")
 #whiptail --yes-button "Confirm" --no-button "Cancel" --title "Confirm Info" --yesno "$(wt_confirm)" 0 10
 #errorcheck && exit 1
 
-chmod +x "$SERVER_INSTALL/patches/apt"
-chmod +x "$SERVER_INSTALL/patches/locale"
-execute_patch "$SERVER_INSTALL/patches/apt"
-wait_for_patch "apt"
-errorcheck && echoerr "apt patch failed" && exit 1
+[ -f /etc/apt/sources.list ] && rm /etc/apt/sources.list
+touch /etc/apt/sources.list
+[ ! -d /etc/apt/sources.list.d ] && mkdir -p /etc/apt/sources.list.d
+[ "$(ls -A /etc/apt/sources.list.d)" ] && rm /etc/apt/sources.list.d/*
+
+echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE main universe" \
+    >  /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.list
+
+echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-updates main universe" \
+    >  /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.updates.list
+
+echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-security main universe" \
+    >  /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.security.list
 
 apt-get update
 apt-get install -y \
@@ -51,9 +62,6 @@ apt-get install -y \
     curl \
     apt-transport-https
 errorcheck && exit 1
-
-root=/mnt/install
-chroot_eval="chroot "$root" /usr/bin/env PATH=/usr/sbin:/usr/bin/:/bin:/sbin DEBIAN_FRONTEND=noninteractive"
 
 clean_install
 errorcheck && exit 1

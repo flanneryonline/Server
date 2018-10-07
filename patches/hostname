@@ -6,15 +6,15 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=1
+version=0
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
-echo "setting hostname fie"
+echo "setting hostname file"
 [ -f /etc/hostname ] && rm /etc/hostname
 echo $SERVER_HOSTNAME > /etc/hostname
 
-echo "setting hosts fie"
+echo "setting hosts file"
 [ -f /etc/hosts ] && rm /etc/hosts
 echo "127.0.0.1 localhost" > /etc/hosts
 echo "127.0.0.1 $SERVER_FQDN $SERVER_HOSTNAME" >> /etc/hosts

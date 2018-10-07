@@ -12,6 +12,8 @@ check_version $version ${0##*/} && echo "patch ${0##*/} already on latest versio
 
 patch_requires "backup" 1
 errorcheck && exit 1
+patch_requires "media_storage" 1
+errorcheck && exit 1
 
 echo "getting system settings"
 
