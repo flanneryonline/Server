@@ -12,7 +12,7 @@ check_version $version ${0##*/} && echo "patch ${0##*/} already on latest versio
 
 patch_requires "apt_install" 1
 errorcheck && exit 1
-patch_requires "users" 1
+patch_requires "users" 0
 errorcheck && exit 1
 patch_requires "storage" 1
 errorcheck && exit 1

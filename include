@@ -248,19 +248,19 @@ server_update() {
 
     get_server_code
 
+    local patch_return=0
     echo "kicking off patches"
     for patch in $(ls "$SERVER_INSTALL/patches")
     do
         execute_patch "$patch"
-        patch_return=$((patch_return+$?))
+        local patch_return=$((patch_return+$?))
     done
 
-    local patch_return=0
     echo "waiting for patches to complete"
     for patch in $(ls "$SERVER_INSTALL/patches")
     do
         wait_for_patch "$patch"
-        patch_return=$((patch_return+$?))
+        local patch_return=$((patch_return+$?))
     done
     [ $patch_return -gt 0 ] && return 1
 
@@ -297,7 +297,7 @@ get_server_code() {
 wait_for_patch() {
     local patch=${1##*/}
     local pid=$(get_patch_pid "$patch")
-    errorcheck && echoerr "pid not found for patch $patch" && return 1
+    errorcheck || [ -z "$pid" ] && return 0
     echo "waiting for patch $patch on pid $pid"
     tail --pid=$pid -f "/var/log/server/patches/$patch.log"
     while kill -0 $ppid >/dev/nul 2>&1
