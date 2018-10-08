@@ -43,7 +43,7 @@ errorcheck && exit 1
 if ! systemctl is-enabled media-services.service
 then
     echo "enabling media-services.service"
-    systemctl enabled media-services.service
+    systemctl enable media-services.service
     ! ischroot && systemctl start media-services.service
 fi
 

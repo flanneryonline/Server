@@ -228,7 +228,9 @@ server_install() {
         rm -r "$root/etc/systemd/system/server-update.timer" && \
         eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.timer /etc/systemd/system/server-update.timer"
 
-    eval "$chroot_eval systemctl enabled server-update.timer"
+    eval "$chroot_eval systemctl enable server-update.timer"
+
+    return 0
 }
 
 server_update() {

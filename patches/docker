@@ -87,7 +87,7 @@ echo "adding docker cleanup scripts to systemd"
 if ! systemctl is-enabled docker-cleanup.timer
 then
     echo "enabling docker cleanup service"
-    systemctl enabled docker-cleanup.timer
+    systemctl enable docker-cleanup.timer
 fi
 
 set_version $version ${0##*/}

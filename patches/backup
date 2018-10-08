@@ -63,7 +63,7 @@ then
         if ! systemctl is-enabled backup-$backup.timer
         then
             echo "enabling $backup backup service"
-            systemctl enabled backup-$backup.timer
+            systemctl enable backup-$backup.timer
         fi
     done
 fi
