@@ -314,6 +314,21 @@ wait_for_patch() {
     return 0
 }
 
+wait_for_required_patch() {
+    local patch=${1##*/}
+    local pid=$(get_patch_pid "$patch")
+    while kill -0 $ppid >/dev/nul 2>&1
+    do
+        sleep 0.5s
+    done
+    get_status "$patch"
+    errorcheck && \
+        echoerr "required patch failure: check log for $patch patch" && \
+        return 1
+    echo "required patch complete: $patch"
+    return 0
+}
+
 get_log_name() {
     local patch=${1##*/}
     [ ! -d "/var/log/server/patches" ] && mkdir -p "/var/log/server/patches"
@@ -380,7 +395,7 @@ patch_requires() {
         execute_patch "$patch"
         errorcheck && echoerr "starting patch $patch might have failed"
     fi
-    wait_for_patch "$patch"
+    wait_for_required_patch "$patch"
     errorcheck && echo "required patch $patch failed" && return 1 || return 0
 }
 
