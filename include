@@ -361,6 +361,8 @@ async_patch() {
     } & >/dev/null 2>&1
     set_patch_pid "$patch" "$!"
     errorcheck && echoerr "failed to set pid for patch $patch" && return 1
+
+    return 0
 }
 
 patch_requires() {
@@ -407,11 +409,12 @@ clear_patch_pid() {
 #   meaning either the version is unknown or less than or equal to the last run
 check_version() {
     local patch=${2##*/}
+    local version=$1
+    [ "x$version" == "x0" ] && return 0
     [ -f "/etc/server/patches/$patch" ] && \
         local local_version=$(cat "/etc/server/patches/$patch")
     [ "x$local_version" == "x" ] && return 1
-    [ "x$local_version" == "x0" ] && return 0
-    vers_test "$1" "-gt" "$local_version" && return 1 || return 0
+    vers_test "$version" "-gt" "$local_version" && return 1 || return 0
 }
 
 set_version() {
