@@ -234,6 +234,18 @@ server_install() {
 }
 
 server_update() {
+
+    echo "running binary updates (apt)"
+    #binary updates
+    apt-get update -qq
+    errorcheck && echoerr "error during apt-get update" && return 1
+    apt-get upgrade -qq --no-install-recommends
+    errorcheck && echoerr "error during apt-get upgrade" && return 1
+    apt-get dist-upgrade -qq --no-install-recommends
+    errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
+    apt-get install -qq --no-install-recommends git
+    errorcheck && echoerr "error installing git" && return 1
+
     get_server_code
 
     echo "kicking off patches"
@@ -251,15 +263,6 @@ server_update() {
         patch_return=$((patch_return+$?))
     done
     [ $patch_return -gt 0 ] && return 1
-
-    echo "running binary updates (apt)"
-    #binary updates
-    eval apt-get update -qq
-    errorcheck && echoerr "error during apt-get update" && return 1
-    eval apt-get upgrade -qq --no-install-recommends
-    errorcheck && echoerr "error during apt-get upgrade" && return 1
-    eval apt-get dist-upgrade -qq --no-install-recommends
-    errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
 
     echo "server updates complete"
     return 0

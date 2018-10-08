@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
-. /opt/server/environment
-. /opt/server/include
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+
+. $SERVER_INSTALL/environment
+. $SERVER_INSTALL/include
 
 snapshot_date=$(date -Is)
 
@@ -13,9 +15,6 @@ take_snapshot() {
 }
 
 run_updates() {
-    docker_compose_update
-    errorcheck && echoerr "error during docker compose update" && return 1
-
     server_update
     errorcheck && echoerr "error during server update" && return 1
 
