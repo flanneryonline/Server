@@ -66,7 +66,9 @@ server_install() {
 
     #timezone
     echo "linking timezone info to /etc/localtime"
-    eval "$chroot_eval ln -s /usr/share/zoneinfo/$SERVER_TIMEZONE /etc/localtime"
+    [ -f "$root/etc/localtime" ] && rm "$root/etc/localtime"
+    [ -h "$root/etc/localtime" ] && rm "$root/etc/localtime"
+    eval "$chroot_eval ln -s \"/usr/share/zoneinfo/$SERVER_TIMEZONE\" /etc/localtime"
     errorcheck && exit 1
     echo "creating /etc/timezone"
     echo $SERVER_TIMEZONE > $root/etc/timezone
@@ -74,12 +76,14 @@ server_install() {
 
     #hostname
     echo "setting hostname file"
-    [ -e /etc/hostname ] && rm /etc/hostname
-    echo $SERVER_HOSTNAME > /etc/hostname
+    [ -f "$root/etc/hostname" ] && rm "$root/etc/hostname"
+    [ -h "$root/etc/hostname" ] && rm "$root/etc/hostname"
+    echo $SERVER_HOSTNAME > "$root/etc/hostname"
     echo "setting hosts file"
-    [ -e /etc/hosts ] && rm /etc/hosts
-    echo "127.0.0.1 localhost" > /etc/hosts
-    echo "127.0.0.1 $SERVER_FQDN $SERVER_HOSTNAME" >> /etc/hosts
+    [ -f "$root/etc/hosts" ] && rm "$root/etc/hosts"
+    [ -h "$root/etc/hosts" ] && rm "$root/etc/hosts"
+    echo "127.0.0.1 localhost" > "$root/etc/hosts"
+    echo "127.0.0.1 $SERVER_FQDN $SERVER_HOSTNAME" >> "$root/etc/hosts"
 
     #networking
     echo "setting up networking"
@@ -164,9 +168,7 @@ server_install() {
 
     #efi
     echo "formating efi partition"
-    eval "$chroot_eval apt-get remove -qq os-prober"
 
-    sed -i 's/GRUB_HIDDEN_TIMEOUT=0/#GRUB_HIDDEN_TIMEOUT=0/' "$root/etc/default/grub"
     sed -i 's/GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"/GRUB_CMDLINE_LINUX_DEFAULT=""/' "$root/etc/default/grub"
 
     disk_num=1
@@ -199,6 +201,19 @@ server_install() {
         disk_num=$((disk_num+1))
     done
     echo "efi grub setup complete"
+
+    #users
+    groupadd -R "$root" -g $ADMIN_GROUP_ID $ADMIN_USERNAME
+    errorcheck && return 1
+    groupadd -R "$root" -g $DOCKER_PGID doc
+    errorcheck && return 1
+    useradd -R "$root" -m -u $ADMIN_USER_ID -g $ADMIN_USERNAME \
+        -G plugdev,sudo,doc -s /bin/bash $ADMIN_USERNAME
+    errorcheck && return 1
+    useradd -R "$root" -r -u $DOCKER_PUID -g doc -s /sbin/nologin doc
+    errorcheck && return 1
+    echo "$ADMIN_USERNAME:$admin_password" | chpasswd -R "$root"
+    errorcheck && return 1
 
     #server update service
     [ ! -e "$root/etc/systemd/system/server-update.service" ] && \
