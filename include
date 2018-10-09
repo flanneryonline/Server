@@ -21,6 +21,19 @@ clean_install(){
     errorcheck && return 1
 
     echo "saving system settings to install location"
+    #save disk links so it survives reboot in new os
+    local fast_disk_temp=$fast_disks
+    fast_disks=
+    for disk in $fast_disk_temp
+    do
+        fast_disks="$fast_disks $(get_disk_link $disk)"
+    done
+    local slow_disk_temp=$slow_disks
+    slow_disks=
+    for disk in $slow_disk_temp
+    do
+        slow_disks="$slow_disks $(get_disk_link $disk)"
+    done
     set_server_setting "password" "$admin_password"
     set_server_setting "backup-sync-enabled" "$SYNC_DATA"
     set_server_setting "backup-enabled" "$BACKUP_ENABLED"
@@ -29,7 +42,6 @@ clean_install(){
     set_server_setting "services-enabled" "$SERVICES_ENABLED"
     set_server_setting "fast-disks" "$fast_disks"
     set_server_setting "slow-disks" "$slow_disks"
-    set_server_setting "boot-disks" "$boot_disks"
     set_server_setting "link-backup" "$LINK_BACKUP"
 
     server_install
@@ -128,6 +140,8 @@ server_install() {
     echo "net.ipv6.conf.all.disable_ipv6 = 1" > "$root/etc/sysctl.d/10-disable-ipv6.conf"
     echo "net.ipv6.conf.default.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
     echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> "$root/etc/sysctl.d/10-disable-ipv6.conf"
+
+    eval "$chroot_eval systemctl enable systemd-networkd"
 
     #apt
     echo "setting up system package management"
@@ -533,7 +547,7 @@ zfs_boot_setup() {
     sleep 1s
 
     raid_type="mirror"
-    [ $(howmany $boot_disk_list) -eq 1 ] && raid_type=""
+    [ $(howmany "$boot_disk_list") -eq 1 ] && raid_type=""
 
     eval "zpool create -f \
         -o ashift=12 \
@@ -608,6 +622,17 @@ get_disk_link() {
     return 0
 }
 
+#gets a single /dev/sdx
+#link based on the /dev/disk/by-xx link provided
+#
+#parameters:
+#   1 - base dev link ex: "/dev/disk/by-id/scsi-12315162363"
+get_disk() {
+    udevadm info -q all $1 | grep DEVNAME | sed 's/ /\n/g' | grep /dev/  | sed 's/DEVNAME=//'
+    errorcheck && return 1
+    return 0
+}
+
 #removes all mounts/swaps/zpools from disk. anything that would prevent repartitioning.
 #
 #variables
@@ -647,5 +672,5 @@ whiptail_disks() {
         local whiptail_output=$(echo "$whiptail_output" | grep -v $f)
     done
     local root_mount_name=$(mount | awk '/\ \/\ / {print $1}')
-    echo "$(echo "$whiptail_output" | grep -v ${root_mount_name##/dev/})"
+    echo "$whiptail_output" | grep -v ${root_mount_name##/dev/}
 }
