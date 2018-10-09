@@ -2,6 +2,7 @@
 
 set -e
 
+export DEBIAN_FRONTEND=noninteractive
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"

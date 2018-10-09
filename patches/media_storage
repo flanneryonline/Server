@@ -2,6 +2,7 @@
 
 set -e
 
+export DEBIAN_FRONTEND=noninteractive
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
@@ -31,6 +32,7 @@ echo "  slow_storage_enabled=$slow_storage_enabled"
 echo "  link_backup=$link_backup"
 
 if [ $link_backup -eq 0 ]
+then
     if [ $fast_storage_enabled -eq 1 ]
     then
         if ! zfs list $FAST_STORAGE_POOL/configs >/dev/null 2>&1
