@@ -267,14 +267,22 @@ server_update() {
     for patch in $(ls "$SERVER_INSTALL/patches")
     do
         execute_patch "$patch"
-        local patch_return=$((patch_return+$?))
+        if [ "$?" -gt 0 ]
+        then
+            echo "error kicking off patch $patch"
+            local patch_return=$((patch_return+1))
+        fi
     done
 
     echo "waiting for patches to complete"
     for patch in $(ls "$SERVER_INSTALL/patches")
     do
         wait_for_patch "$patch"
-        local patch_return=$((patch_return+$?))
+        if [ "$?" -gt 0 ]
+        then
+            echo "error during patch $patch"
+            local patch_return=$((patch_return+1))
+        fi
     done
     [ $patch_return -gt 0 ] && return 1
 
