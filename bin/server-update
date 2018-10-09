@@ -1,25 +1,23 @@
 #!/usr/bin/env bash
 
+set -e
+
 export DEBIAN_FRONTEND=noninteractive
-
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
-
-. $SERVER_INSTALL/environment
-. $SERVER_INSTALL/include
+. "$SERVER_INSTALL/environment"
+. "$SERVER_INSTALL/include"
 
 snapshot_date=$(date -Is)
 
 take_snapshot() {
     zfs snapshot $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@$snapshot_date
     errorcheck && echoerr "error during zfs snapshot" && return 1
-
     return 0
 }
 
 run_updates() {
     server_update
     errorcheck && echoerr "error during server update" && return 1
-
     return 0
 }
 

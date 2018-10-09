@@ -54,7 +54,7 @@ then
         -o ashift=13 \
         -O atime=off \
         -O compression=lz4 \
-        -O mountpoint=/mnt \
+        -O mountpoint=none \
         -O canmount=off \
         $FAST_STORAGE_POOL $raid_type $fast_disk_list"
     errorcheck && echoerr "error creating fast storage pool" && return 1
@@ -91,7 +91,7 @@ then
         -o ashift=12 \
         -O atime=off \
         -O compression=lz4 \
-        -O mountpoint=/mnt \
+        -O mountpoint=none \
         $SLOW_STORAGE_POOL $raid_type $slow_disk_list"
     errorcheck && echoerr "error creating storage pool" && return 1
 fi
