@@ -25,6 +25,7 @@ fast_storage_enabled=${fast_storage_enabled:-0}
 
 echo "  fast_storage_enabled=$fast_storage_enabled"
 
+[ ! -d /var/lib/docker ] && mkdir /var/lib/docker
 if [ $fast_storage_enabled -eq 1 ]
 then
     if ! zfs list $FAST_STORAGE_POOL/docker >/dev/null 2>&1

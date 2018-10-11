@@ -28,6 +28,7 @@ apt-get install -qq --no-install-recommends \
     curl \
     git \
     gdisk \
+    ntpdate \
     openssh-server
 errorcheck && echoerr "error installing packages" && exit 1
 

@@ -378,7 +378,8 @@ execute_patch() {
         return 0
     {
         "$SERVER_INSTALL/patches/$patch" >"$(get_log_name "$patch")" 2>&1
-        set_status "$patch" "$?"
+        local ret=$?
+        set_status "$patch" "$ret"
     } & >/dev/null 2>&1
     set_patch_pid "$patch" "$!"
     errorcheck && echoerr "failed to set pid for patch $patch" && return 1
