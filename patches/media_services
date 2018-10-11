@@ -25,6 +25,10 @@ patch_requires "backup_sync_movies" 1
 errorcheck && exit 1
 patch_requires "backup_sync_unsorted" 1
 errorcheck && exit 1
+patch_requires "docker" 1
+errorcheck && exit 1
+patch_requires "docker_compose" 1
+errorcheck && exit 1
 
 [ ! -d /etc/docker/compose ] && mkdir -p /etc/docker/compose
 [ ! -e /etc/docker/compose/media-services ] && \

@@ -63,6 +63,8 @@ echo "deb [arch=amd64] https://download.docker.com/linux/$SERVER_DIST $SERVER_DI
     >  /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list
 
 echo "installing docker"
+apt-get uppdate -qq
+errorcheck && echoerr "error during docker apt-get update" && exit 1
 apt-get install -qq --no-install-recommends docker-ce
 errorcheck && echoerr "error installing docker" && exit 1
 
