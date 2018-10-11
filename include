@@ -267,7 +267,8 @@ server_update() {
     for patch in $(ls "$SERVER_INSTALL/patches")
     do
         execute_patch "$patch"
-        if [ "$?" -gt 0 ]
+        local ret=$?
+        if [ "$ret" -ne 0 ]
         then
             echo "error kicking off patch $patch"
             local patch_return=$((patch_return+1))
@@ -278,13 +279,14 @@ server_update() {
     for patch in $(ls "$SERVER_INSTALL/patches")
     do
         wait_for_patch "$patch"
-        if [ "$?" -gt 0 ]
+        local ret=$?
+        if [ "$ret" -ne 0 ]
         then
             echo "error during patch $patch"
             local patch_return=$((patch_return+1))
         fi
     done
-    [ $patch_return -gt 0 ] && return 1
+    [ "$patch_return" -ne 0 ] && return 1
 
     echo "server updates complete"
     return 0
@@ -304,7 +306,7 @@ get_server_code() {
     errorcheck && popd >/dev/null && echoerr "failed to update git repo" && return 1
     local local_rev=$(git rev-parse master)
     local server_rev=$(git rev-parse origin/master)
-    if [ $local_rev != $server_rev ]
+    if [ "$local_rev" != "$server_rev" ]
     then
         git reset --hard origin/master >dev/null
         errorcheck && popd >/dev/null && echoerr "failed to reset git" && return 1
@@ -319,10 +321,10 @@ get_server_code() {
 wait_for_patch() {
     local patch=${1##*/}
     local pid=$(get_patch_pid "$patch")
-    errorcheck || [ -z "$pid" ] && return 0
+    [ "x$pid" == "x" ] && echo "patch $patch isn't running..." && return 0
     echo "waiting for patch $patch on pid $pid"
     tail --pid=$pid -f "/var/log/server/patches/$patch.log"
-    while kill -0 $ppid >/dev/nul 2>&1
+    while kill -0 "$pid" >/dev/nul 2>&1
     do
         sleep 0.5s
     done
@@ -339,7 +341,9 @@ wait_for_patch() {
 wait_for_required_patch() {
     local patch=${1##*/}
     local pid=$(get_patch_pid "$patch")
-    while kill -0 $ppid >/dev/nul 2>&1
+    [ "x$pid" == "x" ] && echo "patch $patch isn't running..." && return 0
+    echo "waiting for patch $patch on pid $pid"
+    while kill -0 "$pid" >/dev/nul 2>&1
     do
         sleep 0.5s
     done
@@ -372,8 +376,12 @@ execute_patch() {
     [ "x$pid" != "x" ] && \
         echo "patch $patch already running on pid $pid - skipping" && \
         return 0
-    async_patch "$patch" >/dev/null 2>&1
-    errorcheck && echoerr "failed to start patch $patch" && return 1
+    {
+        "$SERVER_INSTALL/patches/$patch" >"$(get_log_name "$patch")" 2>&1
+        set_status "$patch" "$?"
+    } & >/dev/null 2>&1
+    set_patch_pid "$patch" "$!"
+    errorcheck && echoerr "failed to set pid for patch $patch" && return 1
     echo "started $patch patch on pid $(get_patch_pid "$patch")"
     return 0
 }
@@ -388,18 +396,6 @@ get_status() {
     local patch=${1##*/}
     [ ! -f "/etc/server/patches/$patch.status" ] && return 0
     return $(cat "/etc/server/patches/$patch.status")
-}
-
-async_patch() {
-    local patch=${1##*/}
-    {
-        "$SERVER_INSTALL/patches/$patch" >"$(get_log_name "$patch")" 2>&1
-        set_status "$patch" "$?"
-    } & >/dev/null 2>&1
-    set_patch_pid "$patch" "$!"
-    errorcheck && echoerr "failed to set pid for patch $patch" && return 1
-
-    return 0
 }
 
 patch_requires() {
