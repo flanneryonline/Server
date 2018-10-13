@@ -5,9 +5,9 @@ echo -e "\nPool status"
 for pool in $(zpool list -H -o name)
 do
     used=$(zfs list -H -o used $pool)
-    used_bites=$(df | grep $pool | awk '{print $3}')
+    used_bites=$(df | grep $pool | head -1 | awk '{print $3}')
     available=$(zfs list -H -o avail $pool)
-    available_bites=$(df | grep $pool | awk '{print $4}')
+    available_bites=$(df | grep $pool | head -1 | awk '{print $4}')
     percent=$((70*used_bites/available_bites))
     line="[\e[42m" #green
     [ $percent -gt 50 ] && line="[\e[43m" #yellow
