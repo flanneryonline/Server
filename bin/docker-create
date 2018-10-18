@@ -1,0 +1,115 @@
+#!/usr/bin/env bash
+
+set -e
+
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+. "$SERVER_INSTALL/environment"
+
+#plex
+docker create \
+--name=plex \
+--net=host \
+-e VERSION=latest \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/plex:/config \
+-v $STORAGE_MEDIA_DIR:/media \
+--tmpfs /transcode \
+linuxserver/plex
+
+#pia
+docker create -t \
+--name=pia \
+-p 9117:9117 \
+-p 5075:5075 \
+-p 6789:6789 \
+-p 8112:8112 \
+-p 58846:58846 \
+-p 58946:58946 \
+-p 58946:58946/udp \
+--cap-add=NET_ADMIN \
+--device /dev/net/tun \
+--dns 1.1.1.1 \
+-e TZ=$SERVER_TIMEZONE \
+--tmpfs /tmp \
+dperson/openvpn-client \
+-r 10.0.0.0/8 -f "" -d
+
+#sonarr
+docker create \
+--name=sonarr \
+-p 8989:8989 \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/sonarr:/config \
+-v $STORAGE_MEDIA_DIR/shows:/shows \
+-v $STORAGE_DOWNLOAD_DIR:/downloads \
+linuxserver/sonarr
+
+#radarr
+docker create \
+--name=radarr \
+-p 7878:7878 \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/radarr:/config \
+-v $STORAGE_MEDIA_DIR/movies:/movies \
+-v $STORAGE_DOWNLOAD_DIR:/downloads \
+linuxserver/radarr
+
+#nzbget
+docker create \
+--name=nzbget \
+--net=container:pia \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/nzbget:/config \
+-v $STORAGE_DOWNLOAD_DIR:/downloads \
+linuxserver/nzbget
+
+#deluge
+docker create \
+--name=deluge \
+--net=container:pia \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/deluge:/config \
+-v $STORAGE_DOWNLOAD_DIR:/downloads \
+linuxserver/deluge
+
+#hydra
+docker create \
+--name=hydra \
+--net=container:pia \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/hydra:/config \
+linuxserver/hydra
+
+#jackett
+docker create \
+--name=jackett \
+--net=container:pia \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/jackett:/config \
+linuxserver/jackett
+
+#ombi
+docker create \
+--name=ombi \
+-p 3579:3579 \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/ombi:/config \
+linuxserver/ombi
+
+#tautulli
+docker create \
+--name=tautulli \
+-p 8181:8181 \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/tautulli:/config \
+-v $STORAGE_CONFIG_DIR/plex:/logs:ro \
+linuxserver/tautulli

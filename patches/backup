@@ -18,27 +18,15 @@ errorcheck && exit 1
 
 echo "getting system settings"
 
-link_backup=$(get_server_setting "link-backup")
-link_backup=${link_backup:-0}
 backup_enabled=$(get_server_setting "backup-enabled")
 backup_enabled=${backup_enabled:-0}
 
-echo "  link_backup=$link_backup"
 echo "  backup_enabled=$backup_enabled"
 
 if [ $backup_enabled -eq 1 ]
 then
     echo "creating fstab entry for backup"
     echo "$BACKUP_ADDRESS:/$BACKUP_FOLDER $BACKUP_MOUNT_LOCATION nfs defaults,x-systemd.requires=nfs-client.target 0 0" >> "/etc/fstab"
-fi
-
-if [ $link_backup -eq 1 ]
-then
-    echo "creating backup links"
-    ln -s $BACKUP_MOUNT_LOCATION/media $STORAGE_MEDIA_DIR
-    ln -s $BACKUP_MOUNT_LOCATION/downloads $STORAGE_DOWNLOAD_DIR
-    ln -s $BACKUP_MOUNT_LOCATION/configs $STORAGE_CONFIG_DIR
-    ln -s $BACKUP_MOUNT_LOCATION/files $STORAGE_SHARE_DIR
 fi
 
 if [ $backup_enabled -eq 1 ]

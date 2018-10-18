@@ -1,0 +1,16 @@
+[Unit]
+Description=Service running radarr in Docker.
+Requires=docker-create.service
+Requires=deluge.service
+Requires=nzbget.service
+After=docker-create.service
+After=deluge.service
+After=nzbget.service
+
+[Service]
+ExecStartPre=/usr/bin/docker start radarr
+ExecStart=/usr/bin/docker wait radarr
+ExecStop=/usr/bin/docker stop radarr
+
+[Install]
+WantedBy=multi-user.target

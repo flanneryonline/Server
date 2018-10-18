@@ -2,20 +2,28 @@
 
 # Declare array of services and pretty human readable names
 declare -a services=(
-"systemd-networkd"
-"systemd-resolved"
-"rsyslog"
-"ssh"
-"docker"
-"media-services"
+"plex"
+"pia"
+"nzbget"
+"deluge"
+"hydra"
+"jackett"
+"sonarr"
+"radarr"
+"ombi"
+"tautulli"
 )
 declare -a serviceName=(
-"Networking"
-"DNS Resolver"
-"Syslog"
-"SSH"
-"Docker"
-"Media Services"
+"Plex"
+"VPN"
+"NzbGet"
+"Deluge"
+"Hydra"
+"Jackett"
+"Sonarr"
+"Radarr"
+"Ombi"
+"Tautulli"
 )
 declare -a serviceStatus=()
 

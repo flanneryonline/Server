@@ -1,0 +1,14 @@
+[Unit]
+Description=Service running ombi in Docker.
+Requires=docker-create.service
+Requires=plex.service
+After=docker-create.service
+After=plex.service
+
+[Service]
+ExecStartPre=/usr/bin/docker start ombi
+ExecStart=/usr/bin/docker wait ombi
+ExecStop=/usr/bin/docker stop ombi
+
+[Install]
+WantedBy=multi-user.target

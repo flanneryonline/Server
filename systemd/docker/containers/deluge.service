@@ -1,0 +1,14 @@
+[Unit]
+Description=Service running deluge in Docker.
+Requires=docker-create.service
+Requires=pia.service
+After=docker-create.service
+After=pia.service
+
+[Service]
+ExecStartPre=/usr/bin/docker start deluge
+ExecStart=/usr/bin/docker wait deluge
+ExecStop=/usr/bin/docker stop deluge
+
+[Install]
+WantedBy=multi-user.target

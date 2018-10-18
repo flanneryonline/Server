@@ -1,0 +1,16 @@
+[Unit]
+Description=Service running sonarr in Docker.
+Requires=docker-create.service
+Requires=deluge.service
+Requires=nzbget.service
+After=docker-create.service
+After=deluge.service
+After=nzbget.service
+
+[Service]
+ExecStartPre=/usr/bin/docker start sonarr
+ExecStart=/usr/bin/docker wait sonarr
+ExecStop=/usr/bin/docker stop sonarr
+
+[Install]
+WantedBy=multi-user.target

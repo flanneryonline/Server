@@ -7,7 +7,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=1
+version=0
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
@@ -124,6 +124,12 @@ then
             errorcheck && echoerr "error creating shares" && return 1
         fi
     fi
+else
+    echo "creating backup links"
+    ln -s $BACKUP_MOUNT_LOCATION/media $STORAGE_MEDIA_DIR
+    ln -s $BACKUP_MOUNT_LOCATION/downloads $STORAGE_DOWNLOAD_DIR
+    ln -s $BACKUP_MOUNT_LOCATION/configs $STORAGE_CONFIG_DIR
+    ln -s $BACKUP_MOUNT_LOCATION/files $STORAGE_SHARE_DIR
 fi
 
 set_version $version ${0##*/}

@@ -1,0 +1,14 @@
+[Unit]
+Description=Service running jackett in Docker.
+Requires=docker-create.service
+Requires=pia.service
+After=docker-create.service
+After=pia.service
+
+[Service]
+ExecStartPre=/usr/bin/docker start jackett
+ExecStart=/usr/bin/docker wait jackett
+ExecStop=/usr/bin/docker stop jackett
+
+[Install]
+WantedBy=multi-user.target

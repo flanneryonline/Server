@@ -1,0 +1,14 @@
+[Unit]
+Description=Service running tautulli in Docker.
+Requires=docker-create.service
+Requires=plex.service
+After=docker-create.service
+After=plex.service
+
+[Service]
+ExecStartPre=/usr/bin/docker start tautulli
+ExecStart=/usr/bin/docker wait tautulli
+ExecStop=/usr/bin/docker stop tautulli
+
+[Install]
+WantedBy=multi-user.target
