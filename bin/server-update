@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -e
-
 export DEBIAN_FRONTEND=noninteractive
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
@@ -13,10 +11,9 @@ zfs snapshot $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@$snapshot_date
 errorcheck && echoerr "error during zfs snapshot" && exit 1
 
 server_update
-#uncomment this once everything is working
-#errorcheck && echoerr "error during server update - rolling back" && \
-#    zfs rollback $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@$snapshot_date && \
-#    exit 1
-#zfs destroy $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@$snapshot_date
+errorcheck && echoerr "error during server update - rolling back" && \
+    zfs rollback $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@$snapshot_date && \
+    exit 1
+zfs destroy $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@$snapshot_date
 
 exit 0
