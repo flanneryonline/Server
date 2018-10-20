@@ -24,3 +24,4 @@ type=$1
 [ "$type" = "user" ] && journalctl _UID=$(id -u $3) --since today -n $2
 [ "$type" = "group" ] && journalctl _GID=$(id -g $3) --since today -n $2
 [ "$type" = "dmsg" ] && journalctl -k -o short-precise
+[ "$type" = "docker" ] && docker logs $2 --tail $3

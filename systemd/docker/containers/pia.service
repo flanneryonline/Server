@@ -4,8 +4,7 @@ Requires=docker-create.service
 After=docker-create.service
 
 [Service]
-ExecStartPre=/usr/bin/docker start -i pia
-ExecStart=/usr/bin/docker wait pia
+ExecStart=/usr/bin/docker start -i pia
 ExecStop=/usr/bin/docker stop pia
 
 [Install]

@@ -12,45 +12,49 @@ version=0
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "media_storage" 1
-errorcheck && exit 1
 patch_requires "docker_compose" 1
-errorcheck && exit 1
 patch_requires "backup_sync_configs" 1
-errorcheck && exit 1
 patch_requires "backup_sync_data" 1
-errorcheck && exit 1
 patch_requires "backup_sync_shows" 1
-errorcheck && exit 1
 patch_requires "backup_sync_movies" 1
-errorcheck && exit 1
 patch_requires "backup_sync_unsorted" 1
-errorcheck && exit 1
 patch_requires "docker" 1
-errorcheck && exit 1
-patch_requires "docker_compose" 1
-errorcheck && exit 1
 
-[ ! -d /etc/docker/compose ] && mkdir -p /etc/docker/compose
-[ ! -e /etc/docker/compose/media-services ] && \
-    ln -s /opt/server/docker-compose/media-services /etc/docker/compose/media-services
-[ ! -h /etc/docker/compose/media-services ] && \
-    rm -r /etc/docker/compose/media-services && \
-    ln -s /opt/server/docker-compose/media-services /etc/docker/compose/media-services
-
-[ ! -e /etc/systemd/system/media-services.service ] && \
-    ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service
-[ ! -h /etc/systemd/system/media-services.service ] && \
-    rm -r /etc/systemd/system/media-services.service && \
-    ln -s /opt/server/systemd/docker/media-services.service /etc/systemd/system/media-services.service
+[ ! -e /etc/systemd/system/docker-create.service ] && \
+    ln -s /opt/server/systemd/docker/docker-create.service /etc/systemd/system/docker-create.service
+[ ! -h /etc/systemd/system/docker-create.service ] && \
+    rm -r /etc/systemd/system/docker-create.service && \
+    ln -s /opt/server/systemd/docker/docker-create.service /etc/systemd/system/docker-create.service
 
 ! ischroot && systemctl daemon-reload
 
-if ! systemctl is-enabled media-services.service
+if ! systemctl is-enabled docker-create.service
 then
-    echo "enabling media-services.service"
-    systemctl enable media-services.service
-    ! ischroot && systemctl start media-services.service
+    echo "enabling/starting docker-create.service"
+    systemctl enable docker-create.service
+    ! ischroot && systemctl start docker-create.service
 fi
+
+for service in pia plex tautulli ombi radarr sonarr deluge nzbget jackett hydra
+do
+    [ ! -e /etc/systemd/system/$service.service ] && \
+        ln -s /opt/server/systemd/docker/containers/$service.service /etc/systemd/system/$service.service
+    [ ! -h /etc/systemd/system/$service.service ] && \
+        rm -r /etc/systemd/system/$service.service && \
+        ln -s /opt/server/systemd/docker/containers/$service.service /etc/systemd/system/$service.service
+done
+
+! ischroot && systemctl daemon-reload
+
+for service in pia plex tautulli ombi radarr sonarr deluge nzbget jackett hydra
+do
+    if ! systemctl is-enabled $service.service
+    then
+        echo "enabling $service.service"
+        systemctl enable $service.service
+        ! ischroot && systemctl start $service.service
+    fi
+done
 
 set_version $version ${0##*/}
 exit 0
