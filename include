@@ -102,7 +102,7 @@ server_install() {
     nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
     [ "$(ls -A "$root/etc/systemd/network")" ] && \
         rm -r "$root/etc/systemd/network/"*
-    if [ $(howmany $nets) -eq 1 ]; then
+    if [ $(howmany "$nets") -eq 1 ]; then
         echo "[Match]" > "$root/etc/systemd/network/$nets.network"
         echo "Name=$nets" >> "$root/etc/systemd/network/$nets.network"
         echo "[Network]" >> "$root/etc/systemd/network/$nets.network"
@@ -110,7 +110,7 @@ server_install() {
         echo "IPv6AcceptRA=no" >> "$root/etc/systemd/network/$nets.network"
         echo "LinkLocalAddressing=ipv4" >> "$root/etc/systemd/network/$nets.network"
     fi
-    if [ $(howmany $nets) -gt 1 ]; then
+    if [ $(howmany "$nets") -gt 1 ]; then
         for net in $nets; do
             echo "[Match]" > "$root/etc/systemd/network/$net.network"
             echo "Name=$net" >> "$root/etc/systemd/network/$net.network"
@@ -193,7 +193,7 @@ server_install() {
         sleep 1s
         echo "setting up system for efi"
         [ ! -d "$root/boot/efi" ] && mkdir -p "$root/boot/efi"
-        eval "$chroot_eval mount $(get_disk_link ${boot_disk}1 partuuid) /boot/efi"
+        eval "$chroot_eval mount -t vfat $(get_disk_link ${boot_disk}1 partuuid) /boot/efi"
         errorcheck && echoerr "error mounting efi on $boot_disk" && return 1
 
         echo "updating initramfs"
