@@ -300,7 +300,7 @@ get_server_code() {
         errorcheck && echoerr "failed to clone from git" && return 1
     fi
     pushd "$root$SERVER_INSTALL" >/dev/null
-    git rev-parse --git-dir > /dev/null 2>&1
+    git rev-parse --git-dir >/dev/null 2>&1
     errorcheck && popd >/dev/null && echoerr "directory not a git repo" && return 1
     git remote update >/dev/null
     errorcheck && popd >/dev/null && echoerr "failed to update git repo" && return 1
@@ -308,7 +308,7 @@ get_server_code() {
     local server_rev=$(git rev-parse origin/master)
     if [ "$local_rev" != "$server_rev" ]
     then
-        git reset --hard origin/master >dev/null
+        git reset --hard origin/master >/dev/null
         errorcheck && popd >/dev/null && echoerr "failed to reset git" && return 1
     fi
     popd >/dev/null
