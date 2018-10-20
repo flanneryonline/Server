@@ -7,7 +7,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=0
+version=1
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
@@ -27,9 +27,9 @@ echo "  backup_enabled=$backup_enabled"
 if [ "$sync_enabled" -eq 1 ] && [ "$backup_enabled" -eq 1 ]
 then
     echo "syncing download data"
-    rsync -aqHXAp $BACKUP_MOUNT_LOCATION/downloads/* "$STORAGE_DOWNLOAD_DIR/"
+    rsync -aqHXAp $BACKUP_MOUNT_LOCATION/downloads/ "$STORAGE_DOWNLOAD_DIR/"
     echo "syncing config data"
-    rsync -aqHXAp $BACKUP_MOUNT_LOCATION/configs/* "$STORAGE_CONFIG_DIR/"
+    rsync -aqHXAp $BACKUP_MOUNT_LOCATION/configs/ "$STORAGE_CONFIG_DIR/"
 fi
 
 set_version $version ${0##*/}

@@ -27,7 +27,7 @@ echo "  backup_enabled=$backup_enabled"
 if [ "$sync_enabled" -eq 1 ] && [ "$backup_enabled" -eq 1 ]
 then
     echo "syncing share data"
-    rsync -aqHXAp $BACKUP_MOUNT_LOCATION/files/* "$STORAGE_SHARE_DIR/"
+    rsync -aqHXAp $BACKUP_MOUNT_LOCATION/files/ "$STORAGE_SHARE_DIR/"
 fi
 
 set_version $version ${0##*/}

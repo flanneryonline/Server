@@ -27,7 +27,7 @@ echo "  backup_enabled=$backup_enabled"
 if [ "$sync_enabled" -eq 1 ] && [ "$backup_enabled" -eq 1 ]
 then
     echo "syncing movie data"
-    rsync -aqHXAp $BACKUP_MOUNT_LOCATION/media/movies/* "$STORAGE_MEDIA_DIR/movies/"
+    rsync -aqHXAp $BACKUP_MOUNT_LOCATION/media/movies/ "$STORAGE_MEDIA_DIR/movies/"
 fi
 
 set_version $version ${0##*/}
