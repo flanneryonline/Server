@@ -7,12 +7,11 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=0
+version=1
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "apt_install" 1
-patch_requires "media_storage" 1
 
 echo "getting system settings"
 
@@ -25,34 +24,8 @@ if [ $backup_enabled -eq 1 ]
 then
     echo "creating fstab entry for backup"
     echo "$BACKUP_ADDRESS:/$BACKUP_FOLDER $BACKUP_MOUNT_LOCATION nfs defaults,x-systemd.requires=nfs-client.target 0 0" >> "/etc/fstab"
-fi
-
-if [ $backup_enabled -eq 1 ]
-then
-    for backup in configs movies shows unsorted shares
-    do
-        echo "creating backup service in systemd for $backup"
-
-        [ ! -e /etc/systemd/system/backup-$backup.service ] && \
-            ln -s /opt/server/systemd/backup/backup-$backup.service /etc/systemd/system/backup-$backup.service
-        [ ! -h /etc/systemd/system/backup-$backup.service ] && \
-            rm -r /etc/systemd/system/backup-$backup.service && \
-            ln -s /opt/server/systemd/backup/backup-$backup.service /etc/systemd/system/backup-$backup.service
-
-        [ ! -e /etc/systemd/system/backup-$backup.timer ] && \
-            ln -s /opt/server/systemd/backup/backup-$backup.timer /etc/systemd/system/backup-$backup.timer
-        [ ! -h /etc/systemd/system/backup-$backup.timer ] && \
-            rm -r /etc/systemd/system/backup-$backup.timer && \
-            ln -s /opt/server/systemd/backup/backup-$backup.timer /etc/systemd/system/backup-$backup.timer
-
-        ! ischroot && systemctl daemon-reload
-
-        if ! systemctl is-enabled backup-$backup.timer
-        then
-            echo "enabling $backup backup service"
-            systemctl enable backup-$backup.timer
-        fi
-    done
+    [ ! -d $BACKUP_MOUNT_LOCATION ] && mkdir -p $BACKUP_MOUNT_LOCATION
+    mount $BACKUP_MOUNT_LOCATION
 fi
 
 set_version $version ${0##*/}
