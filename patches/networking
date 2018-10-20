@@ -16,7 +16,7 @@ nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
 echo "  nets=$nets"
 [ "$(ls -A "/etc/systemd/network")" ] && \
     rm -r "/etc/systemd/network/"*
-if [ $(howmany $nets) -eq 1 ]; then
+if [ $(howmany "$nets") -eq 1 ]; then
     echo "creating single network at $nets.network"
     echo "[Match]" > "/etc/systemd/network/$nets.network"
     echo "Name=$nets" >> "/etc/systemd/network/$nets.network"
@@ -25,7 +25,7 @@ if [ $(howmany $nets) -eq 1 ]; then
     echo "IPv6AcceptRA=no" >> "/etc/systemd/network/$nets.network"
     echo "LinkLocalAddressing=ipv4" >> "/etc/systemd/network/$nets.network"
 fi
-if [ $(howmany $nets) -gt 1 ]; then
+if [ $(howmany "$nets") -gt 1 ]; then
     echo "creating lacp network at lacp0.network"
 
     echo "[Match]" > "/etc/systemd/network/lacp0.network"

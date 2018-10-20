@@ -12,9 +12,7 @@ version=0
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "backup" 1
-errorcheck && exit 1
 patch_requires "media_storage" 1
-errorcheck && exit 1
 
 echo "getting system settings"
 
@@ -30,7 +28,6 @@ if [ "$sync_enabled" -eq 1 ] && [ "$backup_enabled" -eq 1 ]
 then
     echo "syncing movie data"
     rsync -aqHXAp $BACKUP_MOUNT_LOCATION/media/movies/* "$STORAGE_MEDIA_DIR/movies/"
-    errorcheck && echoerr "error while copying movies." && return 1
 fi
 
 set_version $version ${0##*/}

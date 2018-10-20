@@ -12,7 +12,6 @@ version=0
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "apt" 0
-errorcheck && exit 1
 
 echo "installing required packages"
 
@@ -30,7 +29,6 @@ apt-get install -qq --no-install-recommends \
     gdisk \
     ntpdate \
     openssh-server
-errorcheck && echoerr "error installing packages" && exit 1
 
 set_version $version ${0##*/}
 exit 0

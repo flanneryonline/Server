@@ -12,15 +12,12 @@ version=0
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "apt_install" 1
-errorcheck && exit 1
 
 echo "marking motd files executable"
 chmod +x /opt/server/motd/*
-errorcheck && exit 1
 
 echo "removing system motd files"
 rm /etc/update-motd.d/*
-errorcheck && exit 1
 
 echo "linking files to system motd directory"
 [ ! -e /etc/update-motd.d/00-header ] && \

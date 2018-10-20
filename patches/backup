@@ -12,9 +12,7 @@ version=0
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "apt_install" 1
-errorcheck && exit 1
 patch_requires "storage" 1
-errorcheck && exit 1
 
 echo "getting system settings"
 

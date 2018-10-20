@@ -12,11 +12,8 @@ version=0
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "apt_install" 1
-errorcheck && exit 1
 patch_requires "users" 0
-errorcheck && exit 1
 patch_requires "storage" 1
-errorcheck && exit 1
 
 echo "getting system settings"
 
@@ -32,30 +29,25 @@ then
     then
         echo "creating docker zfs mount on $FAST_STORAGE_POOL/docker"
         zfs create -o mountpoint=legacy $FAST_STORAGE_POOL/docker
-        errorcheck && echoerr "error creating docker dataset" && return 1
 
         echo "creating fstab entry for docker mount"
         echo "$FAST_STORAGE_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> /etc/fstab
         mount /var/lib/docker
-        errorcheck && echoerr "error mounting /var/lib/docker" && exit 1
     fi
 else
     if ! zfs list $ROOT_POOL/docker >/dev/null 2>&1
     then
         echo "creating docker zfs mount on $ROOT_POOL/docker"
         zfs create -o mountpoint=legacy $ROOT_POOL/docker
-        errorcheck && echoerr "error creating docker dataset" && return 1
 
         echo "creating fstab entry for docker mount"
         echo "$ROOT_POOL/docker /var/lib/docker zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> /etc/fstab
         mount /var/lib/docker
-        errorcheck && echoerr "error mounting /var/lib/docker" && exit 1
     fi
 fi
 
 echo "adding docker apt key"
 curl -fsSL https://download.docker.com/linux/$SERVER_DIST/gpg | apt-key add -
-errorcheck && echoerr "error adding docker apt key" && exit 1
 
 echo "adding docker apt repo"
 [ -f /etc/apt/sources.list.d/$SERVER_DIST.$SERVER_DIST_RELEASE.docker.list ] && \
@@ -65,13 +57,10 @@ echo "deb [arch=amd64] https://download.docker.com/linux/$SERVER_DIST $SERVER_DI
 
 echo "installing docker"
 apt-get update -qq
-errorcheck && echoerr "error during docker apt-get update" && exit 1
 apt-get install -qq --no-install-recommends docker-ce
-errorcheck && echoerr "error installing docker" && exit 1
 
 echo "adding admin user to docker group"
 usermod -g docker $ADMIN_USERNAME
-errorcheck && echoerr "error adding $ADMIN_USERNAME to docker group" && exit 1
 
 echo "adding docker cleanup scripts to systemd"
 [ ! -e /etc/systemd/system/docker-cleanup.service ] && \

@@ -12,7 +12,6 @@ version=0
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "locale" 0
-errorcheck && exit 1
 
 echo "updating sources"
 
@@ -33,7 +32,6 @@ echo "deb [arch=amd64] $SERVER_DIST_URL $SERVER_DIST_RELEASE-security main unive
 echo "running apt-get update"
 
 apt-get update -qq
-errorcheck && exit 1
 
 set_version $version ${0##*/}
 exit 0

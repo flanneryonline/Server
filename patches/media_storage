@@ -12,11 +12,8 @@ version=0
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "apt_install" 1
-errorcheck && exit 1
 patch_requires "users" 0
-errorcheck && exit 1
 patch_requires "storage" 1
-errorcheck && exit 1
 
 echo "getting system settings"
 
@@ -38,13 +35,11 @@ then
         if ! zfs list $FAST_STORAGE_POOL/configs >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_CONFIG_DIR $FAST_STORAGE_POOL/configs
-            errorcheck && echoerr "error creating config dataset" && return 1
         fi
     else
         if ! zfs list $ROOT_POOL/configs >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_CONFIG_DIR $ROOT_POOL/configs
-            errorcheck && echoerr "error creating config dataset" && return 1
         fi
     fi
 
@@ -65,63 +60,51 @@ then
         if ! zfs list $SLOW_STORAGE_POOL/media >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_MEDIA_DIR $SLOW_STORAGE_POOL/media
-            errorcheck && echoerr "error creating media" && return 1
         fi
         if ! zfs list $SLOW_STORAGE_POOL/media/shows >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_MEDIA_DIR/shows $SLOW_STORAGE_POOL/media/shows
-            errorcheck && echoerr "error creating shows" && return 1
         fi
         if ! zfs list $SLOW_STORAGE_POOL/media/movies >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_MEDIA_DIR/movies $SLOW_STORAGE_POOL/media/movies
-            errorcheck && echoerr "error creating movies" && return 1
         fi
         if ! zfs list $SLOW_STORAGE_POOL/media/unsorted >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_MEDIA_DIR/unsorted $SLOW_STORAGE_POOL/media/unsorted
-            errorcheck && echoerr "error creating unsorted" && return 1
         fi
         if ! zfs list $SLOW_STORAGE_POOL/downloads >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_DOWNLOAD_DIR $SLOW_STORAGE_POOL/downloads
-            errorcheck && echoerr "error creating downloads" && return 1
         fi
         if ! zfs list $SLOW_STORAGE_POOL/shares >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_SHARE_DIR $SLOW_STORAGE_POOL/shares
-            errorcheck && echoerr "error creating shares" && return 1
         fi
     else
         if ! zfs list $ROOT_POOL/media >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_MEDIA_DIR $ROOT_POOL/media
-            errorcheck && echoerr "error creating media" && return 1
         fi
         if ! zfs list $ROOT_POOL/media/shows >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_MEDIA_DIR/shows $ROOT_POOL/media/shows
-            errorcheck && echoerr "error creating shows" && return 1
         fi
         if ! zfs list $ROOT_POOL/media/movies >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_MEDIA_DIR/movies $ROOT_POOL/media/movies
-            errorcheck && echoerr "error creating movies" && return 1
         fi
         if ! zfs list $ROOT_POOL/media/unsorted >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_MEDIA_DIR/unsorted $ROOT_POOL/media/unsorted
-            errorcheck && echoerr "error creating unsorted" && return 1
         fi
         if ! zfs list $ROOT_POOL/downloads >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_DOWNLOAD_DIR $ROOT_POOL/downloads
-            errorcheck && echoerr "error creating downloads" && return 1
         fi
         if ! zfs list $ROOT_POOL/shares >/dev/null 2>&1
         then
             zfs create -o mountpoint=$STORAGE_SHARE_DIR $ROOT_POOL/shares
-            errorcheck && echoerr "error creating shares" && return 1
         fi
     fi
 else

@@ -12,7 +12,6 @@ version=0
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "apt_install" 1
-errorcheck && exit 1
 
 echo "getting system settings"
 
@@ -57,7 +56,6 @@ then
         -O mountpoint=none \
         -O canmount=off \
         $FAST_STORAGE_POOL $raid_type $fast_disk_list"
-    errorcheck && echoerr "error creating fast storage pool" && return 1
 
     echo "creating var mountpoint"
     cp /var /var-tmp
@@ -93,7 +91,6 @@ then
         -O compression=lz4 \
         -O mountpoint=none \
         $SLOW_STORAGE_POOL $raid_type $slow_disk_list"
-    errorcheck && echoerr "error creating storage pool" && return 1
 fi
 
 set_version $version ${0##*/}
