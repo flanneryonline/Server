@@ -2,13 +2,17 @@
 
 echo -e "\nPool status"
 
+width=70
+
 for pool in $(zpool list -H -o name)
 do
     used=$(zfs list -H -o used $pool)
-    used_bites=$(df | grep $pool | head -1 | awk '{print $3}')
+    used_bites=$(humanfriendly --parse-size="$used")
     available=$(zfs list -H -o avail $pool)
-    available_bites=$(df | grep $pool | head -1 | awk '{print $4}')
-    percent=$((70*used_bites/available_bites))
+    available_bites=$(humanfriendly --parse-size="$available")
+    total=$(zpool list -H -o free $pool)
+    total_bites=$(humanfriendly --parse-size="$total")
+    percent=$((width*used_bites/total_bites))
     line="[\e[42m" #green
     [ $percent -gt 50 ] && line="[\e[43m" #yellow
     [ $percent -gt 68 ] && line="[\e[41m" #red
@@ -19,7 +23,7 @@ do
         i=$((i+1))
     done
     line+="\e[49m"
-    while [ $i -lt 70 ]
+    while [ $i -lt $width ]
     do
         line+=" "
         i=$((i+1))
@@ -27,6 +31,6 @@ do
     line+="]"
 
     echo -e "  $pool: $([ "$(zpool status -x $pool)" == "pool '$pool' is healthy" ] && echo "\e[32mHEALTHY\e[0m" || echo "\e[31mUNHEALTHY\e[0m" )
-    used: $used  |  available: $available
+    available: $available  |  used: $used  |  total: $total
 $line"
 done

@@ -7,14 +7,11 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=1
+version=2
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
-patch_requires "apt_install" 1
-
-echo "marking motd files executable"
-chmod +x /opt/server/motd/*
+patch_requires "apt_install" 2
 
 echo "removing system motd files"
 rm /etc/update-motd.d/*
