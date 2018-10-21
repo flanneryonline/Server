@@ -29,6 +29,8 @@ apt-get install -qq --no-install-recommends \
     gdisk \
     ntpdate \
     python3-pip \
+    bmon \
+    hddtemp \
     openssh-server
 
 pip3 install humanfriendly
