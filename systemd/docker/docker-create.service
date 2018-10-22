@@ -7,11 +7,9 @@ Wants=zfs.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStartPre=/usr/bin/docker ps -q | /usr/bin/xargs -r /usr/bin/docker stop
-ExecStartPre=/usr/bin/docker ps -aq | /usr/bin/xargs -r /usr/bin/docker rm -f
+ExecStartPre=/opt/server/bin/clear-docker
 ExecStart=/opt/server/bin/docker-create
-ExecStop=/usr/bin/docker ps -q | /usr/bin/xargs -r /usr/bin/docker stop
-ExecStop=/usr/bin/docker ps -aq | /usr/bin/xargs -r /usr/bin/docker rm -f
+ExecStop=/opt/server/bin/clear-docker
 
 [Install]
 WantedBy=multi-user.target
