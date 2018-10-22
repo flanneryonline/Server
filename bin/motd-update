@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+
+set -e
+
+export DEBIAN_FRONTEND=noninteractive
+
+make_readable() {
+    bites=$1
+    [ ${#bites} -lt 4 ] && echo "${bites}B" && return 0
+    megabites=$((bites/1024))
+    [ ${#megabites} -lt 4 ] && echo "${megabites}M" && return 0
+    gigabites=$((bites/1048576))
+    [ ${#gigabites} -lt 4 ] && echo "${gigabites}G" && return 0
+    terabites=$((bites/1073741824))
+    echo "${terabites}T" && return 0
+}
+
+for pool in $(zpool list -H -o name)
+do
+    used_bites=
+    for m in $(df | grep $pool | awk '{print $3}')
+    do
+        used_bites=$((used_bites+m))
+    done
+    available_bites=$(df | grep $pool | head -1 | awk '{print $4}')
+    total_bites=$((used_bites+available_bites))
+
+    used=$(make_readable $used_bites)
+    available=$(make_readable $available_bites)
+    total=$(make_readable $total_bites)
+
+    [ ! -d /etc/server/motd/$pool ] && mkdir -p /etc/server/motd/$pool
+    echo "used=$used" > /etc/server/motd/$pool/info
+    echo "used_bites=$used_bites" >> /etc/server/motd/$pool/info
+    echo "available=$available" >> /etc/server/motd/$pool/info
+    echo "available_bites=$available_bites" >> /etc/server/motd/$pool/info
+    echo "total=$total" >> /etc/server/motd/$pool/info
+    echo "total_bites=$total_bites" >> /etc/server/motd/$pool/info
+
+    for disk in $(zdb -C $pool | grep path | awk '{print $2}' | sed "s/'//g")
+    do
+        disk_name=${disk##*/}
+        [ ! -d /etc/server/motd/$pool/disks/$disk_name ] && mkdir -p /etc/server/motd/$pool/disks/$disk_name
+        echo "temp=$(hddtemp $disk | awk 'BEGIN {FS=":"};{print $3}' | sed 's/ //g' | sed 's/°C//g')" > /etc/server/motd/$pool/disks/$disk_name/info
+    done
+done

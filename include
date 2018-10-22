@@ -288,6 +288,12 @@ server_update() {
     done
     [ "$patch_return" -ne 0 ] && return 1
 
+    echo "marking motd executable"
+    chmod +x "$root$SERVER_INSTALL/motd/"*
+
+    echo "reloading systemd"
+    systemctl daemon-reload
+
     echo "server updates complete"
     return 0
 }
@@ -316,7 +322,6 @@ get_server_code() {
     echo "marking bin/patches executable"
     chmod +x "$root$SERVER_INSTALL/bin/"*
     chmod +x "$root$SERVER_INSTALL/patches/"*
-    chmod +x "$root$SERVER_INSTALL/motd/"*
 }
 
 wait_for_patch() {

@@ -1,0 +1,12 @@
+[Unit]
+Description=motd update service (runs on timer)
+
+[Service]
+Type=oneshot
+WorkingDirectory=/tmp
+User=root
+Group=root
+ExecStart=/opt/server/bin/motd-update
+
+[Install]
+WantedBy=multi-user.target
