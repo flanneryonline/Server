@@ -1,11 +1,7 @@
 [Unit]
 Description=Service running radarr in Docker.
-Requires=docker-create.service
-Requires=deluge.service
-Requires=nzbget.service
-After=docker-create.service
-After=deluge.service
-After=nzbget.service
+Requires=docker-create.service deluge.service nzbget.service jackett.service hydra.service
+After=docker-create.service deluge.service nzbget.service jackett.service hydra.service
 
 [Service]
 ExecStartPre=/usr/bin/docker start radarr

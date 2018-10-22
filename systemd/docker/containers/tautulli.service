@@ -1,9 +1,7 @@
 [Unit]
 Description=Service running tautulli in Docker.
-Requires=docker-create.service
-Requires=plex.service
-After=docker-create.service
-After=plex.service
+Requires=docker-create.service plex.service
+After=docker-create.service plex.service
 
 [Service]
 ExecStartPre=/usr/bin/docker start tautulli

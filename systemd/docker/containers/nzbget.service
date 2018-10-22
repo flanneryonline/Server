@@ -1,9 +1,7 @@
 [Unit]
 Description=Service running nzbget in Docker.
-Requires=docker-create.service
-Requires=pia.service
-After=docker-create.service
-After=pia.service
+Requires=docker-create.service pia.service
+After=docker-create.service pia.service
 
 [Service]
 ExecStartPre=/usr/bin/docker start nzbget
