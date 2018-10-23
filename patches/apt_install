@@ -16,7 +16,6 @@ patch_requires "apt" 0
 echo "installing required packages"
 
 apt-get install -qq --no-install-recommends \
-    postfix \
     nfs-common \
     apt-transport-https \
     gnupg \
