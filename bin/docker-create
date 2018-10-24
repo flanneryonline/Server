@@ -33,6 +33,7 @@ docker create -t \
 -e TZ=$SERVER_TIMEZONE \
 -v $STORAGE_CONFIG_DIR/pia:/vpn \
 --tmpfs /tmp \
+--dns 1.1.1.1 \
 dperson/openvpn-client \
 -r 10.0.0.0/8 -f "" -d
 
