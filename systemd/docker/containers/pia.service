@@ -4,6 +4,7 @@ Requires=docker-create.service
 After=docker-create.service
 
 [Service]
+Restart=always
 ExecStart=/usr/bin/docker start -i pia
 ExecStop=/usr/bin/docker stop pia
 

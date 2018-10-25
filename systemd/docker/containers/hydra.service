@@ -4,6 +4,7 @@ Requires=docker-create.service pia.service
 After=docker-create.service pia.service
 
 [Service]
+Restart=always
 ExecStartPre=/usr/bin/docker start hydra
 ExecStart=/usr/bin/docker wait hydra
 ExecStop=/usr/bin/docker stop hydra

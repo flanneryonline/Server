@@ -4,6 +4,7 @@ Requires=docker-create.service deluge.service nzbget.service jackett.service hyd
 After=docker-create.service deluge.service nzbget.service jackett.service hydra.service
 
 [Service]
+Restart=always
 ExecStartPre=/usr/bin/docker start sonarr
 ExecStart=/usr/bin/docker wait sonarr
 ExecStop=/usr/bin/docker stop sonarr
