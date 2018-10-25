@@ -1,5 +1,5 @@
 [Unit]
-Description=Service for syncing config files to backup host.
+Description=Service for syncing files to backup host.
 Requires=nfs-client.target zfs.target
 After=nfs-client.target zfs.target
 
@@ -7,7 +7,7 @@ After=nfs-client.target zfs.target
 Type=oneshot
 User=root
 Group=root
-ExecStart=/usr/bin/rsync -aqHXAp --delete /mnt/shares/* /mnt/backup/shares/
+ExecStart=/opt/server/bin/media-backup
 
 [Install]
 WantedBy=multi-user.target

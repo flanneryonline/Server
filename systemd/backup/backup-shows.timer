@@ -1,8 +1,0 @@
-[Unit]
-Description=Timer for syncing shows to backup host.
-
-[Timer]
-OnUnitInactiveSec=1h
-
-[Install]
-WantedBy=timers.target

@@ -12,11 +12,6 @@ version=1
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "media_storage" 1
-patch_requires "backup_sync_configs" 1
-patch_requires "backup_sync_data" 1
-patch_requires "backup_sync_shows" 1
-patch_requires "backup_sync_movies" 1
-patch_requires "backup_sync_unsorted" 1
 patch_requires "docker" 1
 
 [ ! -e /etc/systemd/system/docker-create.service ] && \

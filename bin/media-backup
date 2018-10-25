@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+set -e
+
+/usr/bin/rsync -aqHXAp --delete /mnt/configs/ /mnt/backup/configs/
+
+/usr/bin/rsync -aqHXAp --delete /mnt/media/movies/ /mnt/backup/media/movies/
+
+/usr/bin/rsync -aqHXAp --delete /mnt/shares/ /mnt/backup/shares/
+
+/usr/bin/rsync -aqHXAp --delete /mnt/media/shows/ /mnt/backup/media/shows/
+
+/usr/bin/rsync -aqHXAp --delete /mnt/media/unsorted/ /mnt/backup/media/unsorted/
+

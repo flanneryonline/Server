@@ -26,28 +26,16 @@ if [ $backup_enabled -eq 1 ]
 then
     for backup in configs movies shows unsorted shares
     do
-        echo "creating backup service in systemd for $backup"
+        echo "removing old backup service for $backup"
 
-        [ ! -e /etc/systemd/system/backup-$backup.service ] && \
-            ln -s /opt/server/systemd/backup/backup-$backup.service /etc/systemd/system/backup-$backup.service
-        [ ! -h /etc/systemd/system/backup-$backup.service ] && \
-            rm -r /etc/systemd/system/backup-$backup.service && \
-            ln -s /opt/server/systemd/backup/backup-$backup.service /etc/systemd/system/backup-$backup.service
+        systemctl disable backup-$backup.service
 
-        [ ! -e /etc/systemd/system/backup-$backup.timer ] && \
-            ln -s /opt/server/systemd/backup/backup-$backup.timer /etc/systemd/system/backup-$backup.timer
-        [ ! -h /etc/systemd/system/backup-$backup.timer ] && \
-            rm -r /etc/systemd/system/backup-$backup.timer && \
-            ln -s /opt/server/systemd/backup/backup-$backup.timer /etc/systemd/system/backup-$backup.timer
-
-        ! ischroot && systemctl daemon-reload
-
-        if ! systemctl is-enabled backup-$backup.timer
-        then
-            echo "enabling $backup backup service"
-            systemctl enable backup-$backup.timer
-        fi
+        systemctl disable backup-$backup.timer
     done
+
+    systemctl enable /opt/server/systemd/backup/media-backup.service
+    systemctl enable /opt/server/systemd/backup/media-backup.timer
+
 fi
 
 set_version $version ${0##*/}
