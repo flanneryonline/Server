@@ -2,7 +2,8 @@
 Description=timer for server update
 
 [Timer]
-OnUnitInactiveSec=1h
+OnBootSec=1min
+OnUnitActiveSec=6h
 
 [Install]
 WantedBy=timers.target

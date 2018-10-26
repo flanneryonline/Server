@@ -2,7 +2,7 @@
 Description=timer for server update
 
 [Timer]
-OnUnitInactiveSec=24h
+OnCalendar=daily
 
 [Install]
 WantedBy=timers.target
