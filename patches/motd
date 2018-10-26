@@ -7,7 +7,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=3
+version=4
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
@@ -41,24 +41,13 @@ echo "linking files to system motd directory"
     rm -r /etc/update-motd.d/30-storage && \
     ln -s /opt/server/motd/30-storage /etc/update-motd.d/30-storage
 
-echo "\"Samsung SSD 840 EVO 120G B\"                            190  C  \"Samsung SSD 840 EVO 120GB\"" >> /etc/hddtemp.db
+#echo "\"Samsung SSD 840 EVO 120G B\"                            190  C  \"Samsung SSD 840 EVO 120GB\"" >> /etc/hddtemp.db
 
-[ ! -e /etc/systemd/system/server-motd-update.timer ] && \
-    ln -s /opt/server/systemd/system/server-motd-update.timer /etc/systemd/system/server-motd-update.timer
-[ ! -h /etc/systemd/system/server-motd-update.timer ] && \
-    rm -r /etc/systemd/system/server-motd-update.timer && \
-    ln -s /opt/server/systemd/system/server-motd-update.timer /etc/systemd/system/server-motd-update.timer
+systemctl disable motd-news.service
+systemctl disable motd-news.timer
+systemctl enable /opt/server/systemd/system/server-motd-update.timer
+systemctl enable /opt/server/systemd/system/server-motd-update.service
 
-[ ! -e /etc/systemd/system/server-motd-update.service ] && \
-    ln -s /opt/server/systemd/system/server-motd-update.service /etc/systemd/system/server-motd-update.service
-[ ! -h /etc/systemd/system/server-motd-update.service ] && \
-    rm -r /etc/systemd/system/server-motd-update.service && \
-    ln -s /opt/server/systemd/system/server-motd-update.service /etc/systemd/system/server-motd-update.service
-
-! ischroot && systemctl daemon-reload
-systemctl enable server-motd-update.timer
-systemctl enable server-motd-update.service
-! ischroot && systemctl start server-motd-update.service
 
 set_version $version ${0##*/}
 exit 0

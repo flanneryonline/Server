@@ -25,7 +25,7 @@ then
     echo "creating fstab entry for backup"
     echo "$BACKUP_ADDRESS:/$BACKUP_FOLDER $BACKUP_MOUNT_LOCATION nfs defaults,x-systemd.requires=nfs-client.target 0 0" >> "/etc/fstab"
     [ ! -d $BACKUP_MOUNT_LOCATION ] && mkdir -p $BACKUP_MOUNT_LOCATION
-    mount $BACKUP_MOUNT_LOCATION
+    mount | grep "$BACKUP_MOUNT_LOCATION" || mount $BACKUP_MOUNT_LOCATION
 fi
 
 set_version $version ${0##*/}

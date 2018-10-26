@@ -53,7 +53,6 @@ then
     [ ! -d "$STORAGE_CONFIG_DIR/jackett" ] && mkdir "$STORAGE_CONFIG_DIR/jackett"
     [ ! -d "$STORAGE_CONFIG_DIR/sonarr" ] && mkdir "$STORAGE_CONFIG_DIR/sonarr"
     [ ! -d "$STORAGE_CONFIG_DIR/radarr" ] && mkdir "$STORAGE_CONFIG_DIR/radarr"
-    [ ! -d "$STORAGE_CONFIG_DIR/portainer" ] && mkdir "$STORAGE_CONFIG_DIR/portainer"
 
     if [ $slow_storage_enabled -eq 1 ]
     then

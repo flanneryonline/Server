@@ -24,18 +24,8 @@ echo "  backup_enabled=$backup_enabled"
 
 if [ $backup_enabled -eq 1 ]
 then
-    for backup in configs movies shows unsorted shares
-    do
-        echo "removing old backup service for $backup"
-
-        systemctl disable backup-$backup.service
-
-        systemctl disable backup-$backup.timer
-    done
-
     systemctl enable /opt/server/systemd/backup/media-backup.service
     systemctl enable /opt/server/systemd/backup/media-backup.timer
-
 fi
 
 set_version $version ${0##*/}

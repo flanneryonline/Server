@@ -12,8 +12,10 @@ version=0
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 echo "linking timezone info to /etc/localtime"
+[ -e /etc/localtime ] && rm /etc/localtime
 ln -s /usr/share/zoneinfo/$SERVER_TIMEZONE /etc/localtime
 echo "creating /etc/timezone"
+[ -e /etc/timezone ] && rm /etc/timezone
 echo $SERVER_TIMEZONE > /etc/timezone
 
 set_version $version ${0##*/}

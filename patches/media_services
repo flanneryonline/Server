@@ -14,40 +14,13 @@ check_version $version ${0##*/} && echo "patch ${0##*/} already on latest versio
 patch_requires "media_storage" 1
 patch_requires "docker" 1
 
-[ ! -e /etc/systemd/system/docker-create.service ] && \
-    ln -s /opt/server/systemd/docker/docker-create.service /etc/systemd/system/docker-create.service
-[ ! -h /etc/systemd/system/docker-create.service ] && \
-    rm -r /etc/systemd/system/docker-create.service && \
-    ln -s /opt/server/systemd/docker/docker-create.service /etc/systemd/system/docker-create.service
+systemctl enable /opt/server/systemd/docker/docker-create.service
+systemctl start docker-create.service
 
-! ischroot && systemctl daemon-reload
-
-if ! systemctl is-enabled docker-create.service
-then
-    echo "enabling/starting docker-create.service"
-    systemctl enable docker-create.service
-    ! ischroot && systemctl start docker-create.service
-fi
-
-for service in pia plex tautulli ombi radarr sonarr deluge nzbget jackett hydra
+for service in pia plex tautulli ombi deluge nzbget jackett hydra radarr sonarr
 do
-    [ ! -e /etc/systemd/system/$service.service ] && \
-        ln -s /opt/server/systemd/docker/containers/$service.service /etc/systemd/system/$service.service
-    [ ! -h /etc/systemd/system/$service.service ] && \
-        rm -r /etc/systemd/system/$service.service && \
-        ln -s /opt/server/systemd/docker/containers/$service.service /etc/systemd/system/$service.service
-done
-
-! ischroot && systemctl daemon-reload
-
-for service in pia plex tautulli ombi radarr sonarr deluge nzbget jackett hydra
-do
-    if ! systemctl is-enabled $service.service
-    then
-        echo "enabling $service.service"
-        systemctl enable $service.service
-        ! ischroot && systemctl start $service.service
-    fi
+    systemctl enable /opt/server/systemd/docker/containers/$service.service
+    systemctl start $service.service
 done
 
 set_version $version ${0##*/}

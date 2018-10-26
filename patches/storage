@@ -15,55 +15,13 @@ patch_requires "apt_install" 1
 
 echo "getting system settings"
 
-fast_storage_enabled=$(get_server_setting "fast-storage-enabled")
-fast_storage_enabled=${fast_storage_enabled:-0}
-fast_disks=$(get_server_setting "fast-disks")
-fast_disks=${fast_disks:-}
 slow_storage_enabled=$(get_server_setting "slow-storage-enabled")
 slow_storage_enabled=${slow_storage_enabled:-0}
 slow_disks=$(get_server_setting "slow-disks")
 slow_disks=${slow_disks:-}
 
-echo "  fast_storage_enabled=$fast_storage_enabled"
 echo "  slow_storage_enabled=$slow_storage_enabled"
-echo "  fast_disks=$fast_disks"
 echo "  slow_disks=$slow_disks"
-
-if ! zpool status $FAST_STORAGE_POOL >/dev/null 2>&1 && \
-    [ $fast_storage_enabled -eq 1 ] && \
-    [ ! -z "$fast_disks" ]
-then
-    echo "creating fast storage pool"
-    fast_disk_list=
-    for fast_disk in $fast_disks; do
-        echo "clearing disk: $fast_disk"
-        clear_disk $(get_disk $fast_disk)
-        sleep 1s
-        fast_disk_list="$fast_disk_list $fast_disk"
-    done
-    sleep 1s
-
-    raid_type="mirror"
-    [ $(howmany "$fast_disk_list") -eq 1 ] && raid_type=""
-    [ $(howmany "$fast_disk_list") -gt 3 ] && raid_type="raidz"
-
-    echo "  raid_type=$raid_type"
-
-    eval "zpool create -f \
-        -o ashift=13 \
-        -O atime=off \
-        -O compression=lz4 \
-        -O mountpoint=none \
-        -O canmount=off \
-        $FAST_STORAGE_POOL $raid_type $fast_disk_list"
-
-    echo "creating var mountpoint"
-    cp /var /var-tmp
-    zfs create -o mountpoint=legacy $FAST_STORAGE_POOL/var
-    echo "$FAST_STORAGE_POOL/var /var zfs defaults,x-systemd.requires=zfs-mount.service 0 0" >> /etc/fstab
-    rm /var && mount /var && cp /var-tmp /var
-    rm /var-tmp
-fi
 
 if ! zpool status $SLOW_STORAGE_POOL >/dev/null 2>&1 && \
     [ $slow_storage_enabled -eq 1 ] && \
