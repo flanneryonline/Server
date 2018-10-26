@@ -60,6 +60,8 @@ then
     done
 
     echo "fixing systemd-networkd-wait-online.service"
+    [ ! -d /etc/systemd/system/systemd-networkd-wait-online.service.d ] && \
+        mkdir -p /etc/systemd/system/systemd-networkd-wait-online.service.d
     echo "[Service]" > \
         "/etc/systemd/system/systemd-networkd-wait-online.service.d/ignore.conf"
     echo "ExecStart=" >> \
