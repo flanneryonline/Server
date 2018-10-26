@@ -12,7 +12,7 @@ version=1
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 echo "getting list of network adapters"
-nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
+nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo | grep -v docker | grep -v bond | grep -v lacp | grep -v veth)
 echo "  nets=$nets"
 [ "$(ls -A "/etc/systemd/network")" ] && \
     rm -r "/etc/systemd/network/"*
