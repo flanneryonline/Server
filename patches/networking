@@ -7,7 +7,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=0
+version=1
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
@@ -16,7 +16,8 @@ nets=$(ls /sys/class/net | sed 's/ /\n/' | grep -v lo)
 echo "  nets=$nets"
 [ "$(ls -A "/etc/systemd/network")" ] && \
     rm -r "/etc/systemd/network/"*
-if [ $(howmany "$nets") -eq 1 ]; then
+if [ $(howmany "$nets") -eq 1 ]
+then
     echo "creating single network at $nets.network"
     echo "[Match]" > "/etc/systemd/network/$nets.network"
     echo "Name=$nets" >> "/etc/systemd/network/$nets.network"
@@ -25,7 +26,8 @@ if [ $(howmany "$nets") -eq 1 ]; then
     echo "IPv6AcceptRA=no" >> "/etc/systemd/network/$nets.network"
     echo "LinkLocalAddressing=ipv4" >> "/etc/systemd/network/$nets.network"
 fi
-if [ $(howmany "$nets") -gt 1 ]; then
+if [ $(howmany "$nets") -gt 1 ]
+then
     echo "creating lacp network at lacp0.network"
 
     echo "[Match]" > "/etc/systemd/network/lacp0.network"
@@ -46,13 +48,24 @@ if [ $(howmany "$nets") -gt 1 ]; then
     echo "UpDelaySec=2s" >> "/etc/systemd/network/lacp0.netdev"
     echo "DownDelaySec=8s" >> "/etc/systemd/network/lacp0.netdev"
 
-    for net in $nets; do
+    ignore=
+    for net in $nets
+    do
         echo "adding $nets.network to lacp0.network"
         echo "[Match]" > "/etc/systemd/network/$net.network"
         echo "Name=$net" >> "/etc/systemd/network/$net.network"
         echo "[Network]" >> "/etc/systemd/network/$net.network"
         echo "Bond=lacp0" >> "/etc/systemd/network/$net.network"
+        ignore="--ignore=$net "
     done
+
+    echo "fixing systemd-networkd-wait-online.service"
+    echo "[Service]" > \
+        "/etc/systemd/system/systemd-networkd-wait-online.service.d/ignore.conf"
+    echo "ExecStart=" >> \
+        "/etc/systemd/system/systemd-networkd-wait-online.service.d/ignore.conf"
+    echo "ExecStart=/lib/systemd/systemd-networkd-wait-online $ignore" >> \
+        "/etc/systemd/system/systemd-networkd-wait-online.service.d/ignore.conf"
 fi
 
 echo "disabling ipv6"
@@ -62,11 +75,11 @@ echo "net.ipv6.conf.lo.disable_ipv6 = 1" >> "/etc/sysctl.d/10-disable-ipv6.conf"
 
 if ! ischroot
 then
+    systemctl daemon-reload
     echo "restarting networking services"
     systemctl restart systemd-sysctl
-    errorcheck && echoerr "error restarting system services" && exit 1
     systemctl restart systemd-networkd
-    errorcheck && echoerr "error restarting network services" && exit 1
+    systemctl restart systemd-networkd-wait-online
 fi
 
 set_version $version ${0##*/}
