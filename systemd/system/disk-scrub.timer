@@ -1,0 +1,8 @@
+[Unit]
+Description=timer for server update
+
+[Timer]
+OnCalendar=monthly
+
+[Install]
+WantedBy=timers.target

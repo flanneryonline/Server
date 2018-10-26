@@ -7,7 +7,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=1
+version=2
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
@@ -92,6 +92,9 @@ then
         -O mountpoint=none \
         $SLOW_STORAGE_POOL $raid_type $slow_disk_list"
 fi
+
+systemctl enable /opt/server/systemd/system/disk-scrub.service
+systemctl enable /opt/server/systemd/system/disk-scrub.timer
 
 set_version $version ${0##*/}
 exit 0

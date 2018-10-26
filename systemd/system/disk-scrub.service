@@ -1,0 +1,12 @@
+[Unit]
+Description=zfs disk scrubber
+
+[Service]
+Type=oneshot
+WorkingDirectory=/tmp
+User=root
+Group=root
+ExecStart=/opt/server/bin/disk-scrub
+
+[Install]
+WantedBy=multi-user.target
