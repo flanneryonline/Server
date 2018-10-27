@@ -6,7 +6,7 @@ set -e
 
 /usr/bin/rsync -aqHXAp --delete /mnt/media/movies/ /mnt/backup/media/movies/
 
-/usr/bin/rsync -aqHXAp --delete /mnt/shares/ /mnt/backup/shares/
+/usr/bin/rsync -aqHXAp --delete /mnt/shares/ /mnt/backup/files/
 
 /usr/bin/rsync -aqHXAp --delete /mnt/media/shows/ /mnt/backup/media/shows/
 
