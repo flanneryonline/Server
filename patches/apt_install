@@ -7,7 +7,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=2
+version=3
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
@@ -30,7 +30,8 @@ apt-get install -qq --no-install-recommends \
     python3-pip \
     bmon \
     hddtemp \
-    openssh-server
+    openssh-server \
+    sysstat
 
 pip3 install humanfriendly
 
