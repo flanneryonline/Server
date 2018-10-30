@@ -2,6 +2,7 @@
 Description=Service running hydra in Docker.
 Requires=docker-create.service pia.service
 After=docker-create.service pia.service
+PartOf=pia.service
 
 [Service]
 Restart=always

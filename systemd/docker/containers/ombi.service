@@ -2,6 +2,7 @@
 Description=Service running ombi in Docker.
 Requires=docker-create.service plex.service
 After=docker-create.service plex.service
+PartOf=plex.service
 
 [Service]
 Restart=always
