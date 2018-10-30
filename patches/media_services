@@ -7,18 +7,35 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=1
+version=2
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "media_storage" 1
 patch_requires "docker" 1
 
+for service in samba tautulli ombi plex radarr sonarr deluge nzbget jackett hydra pia
+do
+    if systemctl is-active $service.service >/dev/null 2>&1
+    then
+        echo "stopping $service.service"
+        systemctl stop $service.service
+    fi
+done
+
+if systemctl is-active docker-create.service >/dev/null 2>&1
+then
+    echo "stopping docker-create.service"
+    systemctl stop docker-create.service
+fi
+
+echo "starting docker-create.service"
 systemctl enable /opt/server/systemd/docker/docker-create.service
 systemctl start docker-create.service
 
-for service in pia plex tautulli ombi deluge nzbget jackett hydra radarr sonarr
+for service in pia plex tautulli ombi deluge nzbget jackett hydra radarr sonarr samba
 do
+    echo "starting $service.service"
     systemctl enable /opt/server/systemd/docker/containers/$service.service
     systemctl start $service.service
 done
