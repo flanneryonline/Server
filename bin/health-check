@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+set -e
+
+cont=$1
+
+timeout=60
+while [ "$(docker inspect $cont | jq ".[] .State.Health.Status" | sed 's/"//g')" != "healthy" ]
+do
+    timeout=$((timeout-1))
+    sleep 1s
+
+    if [ $timeout -eq 0 ]
+    then
+        break
+    fi
+done

@@ -9,6 +9,10 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 docker create \
 --name=plex \
 --net=host \
+--health-cmd="curl -sSf 'http://localhost:32400/identity' >/dev/null" \
+--health-interval=5s \
+--health-start-period=15s \
+--health-timeout=2s \
 -e VERSION=latest \
 -e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
 -e TZ=$SERVER_TIMEZONE \
@@ -41,6 +45,10 @@ dperson/openvpn-client \
 docker create \
 --name=sonarr \
 -p 8989:8989 \
+--health-cmd="curl -sSf 'http://localhost:8989' >/dev/null" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=2s \
 -e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
 -e TZ=$SERVER_TIMEZONE \
 -v $STORAGE_CONFIG_DIR/sonarr:/config \
@@ -52,6 +60,10 @@ linuxserver/sonarr
 docker create \
 --name=radarr \
 -p 7878:7878 \
+--health-cmd="curl -sSf 'http://localhost:7878' >/dev/null" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=2s \
 -e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
 -e TZ=$SERVER_TIMEZONE \
 -v $STORAGE_CONFIG_DIR/radarr:/config \
@@ -63,6 +75,10 @@ linuxserver/radarr
 docker create \
 --name=nzbget \
 --net=container:pia \
+--health-cmd="curl -sSf 'http://localhost:6789' >/dev/null" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=2s \
 -e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
 -e TZ=$SERVER_TIMEZONE \
 -v $STORAGE_CONFIG_DIR/nzbget:/config \
@@ -73,6 +89,10 @@ linuxserver/nzbget
 docker create \
 --name=deluge \
 --net=container:pia \
+--health-cmd="curl -sSf 'http://localhost:8112' >/dev/null" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=2s \
 -e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
 -e TZ=$SERVER_TIMEZONE \
 -v $STORAGE_CONFIG_DIR/deluge:/config \
@@ -83,6 +103,10 @@ linuxserver/deluge
 docker create \
 --name=hydra \
 --net=container:pia \
+--health-cmd="curl -sSf 'http://localhost:8112' >/dev/null" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=2s \
 -e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
 -e TZ=$SERVER_TIMEZONE \
 -v $STORAGE_CONFIG_DIR/hydra:/config \
@@ -92,6 +116,10 @@ linuxserver/hydra
 docker create \
 --name=jackett \
 --net=container:pia \
+--health-cmd="curl -sSf 'http://localhost:8112' >/dev/null" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=2s \
 -e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
 -e TZ=$SERVER_TIMEZONE \
 -v $STORAGE_CONFIG_DIR/jackett:/config \
@@ -101,6 +129,10 @@ linuxserver/jackett
 docker create \
 --name=ombi \
 -p 3579:3579 \
+--health-cmd="curl -sSf 'http://localhost:3579' >/dev/null" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=2s \
 -e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
 -e TZ=$SERVER_TIMEZONE \
 -v $STORAGE_CONFIG_DIR/ombi:/config \
@@ -110,6 +142,10 @@ linuxserver/ombi
 docker create \
 --name=tautulli \
 -p 8181:8181 \
+--health-cmd="curl -sSf 'http://localhost:8181' >/dev/null" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=2s \
 -e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
 -e TZ=$SERVER_TIMEZONE \
 -v $STORAGE_CONFIG_DIR/tautulli:/config \

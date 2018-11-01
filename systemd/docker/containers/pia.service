@@ -5,7 +5,9 @@ After=docker-create.service
 
 [Service]
 Restart=always
-ExecStart=/usr/bin/docker start -i pia
+ExecStartPre=/usr/bin/docker start pia
+ExecStartPre=/opt/server/bin/health-check pia
+ExecStart=/usr/bin/docker wait pia
 ExecStop=/usr/bin/docker stop pia
 
 [Install]

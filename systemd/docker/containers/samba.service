@@ -5,7 +5,9 @@ After=docker-create.service
 
 [Service]
 Restart=always
-ExecStart=/usr/bin/docker start -i samba
+ExecStartPre=/usr/bin/docker start samba
+ExecStartPre=/opt/server/bin/health-check samba
+ExecStart=/usr/bin/docker wait samba
 ExecStop=/usr/bin/docker stop samba
 
 [Install]

@@ -7,6 +7,7 @@ PartOf=plex.service
 [Service]
 Restart=always
 ExecStartPre=/usr/bin/docker start tautulli
+ExecStartPre=/opt/server/bin/health-check tautulli
 ExecStart=/usr/bin/docker wait tautulli
 ExecStop=/usr/bin/docker stop tautulli
 

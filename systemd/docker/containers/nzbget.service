@@ -7,6 +7,7 @@ PartOf=pia.service
 [Service]
 Restart=always
 ExecStartPre=/usr/bin/docker start nzbget
+ExecStartPre=/opt/server/bin/health-check nzbget
 ExecStart=/usr/bin/docker wait nzbget
 ExecStop=/usr/bin/docker stop nzbget
 
