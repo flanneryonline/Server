@@ -54,13 +54,14 @@ systemctl enable /opt/server/systemd/docker/docker@.service
 for service in pia plex tautulli ombi deluge nzbget jackett hydra radarr sonarr samba
 do
     echo "starting docker@$service.service"
+    [ -f /etc/systemd/system/docker@$service.service.d/dependencies.conf ] && rm /etc/systemd/system/docker@$service.service.d/dependencies.conf
+    systemctl enable docker@$service.service
     if [ -d /opt/server/systemd/docker/docker@.d/$service ]
     then
         [ ! -d /etc/systemd/system/docker@$service.service.d/ ] && mkdir -p /etc/systemd/system/docker@$service.service.d/
-        [ -f /etc/systemd/system/docker@$service.service.d/dependencies.conf ] && rm /etc/systemd/system/docker@$service.service.d/dependencies.conf
         ln -s /opt/server/systemd/docker/docker@.d/$service/dependencies.conf /etc/systemd/system/docker@$service.service.d/dependencies.conf
     fi
-    systemctl enable docker@$service.service
+    systemctl daemon-reload
     systemctl start docker@$service.service
 done
 
