@@ -1,0 +1,11 @@
+[Unit]
+Description=Docker healthcheck service.
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/server/bin/health-check-restart
+
+[Install]
+WantedBy=multi-user.target

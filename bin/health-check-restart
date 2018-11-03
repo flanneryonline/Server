@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -e
+
+for cont in $(ls /opt/server/docker)
+do
+    if [ "$(docker inspect $cont | jq ".[] .State.Health.Status" | sed 's/"//g')" != "healthy" ]
+    then
+        systemctl restart $cont
+    fi
+done

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+set -e
+
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+. "$SERVER_INSTALL/environment"
+
+docker create \
+--name=hydra \
+--net=container:pia \
+--health-cmd="curl -sSf 'http://localhost:8112' >/dev/null" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=2s \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/hydra:/config \
+linuxserver/hydra

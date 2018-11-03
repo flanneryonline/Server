@@ -1,0 +1,15 @@
+[Unit]
+Description=Service running %i in Docker
+
+[Service]
+Restart=always
+ExecStartPre=/opt/server/bin/clear-docker %i
+ExecStartPre=/opt/server/docker/%i
+ExecStartPre=/usr/bin/docker start %i
+ExecStartPre=/opt/server/bin/health-check-startup %i
+ExecStart=/usr/bin/docker wait %i
+ExecStop=/usr/bin/docker stop %i
+ExecStop=/usr/bin/docker rm %i
+
+[Install]
+WantedBy=multi-user.target

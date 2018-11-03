@@ -1,0 +1,8 @@
+[Unit]
+Description=Docker healthcheck timer.
+
+[Timer]
+OnUnitInactiveSec=10m
+
+[Install]
+WantedBy=timers.target

@@ -2,5 +2,16 @@
 
 set -e
 
-/usr/bin/docker ps -q | /usr/bin/xargs -r /usr/bin/docker stop
-/usr/bin/docker ps -aq | /usr/bin/xargs -r /usr/bin/docker rm -f
+name=$1
+
+id=$(docker ps -q -f name=$name)
+if [ ! -z "$id" ]
+then
+    docker stop $id
+fi
+
+id=$(docker ps -aq -f name=$name)
+if [ ! -z "$id" ]
+then
+    docker rm -f $id
+fi

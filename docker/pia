@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -e
+
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+. "$SERVER_INSTALL/environment"
+
+docker create -t \
+--name=pia \
+-p 9117:9117 \
+-p 5075:5075 \
+-p 6789:6789 \
+-p 8112:8112 \
+-p 58846:58846 \
+-p 58946:58946 \
+-p 58946:58946/udp \
+--cap-add=NET_ADMIN \
+--device /dev/net/tun \
+--dns 1.1.1.1 \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/pia:/vpn \
+--tmpfs /tmp \
+--dns 1.1.1.1 \
+dperson/openvpn-client \
+-r 10.0.0.0/8 -f "" -d

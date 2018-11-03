@@ -16,10 +16,25 @@ patch_requires "docker" 1
 
 for service in samba tautulli ombi plex radarr sonarr deluge nzbget jackett hydra pia
 do
+    if systemctl is-active docker@$service.service >/dev/null 2>&1
+    then
+        echo "stopping docker@$service.service"
+        systemctl stop docker@$service.service
+    fi
+    if systemctl is-enabled docker@$service.service >/dev/null 2>&1
+    then
+        echo "disabling docker@$service.service"
+        systemctl disable docker@$service.service
+    fi
     if systemctl is-active $service.service >/dev/null 2>&1
     then
         echo "stopping $service.service"
         systemctl stop $service.service
+    fi
+    if systemctl is-enabled $service.service >/dev/null 2>&1
+    then
+        echo "disabling $service.service"
+        systemctl disable $service.service
     fi
 done
 
@@ -28,16 +43,22 @@ then
     echo "stopping docker-create.service"
     systemctl stop docker-create.service
 fi
+if systemctl is-enabled docker-create.service >/dev/null 2>&1
+then
+    echo "disabling docker-create.service"
+    systemctl disable docker-create.service
+fi
 
-echo "starting docker-create.service"
-systemctl enable /opt/server/systemd/docker/docker-create.service
-systemctl start docker-create.service
+systemctl enable /opt/server/systemd/docker/docker@.service
 
 for service in pia plex tautulli ombi deluge nzbget jackett hydra radarr sonarr samba
 do
     echo "starting $service.service"
-    systemctl enable /opt/server/systemd/docker/containers/$service.service
-    systemctl start $service.service
+    [ ! -d /etc/systemd/system/docker@$service.service.d/ ] && mkdir -p /etc/systemd/system/docker@$service.service.d/
+    [ -f /etc/systemd/system/docker@$service.service.d/dependencies.conf ] && rm /etc/systemd/system/docker@$service.service.d/dependencies.conf
+    ln -s /opt/server/systemd/docker/docker@.d/$service/dependencies.conf /etc/systemd/system/docker@$service.service.d/dependencies.conf
+    systemctl enable docker@$service.service
+    systemctl start docker@$service.service
 done
 
 set_version $version ${0##*/}
