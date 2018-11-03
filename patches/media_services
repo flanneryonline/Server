@@ -21,33 +21,7 @@ do
         echo "stopping docker@$service.service"
         systemctl stop docker@$service.service
     fi
-    if systemctl is-enabled docker@$service.service >/dev/null 2>&1
-    then
-        echo "disabling docker@$service.service"
-        systemctl disable docker@$service.service
-    fi
-    if systemctl is-active $service.service >/dev/null 2>&1
-    then
-        echo "stopping $service.service"
-        systemctl stop $service.service
-    fi
-    if systemctl is-enabled $service.service >/dev/null 2>&1
-    then
-        echo "disabling $service.service"
-        systemctl disable $service.service
-    fi
 done
-
-if systemctl is-active docker-create.service >/dev/null 2>&1
-then
-    echo "stopping docker-create.service"
-    systemctl stop docker-create.service
-fi
-if systemctl is-enabled docker-create.service >/dev/null 2>&1
-then
-    echo "disabling docker-create.service"
-    systemctl disable docker-create.service
-fi
 
 systemctl enable /opt/server/systemd/docker/docker@.service
 
