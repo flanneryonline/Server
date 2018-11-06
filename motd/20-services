@@ -2,16 +2,16 @@
 
 # Declare array of services and pretty human readable names
 declare -a services=(
-"plex"
-"pia"
-"nzbget"
-"deluge"
-"hydra"
-"jackett"
-"sonarr"
-"radarr"
-"ombi"
-"tautulli"
+"docker@plex"
+"docker@pia"
+"docker@nzbget"
+"docker@deluge"
+"docker@hydra"
+"docker@jackett"
+"docker@sonarr"
+"docker@radarr"
+"docker@ombi"
+"docker@tautulli"
 )
 declare -a serviceName=(
 "Plex"
