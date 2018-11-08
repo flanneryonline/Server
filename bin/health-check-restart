@@ -6,6 +6,6 @@ for cont in $(ls /opt/server/docker)
 do
     if [ "$(docker inspect $cont | jq ".[] .State.Health.Status" | sed 's/"//g')" != "healthy" ]
     then
-        systemctl restart $cont
+        systemctl restart docker@$cont.service
     fi
 done
