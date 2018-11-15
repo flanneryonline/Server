@@ -229,20 +229,8 @@ server_install() {
     echo "$ADMIN_USERNAME:$admin_password" | chpasswd -R "$root"
     errorcheck && return 1
 
-    #server update service
-    [ ! -e "$root/etc/systemd/system/server-update.service" ] && \
-        eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.service /etc/systemd/system/server-update.service"
-    [ ! -h "$root/etc/systemd/system/server-update.service" ] && \
-        rm -r "$root/etc/systemd/system/server-update.service" && \
-        eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.service /etc/systemd/system/server-update.service"
-
-    [ ! -e "$root/etc/systemd/system/server-update.timer" ] && \
-        eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.timer /etc/systemd/system/server-update.timer"
-    [ ! -h "$root/etc/systemd/system/server-update.timer" ] && \
-        rm -r "$root/etc/systemd/system/server-update.timer" && \
-        eval "$chroot_eval ln -s /opt/server/systemd/system/server-update.timer /etc/systemd/system/server-update.timer"
-
-    eval "$chroot_eval systemctl enable server-update.timer"
+    eval "$chroot_eval systemctl enable /opt/server/systemd/system/server-update.service"
+    eval "$chroot_eval systemctl enable /opt/server/systemd/system/server-update.timer"
 
     return 0
 }
@@ -562,7 +550,7 @@ zfs_boot_setup() {
     [ $(howmany "$boot_disk_list") -eq 1 ] && raid_type=""
 
     eval "zpool create -f \
-        -o ashift=12 \
+        -o ashift=13 \
         -O atime=off \
         -O compression=lz4 \
         -O canmount=off \

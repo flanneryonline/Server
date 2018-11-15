@@ -25,7 +25,7 @@ done
 
 systemctl enable /opt/server/systemd/docker/docker@.service
 
-for service in pia plex tautulli ombi deluge nzbget jackett hydra radarr sonarr samba
+for service in pia plex tautulli ombi deluge nzbget jackett hydra radarr sonarr samba emby
 do
     echo "starting docker@$service.service"
     [ -f /etc/systemd/system/docker@$service.service.d/dependencies.conf ] && rm /etc/systemd/system/docker@$service.service.d/dependencies.conf

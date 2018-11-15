@@ -27,13 +27,10 @@ apt-get install -qq --no-install-recommends \
     git \
     gdisk \
     ntpdate \
-    python3-pip \
     bmon \
     hddtemp \
     openssh-server \
     sysstat
-
-pip3 install humanfriendly
 
 set_version $version ${0##*/}
 exit 0
