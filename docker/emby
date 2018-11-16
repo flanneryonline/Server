@@ -7,8 +7,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 
 docker create \
 --name=emby \
--p 8096:8096 \
--p 8920:8920 \
+--net=host \
 --health-cmd="ps -o user -e | grep 1001 >/dev/null" \
 --health-interval=5s \
 --health-start-period=15s \
