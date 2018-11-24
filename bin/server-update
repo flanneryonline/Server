@@ -7,15 +7,16 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 
 snapshot_date=$(date -Is)
 
-echo "creating update snapshot"
-zfs snapshot $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@$snapshot_date
+echo "creating update snapshot(s)"
+zfs snapshot -r $ROOT_POOL@$snapshot_date
 errorcheck && echoerr "error during zfs snapshot" && exit 1
 
 server_update
 errorcheck && echoerr "error during server update - rolling back" && \
-    zfs rollback $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@$snapshot_date && \
+    /opt/server/bin/zfs_fullrollback $ROOT_POOL $snapshot_date && \
     exit 1
-echo "removing snapshot"
-zfs destroy $ROOT_POOL/ROOT/$SERVER_DIST/$SERVER_DIST_RELEASE@$snapshot_date
+
+echo "removing snapshot(s)"
+/opt/server/bin/zfs_fulldestroy $ROOT_POOL $snapshot_date
 
 exit 0
