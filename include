@@ -247,6 +247,8 @@ server_update() {
     errorcheck && echoerr "error during apt-get dist-upgrade" && return 1
     apt-get install -qq --no-install-recommends git
     errorcheck && echoerr "error installing git" && return 1
+    apt-get autoremove -qq
+    errorcheck && echoerr "error in apt-get autoremove" && return 1
 
     get_server_code
 
