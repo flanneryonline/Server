@@ -7,14 +7,14 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-version=4
+version=5
 
 check_version $version ${0##*/} && echo "patch ${0##*/} already on latest version." && exit 0
 
 patch_requires "media_storage" 1
 patch_requires "docker" 1
 
-for service in samba tautulli ombi plex radarr sonarr deluge nzbget jackett hydra pia
+for service in $(ls /opt/server/docker)
 do
     if systemctl is-active docker@$service.service >/dev/null 2>&1
     then
@@ -25,9 +25,9 @@ done
 
 systemctl enable /opt/server/systemd/docker/docker@.service
 
-for service in pia plex tautulli ombi deluge nzbget jackett hydra radarr sonarr samba emby
+for service in $(ls /opt/server/docker)
 do
-    echo "starting docker@$service.service"
+    echo "configuring docker@$service.service"
     [ -f /etc/systemd/system/docker@$service.service.d/dependencies.conf ] && rm /etc/systemd/system/docker@$service.service.d/dependencies.conf
     systemctl enable docker@$service.service
     if [ -d /opt/server/systemd/docker/docker@.d/$service ]
@@ -35,12 +35,25 @@ do
         [ ! -d /etc/systemd/system/docker@$service.service.d/ ] && mkdir -p /etc/systemd/system/docker@$service.service.d/
         ln -s /opt/server/systemd/docker/docker@.d/$service/dependencies.conf /etc/systemd/system/docker@$service.service.d/dependencies.conf
     fi
-    systemctl daemon-reload
+done
+
+systemctl daemon-reload
+
+for service in $(ls /opt/server/docker)
+do
+    echo "starting docker@$service.service"
     systemctl start docker@$service.service
 done
 
 systemctl enable /opt/server/systemd/docker/docker-healthcheck.service
 systemctl enable /opt/server/systemd/docker/docker-healthcheck.timer
+systemctl enable /opt/server/systemd/docker/docker-cleanup.service
+systemctl enable /opt/server/systemd/docker/docker-cleanup.timer
+
+systemctl start docker-healthcheck.timer
+systemctl start docker-healthcheck.service
+systemctl start docker-cleanup.timer
+systemctl start docker-cleanup.service
 
 set_version $version ${0##*/}
 exit 0

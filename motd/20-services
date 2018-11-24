@@ -1,53 +1,20 @@
 #!/usr/bin/env bash
 
-# Declare array of services and pretty human readable names
-declare -a services=(
-"docker@plex"
-"docker@emby"
-"docker@pia"
-"docker@nzbget"
-"docker@deluge"
-"docker@hydra"
-"docker@jackett"
-"docker@sonarr"
-"docker@radarr"
-"docker@ombi"
-"docker@tautulli"
-)
-declare -a serviceName=(
-"Plex"
-"Emby"
-"VPN"
-"NzbGet"
-"Deluge"
-"Hydra"
-"Jackett"
-"Sonarr"
-"Radarr"
-"Ombi"
-"Tautulli"
-)
-declare -a serviceStatus=()
-
-# Get status of all my services
-for service in "${services[@]}"
-do
-    serviceStatus+=($(systemctl is-active "$service.service"))
-done
-
-width=120
-line="  "
-lineLen=0
-
 echo ""
 echo "Services running:"
 
-for i in ${!serviceStatus[@]}
+for service in $(ls /opt/server/docker)
 do
     # Color the next line green if it's active, else red
-    if [ "${serviceStatus[$i]}" == "active" ]; then
-	echo -e "  ${serviceName[$i]}: \e[32m● Active\e[0m"
+    if [ "$(systemctl is-active "docker@$service.service")" == "active" ]; then
+	    echo -e "  $service: \e[32m● Active\e[0m"
     else
-	echo -e "  ${serviceName[$i]}: \e[31m▲ Failed\e[0m"
+	    echo -e "  $service: \e[31m▲ Failed\e[0m"
     fi
 done
+
+if [ "$(systemctl is-active "docker@$service.service")" == "active" ]; then
+    echo -e "  $service: \e[32m● Active\e[0m"
+else
+    echo -e "  $service: \e[31m▲ Failed\e[0m"
+fi
