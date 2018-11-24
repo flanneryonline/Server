@@ -8,7 +8,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 docker create \
 --name=cardigann \
 --net=container:pia \
---health-cmd="curl -sSf 'http://localhost:5060' >/dev/null" \
+--health-cmd="ps -e -o comm | grep cardigann >/dev/null" \
 --health-interval=5s \
 --health-start-period=5s \
 --health-timeout=2s \
