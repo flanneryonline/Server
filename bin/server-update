@@ -6,6 +6,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/include"
 
 snapshot_date=$(date -Is)
+e=0
 
 echo "creating update snapshot(s)"
 zfs snapshot -r $ROOT_POOL@$snapshot_date
@@ -14,9 +15,9 @@ errorcheck && echoerr "error during zfs snapshot" && exit 1
 server_update
 errorcheck && echoerr "error during server update - rolling back" && \
     /opt/server/bin/zfs_fullrollback $ROOT_POOL $snapshot_date && \
-    exit 1
+    e=1
 
 echo "removing snapshot(s)"
 /opt/server/bin/zfs_fulldestroy $ROOT_POOL $snapshot_date
 
-exit 0
+exit $e
