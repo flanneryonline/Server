@@ -8,7 +8,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 docker create \
 --name=nzbget \
 --net=container:pia \
---health-cmd="curl -sSf 'http://localhost:6789' >/dev/null" \
+--health-cmd="curl -sSf 'http://127.0.0.1:6789' >/dev/null" \
 --health-interval=5s \
 --health-start-period=5s \
 --health-timeout=2s \

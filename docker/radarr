@@ -8,7 +8,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 docker create \
 --name=radarr \
 -p 7878:7878 \
---health-cmd="curl -sSf 'http://localhost:7878' >/dev/null" \
+--health-cmd="curl -sSf 'http://127.0.0.1:7878' >/dev/null" \
 --health-interval=5s \
 --health-start-period=5s \
 --health-timeout=2s \

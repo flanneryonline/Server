@@ -7,7 +7,7 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 
 docker create \
 --name=mysql \
---health-cmd="mysqladmin ping -h localhost' >/dev/null" \
+--health-cmd="mysqladmin ping -h 127.0.0.1' >/dev/null" \
 --health-interval=5s \
 --health-start-period=5s \
 --health-timeout=2s \
