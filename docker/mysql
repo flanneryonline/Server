@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -e
+
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+. "$SERVER_INSTALL/environment"
+. "$SERVER_INSTALL/include"
+
+MYSQL_PW=$(get_server_setting "mysql_pw")
+
+docker create \
+--name=mysql \
+--health-cmd="mysql -e "select 1" -u root -p $MYSQL_PW >/dev/null 2>&1" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=2s \
+-e MYSQL_ROOT_PASSWORD=$MYSQL_PW \
+mysql:8.0 \
+--bind-address 0.0.0.0
