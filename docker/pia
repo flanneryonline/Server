@@ -10,6 +10,7 @@ docker create -t \
 --health-cmd="curl -sSf 'https://www.google.com' >/dev/null" \
 -p 9117:9117 \
 -p 5075:5075 \
+-p 5076:5076 \
 -p 6789:6789 \
 -p 8112:8112 \
 -p 5060:5060 \
