@@ -12,4 +12,6 @@ apt-get autoremove -qq
 
 get_server_code
 
+chmod +x "$SERVER_INSTALL/motd/"*
+
 exit $e
