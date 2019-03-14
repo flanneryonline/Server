@@ -1,5 +1,5 @@
 [Unit]
-Description=Service for syncing files to backup host.
+Description=Backup Service
 Requires=nfs-client.target zfs.target
 After=nfs-client.target zfs.target
 
@@ -7,7 +7,7 @@ After=nfs-client.target zfs.target
 Type=oneshot
 User=root
 Group=root
-ExecStart=/opt/server/bin/media-backup
+ExecStart=/opt/server/bin/server-backup
 
 [Install]
 WantedBy=multi-user.target

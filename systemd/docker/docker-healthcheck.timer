@@ -1,5 +1,5 @@
 [Unit]
-Description=Docker healthcheck timer.
+Description=Timer for Docker Healthcheck Service
 
 [Timer]
 OnUnitInactiveSec=10m

@@ -24,8 +24,8 @@ echo "  backup_enabled=$backup_enabled"
 
 if [ $backup_enabled -eq 1 ]
 then
-    systemctl enable /opt/server/systemd/backup/media-backup.service
-    systemctl enable /opt/server/systemd/backup/media-backup.timer
+    systemctl enable /opt/server/systemd/backup/server-backup.service
+    systemctl enable /opt/server/systemd/backup/server-backup.timer
 fi
 
 set_version $version ${0##*/}

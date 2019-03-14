@@ -1,6 +1,5 @@
 [Unit]
-Description=timer for server update
-
+Description=Timer for Motd Update Service
 [Timer]
 OnBootSec=1min
 OnUnitActiveSec=6h

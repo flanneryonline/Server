@@ -1,5 +1,5 @@
 [Unit]
-Description=server update service (runs on timer)
+Description=Update Server Service
 
 [Service]
 Type=oneshot

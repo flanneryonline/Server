@@ -1,5 +1,5 @@
 [Unit]
-Description=timer for server update
+Description=Timer for Update Server Service
 
 [Timer]
 OnCalendar=daily

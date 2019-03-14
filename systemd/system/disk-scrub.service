@@ -1,5 +1,5 @@
 [Unit]
-Description=zfs disk scrubber
+Description=Disk Scrubber Service
 
 [Service]
 Type=oneshot

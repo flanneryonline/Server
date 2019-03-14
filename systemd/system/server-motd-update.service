@@ -1,5 +1,5 @@
 [Unit]
-Description=motd update service (runs on timer)
+Description=Update Motd Service
 
 [Service]
 Type=oneshot

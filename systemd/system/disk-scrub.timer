@@ -1,5 +1,5 @@
 [Unit]
-Description=timer for server update
+Description=Timmer for Disk Scrubber Service
 
 [Timer]
 OnCalendar=monthly

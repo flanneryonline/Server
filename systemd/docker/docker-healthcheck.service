@@ -1,5 +1,5 @@
 [Unit]
-Description=Docker healthcheck service.
+Description=Docker Healthcheck Service
 Requires=docker.service
 After=docker.service
 

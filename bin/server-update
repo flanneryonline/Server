@@ -5,19 +5,11 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
 
-snapshot_date=$(date -Is)
-e=0
+apt-get update -qq
+apt-get upgrade -qq --no-install-recommends
+apt-get dist-upgrade -qq --no-install-recommends
+apt-get autoremove -qq
 
-echo "creating update snapshot(s)"
-zfs snapshot -r $ROOT_POOL@$snapshot_date
-errorcheck && echoerr "error during zfs snapshot" && exit 1
-
-server_update
-errorcheck && echoerr "error during server update - rolling back" && \
-    /opt/server/bin/zfs_fullrollback $ROOT_POOL $snapshot_date && \
-    e=1
-
-echo "removing snapshot(s)"
-/opt/server/bin/zfs_fulldestroy $ROOT_POOL $snapshot_date
+get_server_code
 
 exit $e

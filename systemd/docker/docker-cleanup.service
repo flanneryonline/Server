@@ -1,5 +1,5 @@
 [Unit]
-Description=Docker cleanup service.
+Description=Docker Cleanup Service
 Requires=docker.service
 After=docker.service
 

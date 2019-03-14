@@ -1,5 +1,5 @@
 [Unit]
-Description=Service running %i in Docker
+Description=%i Service in Docker
 
 [Service]
 Restart=always

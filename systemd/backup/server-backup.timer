@@ -1,5 +1,5 @@
 [Unit]
-Description=Timer for syncing files to backup host.
+Description=Timer for Backup Service
 
 [Timer]
 OnUnitInactiveSec=6h
