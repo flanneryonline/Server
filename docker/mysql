@@ -10,6 +10,7 @@ MYSQL_PW=$(get_server_setting "mysql_pw")
 
 docker create \
 --name=mysql \
+-p 3306:3306 \
 --health-cmd="mysql -e \"select 1\" -u root -p$MYSQL_PW >/dev/null 2>&1" \
 --health-interval=5s \
 --health-start-period=5s \
