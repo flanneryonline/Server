@@ -14,6 +14,8 @@ docker create \
 --health-interval=5s \
 --health-start-period=5s \
 --health-timeout=2s \
+-v $STORAGE_CONFIG_DIR/mysql/config:/etc/mysql/conf.d \
+-v $STORAGE_CONFIG_DIR/mysql/data:/var/lib/mysql \
 -e MYSQL_ROOT_PASSWORD=$MYSQL_PW \
 mysql:8.0 \
 --bind-address 0.0.0.0
