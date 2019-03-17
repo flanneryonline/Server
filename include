@@ -111,11 +111,15 @@ server_install() {
         echo "LinkLocalAddressing=ipv4" >> "$root/etc/systemd/network/$nets.network"
     fi
     if [ $(howmany "$nets") -gt 1 ]; then
-        for net in $nets; do
-            echo "[Match]" > "$root/etc/systemd/network/$net.network"
-            echo "Name=$net" >> "$root/etc/systemd/network/$net.network"
-            echo "[Network]" >> "$root/etc/systemd/network/$net.network"
-            echo "Bond=lacp0" >> "$root/etc/systemd/network/$net.network"
+        ignore=
+        for net in $nets
+        do
+            echo "adding $nets.network to lacp0.network"
+            echo "[Match]" > "/etc/systemd/network/$net.network"
+            echo "Name=$net" >> "/etc/systemd/network/$net.network"
+            echo "[Network]" >> "/etc/systemd/network/$net.network"
+            echo "Bond=lacp0" >> "/etc/systemd/network/$net.network"
+            ignore=" --ignore=$net$ignore"
         done
 
         echo "[Match]" > "$root/etc/systemd/network/lacp0.network"
@@ -135,6 +139,16 @@ server_install() {
         echo "MIIMonitorSec=1s" >> "$root/etc/systemd/network/lacp0.netdev"
         echo "UpDelaySec=2s" >> "$root/etc/systemd/network/lacp0.netdev"
         echo "DownDelaySec=8s" >> "$root/etc/systemd/network/lacp0.netdev"
+
+        echo "fixing systemd-networkd-wait-online.service"
+        [ ! -d /etc/systemd/system/systemd-networkd-wait-online.service.d ] && \
+            mkdir -p /etc/systemd/system/systemd-networkd-wait-online.service.d
+        echo "[Service]" > \
+            "/etc/systemd/system/systemd-networkd-wait-online.service.d/ignore.conf"
+        echo "ExecStart=" >> \
+            "/etc/systemd/system/systemd-networkd-wait-online.service.d/ignore.conf"
+        echo "ExecStart=/lib/systemd/systemd-networkd-wait-online$ignore" >> \
+            "/etc/systemd/system/systemd-networkd-wait-online.service.d/ignore.conf"
     fi
 
     echo "net.ipv6.conf.all.disable_ipv6 = 1" > "$root/etc/sysctl.d/10-disable-ipv6.conf"
