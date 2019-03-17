@@ -1,5 +1,7 @@
 [Unit]
 Description=Update Motd Service
+Requires=docker-services.target
+After=docker-services.target
 
 [Service]
 Type=oneshot
@@ -7,6 +9,3 @@ WorkingDirectory=/tmp
 User=root
 Group=root
 ExecStart=/opt/server/bin/motd-update
-
-[Install]
-WantedBy=multi-user.target

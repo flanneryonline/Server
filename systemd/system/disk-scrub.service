@@ -1,5 +1,7 @@
 [Unit]
 Description=Disk Scrubber Service
+Requires=zfs.target
+After=zfs.target
 
 [Service]
 Type=oneshot

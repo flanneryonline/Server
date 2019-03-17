@@ -1,5 +1,8 @@
 [Unit]
 Description=%i Service in Docker
+Requires=docker.service
+After=docker.service
+PartOf=docker.service
 
 [Service]
 Restart=always
@@ -12,4 +15,4 @@ ExecStop=/usr/bin/docker stop %i
 ExecStop=/usr/bin/docker rm %i
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=docker-services.target
