@@ -8,6 +8,3 @@ Type=oneshot
 User=root
 Group=root
 ExecStart=/opt/server/bin/server-backup
-
-[Install]
-WantedBy=multi-user.target
