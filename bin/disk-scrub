@@ -4,5 +4,8 @@ set -e
 
 for pool in $(zpool list -H -o name)
 do
-    zpool scrub $pool
+    if ! zpool status $pool | grep "scrub in progress"
+    then
+        zpool scrub $pool
+    fi
 done
