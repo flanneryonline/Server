@@ -12,9 +12,3 @@ do
 	    echo -e "  $service: \e[31m▲ Failed\e[0m"
     fi
 done
-
-if [ "$(systemctl is-active "docker@$service.service")" == "active" ]; then
-    echo -e "  $service: \e[32m● Active\e[0m"
-else
-    echo -e "  $service: \e[31m▲ Failed\e[0m"
-fi
