@@ -5,6 +5,8 @@ set -e
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 
+docker pull dperson/openvpn-client
+
 docker create -t \
 --name=pia \
 --health-cmd="curl -sSf 'https://www.google.com' >/dev/null" \

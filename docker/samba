@@ -5,6 +5,8 @@ set -e
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 
+docker pull dperson/samba
+
 docker create -t \
 --name=samba \
 -p 139:139 \
@@ -14,8 +16,5 @@ docker create -t \
 -v $STORAGE_DOWNLOAD_DIR:/mnt/downloads \
 -v $STORAGE_MEDIA_DIR:/mnt/media \
 -v $STORAGE_SHARE_DIR:/mnt/shares \
-dperson/samba -r \
-    -s "configs;/mnt/configs;yes;no" \
-    -s "downloads;/mnt/downloads;yes;no" \
-    -s "media;/mnt/media;yes;no" \
-    -s "shares;/mnt/shares;yes;no"
+-v $STORAGE_CONFIG_DIR/samba:/config \
+dperson/samba -r -I /config/include.conf

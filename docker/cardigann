@@ -5,6 +5,8 @@ set -e
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 
+docker pull linuxserver/cardigann
+
 docker create \
 --name=cardigann \
 --net=container:pia \

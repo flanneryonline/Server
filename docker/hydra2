@@ -5,6 +5,8 @@ set -e
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 
+docker pull linuxserver/hydra2
+
 docker create \
 --name=hydra2 \
 --net=container:pia \

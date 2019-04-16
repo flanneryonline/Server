@@ -5,6 +5,8 @@ set -e
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 
+docker pull linuxserver/deluge
+
 docker create \
 --name=deluge \
 --net=container:pia \
