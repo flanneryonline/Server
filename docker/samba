@@ -16,5 +16,8 @@ docker create -t \
 -v $STORAGE_DOWNLOAD_DIR:/mnt/downloads \
 -v $STORAGE_MEDIA_DIR:/mnt/media \
 -v $STORAGE_SHARE_DIR:/mnt/shares \
--v $STORAGE_CONFIG_DIR/samba:/config \
-dperson/samba -r -I /config/include.conf
+dperson/samba -r \
+    -s "configs;/mnt/configs;yes;no" \
+    -s "downloads;/mnt/downloads;yes;no" \
+    -s "media;/mnt/media;yes;no" \
+    -s "shares;/mnt/shares;yes;no"
