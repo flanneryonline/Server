@@ -2,6 +2,11 @@
 
 set -e
 
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+. "$SERVER_INSTALL/environment"
+
+mount | grep $BACKUP_ADDRESS || exit 1
+
 /usr/bin/rsync -aqHXAp --delete /mnt/configs/ /mnt/backup/configs/
 
 /usr/bin/rsync -aqHXAp --delete /mnt/shares/ /mnt/backup/files/
