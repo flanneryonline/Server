@@ -5,7 +5,7 @@ set -e
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 
-docker pull linuxserver/sonarr
+docker pull linuxserver/sonarr:preview
 
 docker create \
 --name=sonarr \
@@ -19,4 +19,4 @@ docker create \
 -v $STORAGE_CONFIG_DIR/sonarr:/config \
 -v $STORAGE_MEDIA_DIR/shows:/shows \
 -v $STORAGE_DOWNLOAD_DIR:/downloads \
-linuxserver/sonarr
+linuxserver/sonarr:preview
