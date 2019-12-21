@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -e
+
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+. "$SERVER_INSTALL/environment"
+
+docker pull bitwardenrs/server
+
+docker create \
+--name=bitwarden \
+-p 80:80 \
+--health-cmd="which which 2>&1" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=2s \
+-e SIGNUPS_ALLOWED=false \
+-e INVITATIONS_ALLOWED=false \
+-e DOMAIN=https://password.flanneryonline.com \
+-e WEB_VAULT_FOLDER=/data/web \
+-v $STORAGE_CONFIG_DIR/bitwarden:/data \
+bitwardenrs/server
