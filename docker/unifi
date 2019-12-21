@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+set -e
+
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+. "$SERVER_INSTALL/environment"
+
+docker pull linuxserver/unifi-controller
+
+docker create -t \
+--name=unifi \
+--health-cmd="curl --max-time 5 -kILsf 'https://localhost:8443' >/dev/null" \
+--health-interval=5s \
+--health-start-period=5s \
+--health-timeout=5s \
+-p 8080:8080 \
+-p 8081:8081 \
+-p 8443:8443 \
+-p 8880:8880 \
+-p 8843:8843 \
+-p 3478:3478/udp \
+-p 10001:10001/udp \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-v $STORAGE_CONFIG_DIR/unifi:/config \
+linuxserver/unifi-controller
