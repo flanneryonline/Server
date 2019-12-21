@@ -10,10 +10,10 @@ docker pull linuxserver/nzbget
 docker create \
 --name=nzbget \
 --net=container:pia \
---health-cmd="curl -sSf 'http://127.0.0.1:6789' >/dev/null" \
+--health-cmd="curl --max-time 5 -ILsf 'http://127.0.0.1:6789' >/dev/null" \
 --health-interval=5s \
 --health-start-period=5s \
---health-timeout=2s \
+--health-timeout=5s \
 -e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
 -e TZ=$SERVER_TIMEZONE \
 -v $STORAGE_CONFIG_DIR/nzbget:/config \

@@ -9,7 +9,10 @@ docker pull dperson/openvpn-client
 
 docker create -t \
 --name=pia \
---health-cmd="curl -sSf 'https://www.google.com' >/dev/null" \
+--health-cmd="curl --max-time 5 -ILsf 'https://www.google.com' >/dev/null" \
+--health-interval=10s \
+--health-start-period=25s \
+--health-timeout=10s \
 -p 5075:5075 \
 -p 5076:5076 \
 -p 6789:6789 \
