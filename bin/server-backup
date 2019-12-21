@@ -7,6 +7,6 @@ SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 
 mount | grep $BACKUP_ADDRESS || exit 1
 
-/usr/bin/rsync -aqHXAp --delete /mnt/configs/ /mnt/backup/configs/
+/usr/bin/rsync -aqHAp --delete /mnt/configs/ /mnt/backup/configs/
 
-/usr/bin/rsync -aqHXAp --delete /mnt/shares/ /mnt/backup/files/
+/usr/bin/rsync -aqHAp --delete /mnt/shares/ /mnt/backup/files/
