@@ -10,7 +10,7 @@ docker pull linuxserver/sonarr:preview
 docker create \
 --name=sonarr \
 -p 8989:8989 \
---health-cmd="curl --max-time 5 -ILsf 'http://127.0.0.1:8989' >/dev/null" \
+--health-cmd="curl --max-time 5 -Lsf 'http://127.0.0.1:8989' >/dev/null" \
 --health-interval=5s \
 --health-start-period=5s \
 --health-timeout=5s \

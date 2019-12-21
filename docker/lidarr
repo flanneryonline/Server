@@ -10,7 +10,7 @@ docker pull linuxserver/lidarr
 docker create \
 --name=lidarr \
 -p 8686:8686 \
---health-cmd="curl --max-time 5 -ILsf 'http://127.0.0.1:8686' >/dev/null" \
+--health-cmd="curl --max-time 5 -Lsf 'http://127.0.0.1:8686' >/dev/null" \
 --health-interval=5s \
 --health-start-period=5s \
 --health-timeout=5s \
