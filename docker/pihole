@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+set -e
+
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+. "$SERVER_INSTALL/environment"
+. "$SERVER_INSTALL/include"
+
+PIHOLE_PW=$(get_server_setting "pihole_pw")
+
+docker pull pihole/pihole
+
+docker create \
+--name=pihole \
+-p 53:53/tcp \
+-p 53:53/udp \
+-p 1180:80 \
+-p 11443:443 \
+-e TZ=$SERVER_TIMEZONE \
+-e WEBPASSWORD=$PIHOLE_PW \
+-v $STORAGE_CONFIG_DIR/pihole/:/etc/pihole/ \
+-v $STORAGE_CONFIG_DIR/pihole/dnsmasq.d/:/etc/dnsmasq.d/ \
+pihole/pihole
