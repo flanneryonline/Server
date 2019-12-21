@@ -39,9 +39,12 @@ $line"
         disk_link="/dev/disk/by-id/$disk"
         temp=$(cat /etc/server/motd/$pool/disks/$disk/info | grep temp | head -1 | cut -d "=" -f2)
         color_start="\e[32m"
-        [ $temp -gt 40 ] && color_start="\e[33m"
-        [ $temp -gt 55 ] && color_start="\e[31m"
-        echo "        $disk"
-        echo -e "            Temperature: $color_start$temp°C\e[0m"
+        if [ $temp -gt 40 ]; then
+            color_start="\e[33m"
+            [ $temp -gt 55 ] && color_start="\e[31m"
+            echo "        $disk"
+            echo -e "            Temperature: $color_start$temp°C\e[0m"
+        fi
     done
+    echo " "
 done

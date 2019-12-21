@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 
 echo ""
-echo "Services running:"
+echo "Failed Services:"
+end="All good!"
 
 for service in $(ls /opt/server/docker)
 do
     # Color the next line green if it's active, else red
-    if [ "$(systemctl is-active "docker@$service.service")" == "active" ]; then
-	    echo -e "  $service: \e[32m● Active\e[0m"
-    else
+    if [ "$(systemctl is-active "docker@$service.service")" != "active" ]; then
 	    echo -e "  $service: \e[31m▲ Failed\e[0m"
+        end="FAIL"
+    fi
+    if [ "$end" != "FAIL" ]; then
+        echo "$end"
     fi
 done
