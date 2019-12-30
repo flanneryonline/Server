@@ -2,7 +2,7 @@
 
 echo ""
 echo "Failed Services:"
-end="All good!"
+end="No services failed!"
 
 for service in $(ls /opt/server/docker)
 do
@@ -13,5 +13,5 @@ do
     fi
 done
 if [ "$end" != "FAIL" ]; then
-    echo "$end"
+    echo -e "\e[32m$end\e[0m"
 fi

@@ -13,7 +13,7 @@ do
     total=$(cat /etc/server/motd/$pool/info | grep total | head -1 | cut -d "=" -f2)
     total_bites=$(cat /etc/server/motd/$pool/info | grep total_bites | head -1 | cut -d "=" -f2)
     percent=$((width*used_bites/total_bites))
-    line="[\e[42m" #green
+    line="[\e[32m" #green
     [ $percent -gt 50 ] && line="[\e[43m" #yellow
     [ $percent -gt 68 ] && line="[\e[41m" #red
     i=0
