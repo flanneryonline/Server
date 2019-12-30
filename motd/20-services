@@ -11,7 +11,7 @@ do
 	    echo -e "  $service: \e[31m▲ Failed\e[0m"
         end="FAIL"
     fi
-    if [ "$end" != "FAIL" ]; then
-        echo "$end"
-    fi
 done
+if [ "$end" != "FAIL" ]; then
+    echo "$end"
+fi
