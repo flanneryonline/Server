@@ -13,7 +13,7 @@ do
     total=$(cat /etc/server/motd/$pool/info | grep total | head -1 | cut -d "=" -f2)
     total_bites=$(cat /etc/server/motd/$pool/info | grep total_bites | head -1 | cut -d "=" -f2)
     percent=$((width*used_bites/total_bites))
-    line="[\e[32m" #green
+    line="[\e[42m" #green
     [ $percent -gt 50 ] && line="[\e[43m" #yellow
     [ $percent -gt 68 ] && line="[\e[41m" #red
     i=0
@@ -28,7 +28,7 @@ do
         line+=" "
         i=$((i+1))
     done
-    line+="]"
+    line+="\e[0m]"
 
     echo -e "  $pool: $([ "$(zpool status -x $pool)" == "pool '$pool' is healthy" ] && echo "\e[32mHEALTHY\e[0m" || echo "\e[31mUNHEALTHY\e[0m" )
     available: $available  |  used: $used  |  total: $total
@@ -38,7 +38,6 @@ $line"
         disk=${disk_file##*/}
         disk_link="/dev/disk/by-id/$disk"
         temp=$(cat /etc/server/motd/$pool/disks/$disk/info | grep temp | head -1 | cut -d "=" -f2)
-        color_start="\e[32m"
         if [ $temp -gt 40 ]; then
             color_start="\e[33m"
             [ $temp -gt 55 ] && color_start="\e[31m"
