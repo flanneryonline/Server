@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+set -e
+
+SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
+. "$SERVER_INSTALL/environment"
+
+docker pull linuxserver/plex
+
+docker create \
+--name=plex \
+--net=host \
+--health-cmd="curl -sSf 'http://127.0.0.1:32400/identity' >/dev/null" \
+--health-interval=5s \
+--health-start-period=15s \
+--health-timeout=2s \
+-e VERSION=latest \
+-e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
+-e TZ=$SERVER_TIMEZONE \
+-v $STORAGE_CONFIG_DIR/plex:/config \
+-v $STORAGE_MEDIA_DIR:/media \
+--tmpfs /transcode \
+linuxserver/plex
