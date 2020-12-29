@@ -5,17 +5,18 @@ set -e
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 
-docker pull linuxserver/deluge
+docker pull linuxserver/radarr
 
 docker create \
---name=deluge \
---net=container:pia \
---health-cmd="curl --max-time 5 -Lsf 'http://127.0.0.1:8112' >/dev/null" \
+--name=radarr4k \
+-p 7888:7888 \
+--health-cmd="curl --max-time 5 -Lsf 'http://127.0.0.1:7888' >/dev/null" \
 --health-interval=5s \
 --health-start-period=5s \
 --health-timeout=5s \
 -e PUID=$DOCKER_PUID -e PGID=$DOCKER_PGID \
 -e TZ=$SERVER_TIMEZONE \
--v $STORAGE_CONFIG_DIR/deluge:/config \
+-v $STORAGE_CONFIG_DIR/radarr4k:/config \
+-v $STORAGE_MEDIA_DIR/movies:/movies \
 -v $STORAGE_DOWNLOAD_DIR:/downloads \
-linuxserver/deluge
+linuxserver/radarr
