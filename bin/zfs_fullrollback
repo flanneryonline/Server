@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+exec 2> >(logger -s -t $(basename $0))
+
+set -e
+
 # parameter list:
 #   (1) the filesystem to be used to start decendant recursion
 #       example: pool/dataset/files
@@ -12,3 +16,5 @@ for snap in $(zfs list -H -t snapshot -r $1 | grep "@$2" | cut -f 1); do
         # -f : forces an unmount of any clone file systems that are to be destroyed
         zfs rollback -r -R -f $snap
 done
+
+exit 0

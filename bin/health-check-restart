@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+exec 2> >(logger -s -t $(basename $0))
+
 set -e
 
 for cont in $(ls /opt/server/docker)
@@ -9,3 +11,5 @@ do
         systemctl restart docker@$cont.service
     fi
 done
+
+exit 0

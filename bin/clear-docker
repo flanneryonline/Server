@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+exec 2> >(logger -s -t $(basename $0))
+
 set -e
 
 name=$1
@@ -15,3 +17,5 @@ if [ ! -z "$id" ]
 then
     docker rm -f $id
 fi
+
+exit 0

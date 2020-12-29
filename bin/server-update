@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
+exec 2> >(logger -s -t $(basename $0))
+
+set -e
+
 export DEBIAN_FRONTEND=noninteractive
+
 SERVER_INSTALL=${SERVER_INSTALL:-/opt/server}
 . "$SERVER_INSTALL/environment"
 . "$SERVER_INSTALL/include"
@@ -12,6 +17,4 @@ apt-get autoremove -qq
 
 get_server_code
 
-chmod +x "$SERVER_INSTALL/motd/"*
-
-exit $e
+exit 0

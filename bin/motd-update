@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+exec 2> >(logger -s -t $(basename $0))
+
 set -e
 
 export DEBIAN_FRONTEND=noninteractive
@@ -44,3 +46,5 @@ do
         echo "temp=$(hddtemp $disk | awk 'BEGIN {FS=":"};{print $3}' | sed 's/ //g' | sed 's/°C//g')" > /etc/server/motd/$pool/disks/$disk_name/info
     done
 done
+
+exit 0
